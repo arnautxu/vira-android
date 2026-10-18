@@ -5,6 +5,7 @@ package cat.vira.android.core.backend.sync
 import cat.vira.android.core.backend.InstantSerializer
 import cat.vira.android.core.backend.UuidSerializer
 import cat.vira.android.core.data.ViraDatabase
+import cat.vira.android.core.data.ViraRewards
 import cat.vira.android.core.data.ViraStore
 import cat.vira.android.core.data.ViraTime
 import cat.vira.android.core.data.model.ProgressCounter
@@ -83,11 +84,14 @@ class ProgressCounterSyncTable(
         if (row.emotionCheckinsCount != null) json else JsonObject(json - "emotion_checkins_count")
     }
 
+    /// Primer es baixa, després es puja: un comptador local més nou però que en sap menys (un telèfon
+    /// nou que ha guanyat XP abans d'entrar al compte) no pot trepitjar el del servidor abans de sumar-s'hi.
+    override val mergesOnPull = true
+
     override suspend fun apply(rows: List<ProgressCounterSyncRow>, db: ViraDatabase) {
         val row = rows.lastOrNull() ?: return
         val model = store(db).counter()
-        if (!shouldOverwrite(row, model)) return
-        db.progressCounters().upsertRaw(listOf(model.copy(
+        val winner = if (!shouldOverwrite(row, model)) model else model.copy(
             totalXP = row.totalXp, coinBalance = row.coinBalance, coinsEarnedTotal = row.coinsEarnedTotal,
             emotionCheckinsCount = row.emotionCheckinsCount ?: model.emotionCheckinsCount,
             focusSessionsCount = row.focusSessionsCount,
@@ -97,11 +101,25 @@ class ProgressCounterSyncTable(
             // o en obrir la porta la pujada sencera hi empataria i `keep_last_write` la descartaria.
             updatedAt = if (row.emotionCheckinsCount != null) row.updatedAt
                 else maxOf(ViraTime.now(), row.updatedAt.plus(ViraEmotionTrace.heldUploadOffset.multipliedBy(2))),
-        )))
+        )
+        // L'XP i els recomptes només creixen, guanyi qui guanyi: el que en sabia un dels dos costats no
+        // es pot perdre per una data més nova. Si n'hi ha cap que puja, es data perquè la propera
+        // passada ho torni a pujar. El saldo no hi entra: baixa amb les compres, i el quadra el llibre.
+        val lifted = winner.copy(
+            totalXP = maxOf(winner.totalXP, model.totalXP, row.totalXp),
+            coinsEarnedTotal = maxOf(winner.coinsEarnedTotal, model.coinsEarnedTotal, row.coinsEarnedTotal),
+            emotionCheckinsCount = maxOf(winner.emotionCheckinsCount, model.emotionCheckinsCount,
+                row.emotionCheckinsCount ?: 0),
+            focusSessionsCount = maxOf(winner.focusSessionsCount, model.focusSessionsCount, row.focusSessionsCount),
+            habitsCompletedCount = maxOf(winner.habitsCompletedCount, model.habitsCompletedCount, row.habitsCompletedCount),
+            daysActiveCount = maxOf(winner.daysActiveCount, model.daysActiveCount, row.daysActiveCount),
+        )
+        val merged = if (lifted == winner) winner else lifted.copy(updatedAt = maxOf(ViraTime.now(), winner.updatedAt))
+        if (merged != model) db.progressCounters().upsertRaw(listOf(merged))
         // El comptador del servidor pot ser més vell que el llibre major que ja hi ha al telèfon (una
         // passada anterior el va reparar i ara la baixada del llibre no porta res de nou).
-        CoinTransactionSyncTable.reconcileBalanceWithLedger(db, store(db))
-        afterApply(db)
+        ViraRewards(store(db)).reconcileBalanceWithLedger()
+        if (merged != model) afterApply(db)
     }
 }
 
