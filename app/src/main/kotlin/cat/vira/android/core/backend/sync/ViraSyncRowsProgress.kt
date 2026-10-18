@@ -156,7 +156,10 @@ class StreakSyncTable(
         val learnedSomething = merged.bestDays != row.bestDays || merged.activeDays != row.activeDays.toSortedSet().toList() ||
             merged.hasCelebratedWeekStreak != row.hasCelebratedWeekStreak ||
             merged.hasCelebratedMonthStreak != row.hasCelebratedMonthStreak
-        db.streaks().upsertRaw(listOf(if (learnedSomething) merged.copy(updatedAt = ViraTime.now()) else merged))
+        // Mai abans de la fila del servidor: si el rellotge de l'altre telèfon va avançat, el servidor
+        // rebutjaria la pujada.
+        val stamp = maxOf(ViraTime.now(), row.updatedAt.plusNanos(1_000))
+        db.streaks().upsertRaw(listOf(if (learnedSomething) merged.copy(updatedAt = stamp) else merged))
         afterApply(db)
     }
 }

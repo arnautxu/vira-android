@@ -180,7 +180,9 @@ class ViraSyncEngine(
                     throw error
                 }
                 failed += name
-                if (firstFailure == null) firstFailure = error
+                // Un error que es pot tornar a provar passa al davant: si no, el treball en segon pla
+                // no ho tornaria a intentar per culpa d'una altra taula que el servidor rebutja sempre.
+                if (firstFailure == null || (!firstFailure.isRetryable() && error.isRetryable())) firstFailure = error
             }
         }
 
@@ -276,6 +278,7 @@ class ViraSyncEngine(
         }
         requireCurrentAccount()
         table.afterPull(db)
+        requireCurrentAccount()
         newest?.let { cursors.set("pull.${table.table}", it) }
     }
 
@@ -314,11 +317,16 @@ class ViraSyncEngine(
                 identity = Identity(user.id, session.dataGeneration)
                 val token = session.accessToken()
                 requireCurrentAccount()
-                for (table in syncedTables) {
-                    rest.delete(table, listOf(Param("user_id", "eq.${user.id}")), token)
-                    requireCurrentAccount()
+                try {
+                    for (table in syncedTables) {
+                        rest.delete(table, listOf(Param("user_id", "eq.${user.id}")), token)
+                        requireCurrentAccount()
+                    }
+                } finally {
+                    // Si s'ha quedat a mitges, el telèfon encara ho té tot: sense cursors, la passada
+                    // següent ho torna a pujar sencer i el compte no es queda mig buit.
+                    cursors.reset()
                 }
-                cursors.reset()
                 _state.value = State.Succeeded(clock())
             }
             ViraDataEraser.eraseEverything(db, preferences, alsoErase)
@@ -336,6 +344,9 @@ class ViraSyncEngine(
     /// La identitat de la passada, no la del moment en què acaba una petició: si entremig s'ha
     /// tancat la sessió o ha entrat un altre compte, el que arriba no és d'aquest telèfon.
     private data class Identity(val userId: UUID, val generation: UUID)
+
+    /// Un error que no és de Vira acaba com a `UNAVAILABLE`, que sí que es torna a provar.
+    private fun Exception?.isRetryable() = (this as? ViraBackendException)?.error?.isRetryable ?: true
 
     private class AccountChanged : CancellationException("Ha canviat el compte")
 

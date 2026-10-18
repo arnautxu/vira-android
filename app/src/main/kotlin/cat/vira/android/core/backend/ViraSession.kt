@@ -77,7 +77,11 @@ class ViraSession(
     /// En arrencar. Si el testimoni ha caducat amb l'app tancada, el renova en silenci.
     suspend fun restore() {
         val auth = auth ?: run { _state.value = State.Unconfigured; return }
-        val saved = auth.storedSession() ?: run { _state.value = State.SignedOut; return }
+        val saved = auth.storedSession() ?: run {
+            setRecovering(false)
+            _state.value = State.SignedOut
+            return
+        }
         stored = saved
         claimLocalData(saved.user, isNewSignIn = false)
         // Si Android va tancar l'app entre l'enllaç i la contrasenya nova, la pantalla torna a sortir.
@@ -272,6 +276,8 @@ class ViraSession(
     }
 
     private suspend fun adopt(session: ViraStoredSession) {
+        // Una sessió nova no és una recuperació; si ho és, `handleCallback` ho torna a dir just després.
+        setRecovering(false)
         stored = session
         _lastError.value = null
         verifiedConsent = null

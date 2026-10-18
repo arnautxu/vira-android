@@ -301,6 +301,23 @@ class ViraSyncEngineTest {
     }
 
     @Test
+    fun unEsborratAMitgesTornaAPujarHoTot() = runBlocking {
+        store.create(db.planItems(), PlanItem(title = "Deures"))
+        val engine = engine(ViraConsentStatus.GRANTED)
+        engine.sync()
+        assertTrue(ViraSyncCursors(preferences).get("push.plan_items") != null)
+
+        server.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse =
+                if (request.method == "DELETE") MockResponse().setResponseCode(503) else MockResponse().setBody("[]")
+        }
+        assertTrue(runCatching { engine.eraseEverything() }.isFailure)
+        // El telèfon ho conserva i, sense cursors, la passada següent ho torna a enviar sencer.
+        assertEquals(1, db.planItems().all().size)
+        assertEquals(null, ViraSyncCursors(preferences).get("push.plan_items"))
+    }
+
+    @Test
     fun esborrarHoTotComencaPelServidor() = runBlocking {
         store.create(db.planItems(), PlanItem(title = "Deures"))
         val engine = engine(ViraConsentStatus.GRANTED)
