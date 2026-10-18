@@ -324,6 +324,26 @@ class ViraSyncEngineTest {
     }
 
     @Test
+    fun unaRatxaMesNovaNoPerdElsDiesQueNomesSabiaElServidor() = runBlocking {
+        val mine = Instant.parse("2026-10-17T00:00:00Z")
+        val theirs = Instant.parse("2026-10-10T00:00:00Z")
+        db.streaks().upsertRaw(listOf(store.streak().copy(
+            bestDays = 2, activeDays = listOf(mine), updatedAt = Instant.parse("2026-10-17T12:00:00Z"),
+        )))
+        serverRows["streaks"] = """[{"current_days":1,"best_days":9,"last_active_day":null,"freezes_available":2,
+            "freezes_used_this_month":0,"last_grant_month":24322,"is_frozen":false,"protected_days":[],
+            "active_days":["2026-10-10T00:00:00+00:00"],"is_visible":true,"has_celebrated_week_streak":true,
+            "has_celebrated_month_streak":false,"updated_at":"2026-10-11T10:00:00+00:00","user_id":"$userId"}]"""
+        engine(ViraConsentStatus.GRANTED).sync()
+        val streak = store.streak()
+        assertEquals(listOf(theirs, mine), streak.activeDays)
+        assertEquals(9, streak.bestDays)
+        assertTrue(streak.hasCelebratedWeekStreak)
+        // I puja: és el que els altres telèfons encara no saben.
+        assertTrue(bodies("streaks").isNotEmpty())
+    }
+
+    @Test
     fun elCursorNoBaixaDeLAnyU() {
         val cursors = ViraSyncCursors(preferences)
         cursors.set("pull.progress_counters", ViraTime.distantPast)

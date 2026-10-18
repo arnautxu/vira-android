@@ -35,6 +35,9 @@ abstract class ViraSyncTable<R : ViraSyncRow>(
     abstract suspend fun local(db: ViraDatabase): List<R>
     abstract suspend fun apply(rows: List<R>, db: ViraDatabase)
 
+    /// Després de la baixada sencera de la taula (totes les pàgines, o cap si no hi havia res de nou).
+    open suspend fun afterPull(db: ViraDatabase) {}
+
     fun encode(row: R): JsonObject = ViraJson.json.encodeToJsonElement(serializer, row).jsonObject
     fun decode(row: JsonObject): R = ViraJson.json.decodeFromJsonElement(serializer, row)
 

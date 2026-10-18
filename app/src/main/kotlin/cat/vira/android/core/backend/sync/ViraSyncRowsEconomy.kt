@@ -4,6 +4,7 @@ package cat.vira.android.core.backend.sync
 
 import cat.vira.android.core.backend.InstantSerializer
 import cat.vira.android.core.backend.UuidSerializer
+import androidx.room.withTransaction
 import cat.vira.android.core.data.ViraDatabase
 import cat.vira.android.core.data.ViraStore
 import cat.vira.android.core.data.model.AccessoryOwnership
@@ -39,7 +40,12 @@ class CoinTransactionSyncTable(private val store: (ViraDatabase) -> ViraStore) :
         db.coinTransactions().upsertRaw(rows.filter { it.id !in existing }.map {
             CoinTransaction(id = it.id, amount = it.amount, reasonRaw = it.reason, createdAt = it.createdAt, updatedAt = it.updatedAt)
         })
-        reconcileBalanceWithLedger(db, store(db))
+    }
+
+    /// Amb el llibre sencer, no pàgina a pàgina: la reparació només suma, i una pàgina de guanys
+    /// sense la de despeses deixaria el saldo enfilat per sempre.
+    override suspend fun afterPull(db: ViraDatabase) {
+        db.withTransaction { reconcileBalanceWithLedger(db, store(db)) }
     }
 
     companion object {

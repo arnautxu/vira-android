@@ -258,18 +258,16 @@ class ViraSyncEngine(
             requireCurrentAccount()
             if (!allowsNow(table)) return
             val batchNewest = page.map(table::decode).maxOfOrNull { it.updatedAt } ?: break
-            // Si l'esborrat d'aquest telèfon encara no ha arribat al servidor (ha fallat), la fila
-            // torna a baixar: no s'ha de ressuscitar.
-            val buried: Set<UUID?> = db.tombstones().recordIDs(table.table).toSet()
-            val rows = page.filter { it.recordID() !in buried }.map(table::decode)
-
             // Res d'això és un canvi local: s'escriu en cru, sense segellar. Si es datés amb l'hora
             // d'ara, es tornaria a enviar tot seguit i la pilota no pararia mai.
             // Dins de la transacció: si entremig ha entrat un altre compte, el seu esborrat ja ha passat
             // o s'espera que acabem, i les files del compte vell no hi poden entrar.
             db.withTransaction {
                 requireCurrentAccount()
-                table.apply(rows, db)
+                // Si l'esborrat d'aquest telèfon encara no ha arribat al servidor (ha fallat, o s'acaba
+                // de fer), la fila torna a baixar: no s'ha de ressuscitar.
+                val buried: Set<UUID?> = db.tombstones().recordIDs(table.table).toSet()
+                table.apply(page.filter { it.recordID() !in buried }.map(table::decode), db)
             }
 
             newest = maxOf(newest ?: batchNewest, batchNewest)
@@ -277,6 +275,7 @@ class ViraSyncEngine(
             boundary = ViraSyncPage.after(ViraSyncPage.boundary(page.last(), table.tieColumns))
         }
         requireCurrentAccount()
+        table.afterPull(db)
         newest?.let { cursors.set("pull.${table.table}", it) }
     }
 

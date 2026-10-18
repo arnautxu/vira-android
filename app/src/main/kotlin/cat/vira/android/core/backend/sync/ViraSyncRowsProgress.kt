@@ -118,7 +118,21 @@ class StreakSyncTable(
     override suspend fun apply(rows: List<StreakSyncRow>, db: ViraDatabase) {
         val row = rows.lastOrNull() ?: return
         val model = store(db).streak()
-        if (!shouldOverwrite(row, model)) return
+        if (!shouldOverwrite(row, model)) {
+            // El d'aquí és més nou i es queda, però el que només creix (dies, rècord, celebracions) es
+            // suma igualment: si no, la propera pujada esborraria la història que només sabia el servidor.
+            val union = model.copy(
+                bestDays = maxOf(model.bestDays, row.bestDays),
+                activeDays = (model.activeDays + row.activeDays).toSortedSet().toList(),
+                hasCelebratedWeekStreak = model.hasCelebratedWeekStreak || row.hasCelebratedWeekStreak,
+                hasCelebratedMonthStreak = model.hasCelebratedMonthStreak || row.hasCelebratedMonthStreak,
+            )
+            if (union != model) {
+                db.streaks().upsertRaw(listOf(union.copy(updatedAt = maxOf(ViraTime.now(), model.updatedAt))))
+                afterApply(db)
+            }
+            return
+        }
         val merged = model.copy(
             currentDays = row.currentDays,
             // El rècord no baixa mai, ni tan sols per una fila més nova d'un telèfon que en sabia menys.
