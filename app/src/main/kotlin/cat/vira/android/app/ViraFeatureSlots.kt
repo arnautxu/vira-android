@@ -29,6 +29,7 @@ import cat.vira.android.core.design.PendingScreen
 import cat.vira.android.core.design.components.ViraActionButton
 import cat.vira.android.core.design.components.ViraActionHierarchy
 import cat.vira.android.core.design.tokens.ViraSpacing
+import cat.vira.android.features.progress.recordProgress
 import cat.vira.android.features.entry.EntryRequest
 import cat.vira.android.features.focus.FocusProfileEditorScreen
 import cat.vira.android.features.focus.FocusScreen
@@ -116,7 +117,7 @@ internal object ViraFeatureSlots {
     /// Fil Viri i ratxa (`features/progress`): concedeix la recompensa d'una acció feta i en torna
     /// (monedes, XP). Ha de passar per `ViraProgress.record`, que també compta el dia per a la ratxa;
     /// l'XP és `ViraRewards.rule(reason)?.coins`. Mai des de medicació.
-    suspend fun commitReward(backend: ViraBackend, reason: CoinReason): Pair<Int, Int> = 0 to 0
+    suspend fun commitReward(backend: ViraBackend, reason: CoinReason): Pair<Int, Int> = recordProgress(backend, reason)
 
     /// Fil Pla (`HabitCelebrationView`): la celebració a pantalla completa del primer hàbit del dia.
     /// Mentre no hi és, es tanca sola.
