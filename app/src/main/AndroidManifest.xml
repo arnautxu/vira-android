@@ -11,6 +11,8 @@
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <!-- Ajuda ara (`features/help`): la vibració que marca la respiració. -->
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- Avui (`features/today`): llegeix el calendari del sistema, només si l'interruptor és encès. -->
+    <uses-permission android:name="android.permission.READ_CALENDAR" />
 
     <application
         android:name=".ViraApp"
