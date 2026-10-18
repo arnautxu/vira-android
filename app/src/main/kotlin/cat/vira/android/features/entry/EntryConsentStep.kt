@@ -29,6 +29,7 @@ import cat.vira.android.core.design.tokens.ViraColor
 import cat.vira.android.core.design.tokens.ViraFont
 import cat.vira.android.core.design.tokens.ViraSpacing
 import cat.vira.android.core.design.tokens.ViraTouch
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 
 /// E8 · El permís del tutor (`EntryConsentStep.swift`).
@@ -140,6 +141,10 @@ fun EntryNicknameStep(services: EntryServices, onContinue: () -> Unit) {
         scope.launch {
             try {
                 if (trimmed != stored) services.setDisplayName(trimmed)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (_: Exception) {
+                // El malnom és opcional i es pot posar després al Perfil: no atura el flux.
             } finally {
                 saving = false
             }
