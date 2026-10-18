@@ -26,6 +26,7 @@ import cat.vira.android.core.data.model.Streak
 import cat.vira.android.core.data.model.SyncTombstone
 import cat.vira.android.core.data.model.ViraProfile
 import kotlinx.coroutines.flow.Flow
+import java.time.Instant
 import java.util.UUID
 
 /// Escriptura en cru, **sense segellar**.
@@ -133,6 +134,10 @@ interface ViraRowDao<T> {
 @Dao interface CoinTransactionDao : ViraRowDao<CoinTransaction> {
     @Query("SELECT * FROM CoinTransaction") suspend fun all(): List<CoinTransaction>
     @Query("SELECT * FROM CoinTransaction ORDER BY createdAt DESC") fun observeAll(): Flow<List<CoinTransaction>>
+    /// Concessions (moviments positius) d'un motiu dins d'un interval: el sostre diari de `ViraRewards`.
+    /// Amb límit superior: una fila d'un altre telèfon amb el rellotge avançat no ha de gastar el d'avui.
+    @Query("SELECT COUNT(*) FROM CoinTransaction WHERE reasonRaw = :reasonRaw AND amount > 0 AND createdAt >= :from AND createdAt < :until")
+    suspend fun grantsBetween(reasonRaw: String, from: Instant, until: Instant): Int
     @Query("DELETE FROM CoinTransaction") suspend fun deleteAll()
 }
 
