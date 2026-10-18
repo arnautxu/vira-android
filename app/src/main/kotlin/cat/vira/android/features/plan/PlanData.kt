@@ -6,6 +6,7 @@ import cat.vira.android.core.data.ViraTime
 import cat.vira.android.core.data.model.CoinReason
 import cat.vira.android.core.data.model.Habit
 import cat.vira.android.core.data.model.HabitLog
+import cat.vira.android.features.progress.logic.ViraProgress
 import cat.vira.android.core.data.model.IntakeStatus
 import cat.vira.android.core.data.model.Medication
 import cat.vira.android.core.data.model.MedicationIntake
@@ -151,7 +152,7 @@ class PlanActions(
                     reason = CoinReason.HABIT,
                     onUndo = { write { db.habitLogs().byId(log.id)?.let { delete(it) } } },
                     onCommit = {
-                        store?.let { it.save(it.db.progressCounters(), it.counter().let { c -> c.copy(habitsCompletedCount = c.habitsCompletedCount + 1) }) }
+                        store?.let { ViraProgress(it).countHabitCompleted() }
                     },
                     title = habit.title,
                 ),

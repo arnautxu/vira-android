@@ -367,50 +367,6 @@ private fun DayCell(day: LocalDate, isSelected: Boolean, isToday: Boolean, count
     }
 }
 
-/// Escena de Viri amb una bombolla que trepitja la vora (`RewardsSceneCard`). Provisional: quan
-/// Viri i ratxa en publiqui la de tota l'app, aquesta marxa.
-@Composable
-fun PlanSceneCard(
-    @DrawableRes scene: Int,
-    message: String,
-    modifier: Modifier = Modifier,
-    content: @Composable ColumnScope.() -> Unit = {},
-) {
-    val shape = RoundedCornerShape(ViraRadius.l)
-    val isLarge = LocalViraEnvironment.current.isAccessibilitySize
-    val spoken = stringResource(R.string.today_viri_a11y, message)
-    Column(
-        modifier.fillMaxWidth()
-            .shadow(14.dp, shape, ambientColor = ViraColor.accent(area).copy(alpha = 0.18f), spotColor = ViraColor.accent(area).copy(alpha = 0.18f))
-            .clip(shape)
-            .background(ViraGradient.card(area), shape),
-    ) {
-        Image(
-            painterResource(scene),
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxWidth().height(if (isLarge) 120.dp else 184.dp).semantics { invisibleToUser() },
-        )
-        Column(
-            Modifier.padding(start = ViraSpacing.m, end = ViraSpacing.m, bottom = ViraSpacing.m),
-            verticalArrangement = Arrangement.spacedBy(ViraSpacing.s),
-        ) {
-            Text(
-                message,
-                style = ViraFont.headline,
-                color = ViraColor.textPrimary,
-                modifier = Modifier.pullUp(ViraSpacing.xxl)
-                    .fillMaxWidth()
-                    .shadow(10.dp, shape, ambientColor = ViraColor.accent(area).copy(alpha = 0.16f), spotColor = ViraColor.accent(area).copy(alpha = 0.16f))
-                    .background(ViraColor.surfaceElevated, shape)
-                    .padding(horizontal = ViraSpacing.m, vertical = ViraSpacing.s)
-                    .clearAndSetSemantics { contentDescription = spoken },
-            )
-            content()
-        }
-    }
-}
-
 /// Mes i any, amb la primera lletra en majúscula (`.dateTime.month(.wide).year()`).
 @Composable
 @ReadOnlyComposable
