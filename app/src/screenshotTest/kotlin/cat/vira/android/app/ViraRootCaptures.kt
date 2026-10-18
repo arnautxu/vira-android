@@ -27,3 +27,6 @@ private fun Root(tab: ViraTab) {
 
 @PreviewTest @RootCaptures @Composable fun RootToday() = Root(ViraTab.Today)
 @PreviewTest @RootCaptures @Composable fun RootPlan() = Root(ViraTab.Plan)
+
+/// La pantalla del bloqueig de l'app (Ajustos → Privacitat), neutra i sense Viri.
+@PreviewTest @RootCaptures @Composable fun AppLock() = ViraTheme(reduceMotion = true) { ViraLockScreen(onUnlock = {}) }

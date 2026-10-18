@@ -3,6 +3,7 @@ package cat.vira.android.app
 import cat.vira.android.core.data.model.CoinReason
 import cat.vira.android.core.design.components.CompletionPhase
 import cat.vira.android.core.design.components.PendingCompletion
+import cat.vira.android.features.progress.logic.ChallengeItem
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.TestScope
@@ -19,12 +20,56 @@ class CompletionQueueTest {
 
     private val committed = mutableListOf<CoinReason>()
 
-    private fun TestScope.queue(firstHabit: Boolean = true, commitMillis: Long = 0) = CompletionQueue(
+    private val deferrals = mutableListOf<Boolean>()
+
+    private fun TestScope.queue(
+        firstHabit: Boolean = true,
+        commitMillis: Long = 0,
+        challenge: ChallengeMoment? = null,
+    ) = CompletionQueue(
         scope = backgroundScope,
-        commit = { reason -> delay(commitMillis); committed += reason; 3 to 3 },
+        commit = { reason, _ -> delay(commitMillis); committed += reason; 3 to 3 },
         isFirstHabitOfDay = { firstHabit },
         undoWindowMillis = { 2_000 },
-    )
+        challengeCompleted = { _, _ -> challenge },
+    ).also { it.deferStreak = { deferred -> deferrals += deferred } }
+
+    @Test
+    fun `una acció nova a mitja concessió no deixa la ratxa retinguda`() = runTest {
+        val queue = queue(commitMillis = 1_000)
+        queue.present(PendingCompletion("plan-1", CoinReason.PLAN_ITEM, onUndo = {}))
+        advanceTimeBy(2_500)
+        queue.present(PendingCompletion("plan-2", CoinReason.PLAN_ITEM, onUndo = {}))
+        advanceTimeBy(10_000)
+        runCurrent()
+        assertEquals(deferrals.count { it }, deferrals.count { !it })
+    }
+
+    @Test
+    fun `la ratxa es reté mentre es concedeix i s'allibera si no s'obre res`() = runTest {
+        val queue = queue()
+        queue.present(PendingCompletion("plan-1", CoinReason.PLAN_ITEM, onUndo = {}))
+        advanceTimeBy(2_001)
+        runCurrent()
+        assertEquals(listOf(true, false), deferrals)
+    }
+
+    @Test
+    fun `el moment de repte surt un cop per cicle i reté la ratxa`() = runTest {
+        val item = ChallengeItem.catalog.first()
+        val queue = queue(challenge = ChallengeMoment(item, item.threshold, "${item.key}-0"))
+        queue.present(PendingCompletion("plan-1", CoinReason.PLAN_ITEM, onUndo = {}))
+        advanceTimeBy(2_001)
+        runCurrent()
+        assertEquals(item, queue.challengeMoment?.item)
+        assertEquals(listOf(true), deferrals)
+
+        queue.challengeMoment = null
+        queue.present(PendingCompletion("plan-2", CoinReason.PLAN_ITEM, onUndo = {}))
+        advanceTimeBy(2_001)
+        runCurrent()
+        assertNull(queue.challengeMoment)
+    }
 
     @Test
     fun `desfer dins de la finestra no concedeix res`() = runTest {

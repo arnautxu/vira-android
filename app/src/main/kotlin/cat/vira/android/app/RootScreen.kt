@@ -1,6 +1,7 @@
 package cat.vira.android.app
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -12,24 +13,35 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import cat.vira.android.R
+import cat.vira.android.ViraApp
 import cat.vira.android.core.data.ViraPreferences
 import cat.vira.android.core.design.components.ViraProfileSummary
 import cat.vira.android.core.design.components.ViraTabBar
 import cat.vira.android.core.design.components.ViraTabBarItem
 import cat.vira.android.core.design.components.ViraTopBar
 import cat.vira.android.core.design.tokens.ViraColor
+import cat.vira.android.core.notifications.ViraNotifications
 import cat.vira.android.features.emotions.EmotionsScreen
+import cat.vira.android.features.entry.ViraTutorialOverlay
+import cat.vira.android.features.focus.FocusResumeEffect
 import cat.vira.android.features.plan.PlanScreen
 import cat.vira.android.features.progress.ProgressScreen
 import cat.vira.android.features.today.TodayScreen
@@ -40,10 +52,27 @@ import cat.vira.android.features.today.TodayScreen
 fun RootScreen() {
     val navController = rememberNavController()
     val navigator = rememberViraNavigator()
-    SideEffect {
+    // Un `DisposableEffect` i no un `SideEffect`: aquests s'executen després de tots els efectes, i
+    // la represa del focus d'aquí sota ja pot navegar a la primera composició, si l'activitat neix represa.
+    DisposableEffect(navController) {
         navigator.presentModal = { modal -> navController.navigate(modal.route) { launchSingleTop = true } }
+        onDispose { }
     }
     val close: () -> Unit = { navController.popBackStack() }
+    val app = LocalContext.current.applicationContext as ViraApp
+    val celebrations = app.celebrations
+    // L'avís tocat porta a Avui o al check-in, com `openFromIntent` de l'iPhone: una pantalla oberta,
+    // mai una dada escrita.
+    val notificationDestination by app.notificationDestination.collectAsStateWithLifecycle()
+    LaunchedEffect(notificationDestination) {
+        when (notificationDestination ?: return@LaunchedEffect) {
+            ViraNotifications.DESTINATION_CHECK_IN -> navigator.navigate(ViraDestination.Emotions(EmotionsSection.CheckIn))
+            else -> navigator.open(ViraTab.Today)
+        }
+        app.notificationDestination.value = null
+    }
+    // Una sessió en marxa torna a la vista quan l'app torna a primer pla (des de l'avís fix).
+    FocusResumeEffect { navigator.startFocus(navigator.focusLink) }
 
     CompositionLocalProvider(LocalViraNavigator provides navigator) {
         ViraCompletionQueue {
@@ -75,6 +104,7 @@ fun RootScreen() {
                     ViraFeatureSlots.FocusProfileEditor(profileId = navigator.editingFocusProfileId, onClose = close)
                 }
             }
+            ViraCelebrations(celebrations)
         }
     }
 }
@@ -85,26 +115,64 @@ fun RootScreen() {
 private fun MainTabs(navigator: ViraNavigator) {
     val stateHolder = rememberSaveableStateHolder()
     val tab = navigator.selectedTab
+    val tutorial = rememberViraTutorial(navigator)
+    // Mentre hi ha la cortina, cap celebració agafa la pantalla; es queden pendents.
+    val app = LocalContext.current.applicationContext as ViraApp
+    val celebrations = app.celebrations
+    // L'avís tocat porta a Avui o al check-in, com `openFromIntent` de l'iPhone: una pantalla oberta,
+    // mai una dada escrita.
+    val notificationDestination by app.notificationDestination.collectAsStateWithLifecycle()
+    LaunchedEffect(notificationDestination) {
+        when (notificationDestination ?: return@LaunchedEffect) {
+            ViraNotifications.DESTINATION_CHECK_IN -> navigator.navigate(ViraDestination.Emotions(EmotionsSection.CheckIn))
+            else -> navigator.open(ViraTab.Today)
+        }
+        app.notificationDestination.value = null
+    }
+    // Sense alliberar en desaparèixer: el bloqueig de l'app treu les pestanyes un moment i el tutorial
+    // torna en desbloquejar. La propera composició ja hi posa el valor bo.
+    SideEffect { celebrations.tutorialVisible = tutorial.holdsCelebrations }
+    val tabBounds = remember { mutableStateMapOf<String, Rect>() }
 
     // Enrere des d'una altra pestanya torna a Avui, que és on s'obre l'app; des d'Avui, surt.
     BackHandler(enabled = tab != ViraTab.Today) { navigator.open(ViraTab.Today) }
+    // Amb el tutorial a la pantalla, Enrere és «Saltar»: compta com a vist, igual que el botó.
+    BackHandler(enabled = tutorial.step != null) { tutorial.finish() }
 
-    ViraRootLayout(
-        selectedTab = tab,
-        profile = rememberProfileSummary(),
-        onTabTap = navigator::open,
-        onFocus = { navigator.startFocus() },
-        onProfile = { navigator.navigate(ViraDestination.Profile) },
-        onSettings = navigator::openSettings,
-        onHelp = navigator::openHelp,
-    ) {
-        stateHolder.SaveableStateProvider(tab.route) {
-            when (tab) {
-                ViraTab.Today -> TodayScreen()
-                ViraTab.Plan -> PlanScreen()
-                ViraTab.Emotions -> EmotionsScreen()
-                ViraTab.Progress -> ProgressScreen()
+    Box(Modifier.fillMaxSize()) {
+        // La cortina és modal també per a TalkBack: l'arbre de sota no es pot recórrer.
+        Box(if (tutorial.step != null) Modifier.clearAndSetSemantics {} else Modifier) {
+            ViraRootLayout(
+                selectedTab = tab,
+                profile = rememberProfileSummary(),
+                onTabTap = navigator::open,
+                onFocus = { navigator.startFocus() },
+                onProfile = { navigator.navigate(ViraDestination.Profile) },
+                onSettings = navigator::openSettings,
+                onHelp = navigator::openHelp,
+                onTabBounds = { key, bounds -> tabBounds[key] = bounds },
+            ) {
+                stateHolder.SaveableStateProvider(tab.route) {
+                    when (tab) {
+                        ViraTab.Today -> TodayScreen()
+                        ViraTab.Plan -> PlanScreen()
+                        ViraTab.Emotions -> EmotionsScreen()
+                        ViraTab.Progress -> ProgressScreen()
+                    }
+                }
             }
+        }
+        val step = tutorial.step
+        AnimatedVisibility(visible = step != null, enter = fadeIn(), exit = fadeOut()) {
+            // En fondre's, `step` ja és nul: es dibuixa l'última parada fins que desapareix.
+            val shown = step ?: tutorial.lastStep ?: return@AnimatedVisibility
+            ViraTutorialOverlay(
+                step = shown,
+                spotlight = shown.tab?.let { tabBounds[it.route] },
+                prefs = tutorial.prefs,
+                onNext = tutorial::advance,
+                onSkip = tutorial::finish,
+            )
         }
     }
 }
@@ -123,6 +191,7 @@ fun ViraRootLayout(
     onProfile: () -> Unit,
     onSettings: () -> Unit,
     onHelp: () -> Unit,
+    onTabBounds: (key: String, bounds: Rect) -> Unit = { _, _ -> },
     content: @Composable () -> Unit,
 ) {
     val items = ViraTab.entries.map { ViraTabBarItem(it.route, stringResource(it.title), it.icon) }
@@ -145,6 +214,7 @@ fun ViraRootLayout(
                 onTabTap = { key -> ViraTab.fromRoute(key)?.let(onTabTap) },
                 onFocus = onFocus,
                 modifier = Modifier.align(Alignment.BottomCenter),
+                onItemBounds = onTabBounds,
             )
         }
     }
