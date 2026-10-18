@@ -48,13 +48,14 @@ object ViraNotificationPreferences {
     const val VIRI_DEFAULT_MINUTE = 30
 
     /// Totes les claus d'avisos a fàbrica. La crida `ViraNotifications.cancelEverything`.
-    fun reset(p: SharedPreferences) = p.edit {
-        listOf(
-            REMINDERS_ENABLED, REMINDERS_HABITS_ENABLED, REMINDERS_MEDICATION_ENABLED, REMINDERS_PLAN_ENABLED,
-            REMINDERS_EMOTION_ENABLED, EMOTION_REMINDER_HOUR, EMOTION_REMINDER_MINUTE, NOTIFICATION_DETAIL_ENABLED,
-            NOTIFICATION_DETAIL_MEDICATION_ENABLED, VIRI_MESSAGES_ENABLED, VIRI_MESSAGE_HOUR, VIRI_MESSAGE_MINUTE,
-        ).forEach(::remove)
-    }
+    fun reset(p: SharedPreferences) = p.edit { KEYS.forEach(::remove) }
+
+    /// Totes les preferències que decideixen quins avisos hi ha i què diuen.
+    val KEYS = setOf(
+        REMINDERS_ENABLED, REMINDERS_HABITS_ENABLED, REMINDERS_MEDICATION_ENABLED, REMINDERS_PLAN_ENABLED,
+        REMINDERS_EMOTION_ENABLED, EMOTION_REMINDER_HOUR, EMOTION_REMINDER_MINUTE, NOTIFICATION_DETAIL_ENABLED,
+        NOTIFICATION_DETAIL_MEDICATION_ENABLED, VIRI_MESSAGES_ENABLED, VIRI_MESSAGE_HOUR, VIRI_MESSAGE_MINUTE,
+    )
 
     fun remindersEnabled(p: SharedPreferences) = p.getBoolean(REMINDERS_ENABLED, true)
     fun habitsEnabled(p: SharedPreferences) = p.getBoolean(REMINDERS_HABITS_ENABLED, true)

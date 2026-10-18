@@ -282,6 +282,7 @@ object ViraNotifications {
     /// cap avís recordi una cosa ja feta. `request` ajunta les ràfegues en una sola passada.
     fun watch(context: Context, db: ViraDatabase) {
         val appContext = context.applicationContext
+        preferenceContext = appContext
         db.invalidationTracker.addObserver(
             object : InvalidationTracker.Observer(WATCHED_TABLES) {
                 override fun onInvalidated(tables: Set<String>) {
@@ -295,7 +296,19 @@ object ViraNotifications {
                 }
             },
         )
+        // Un interruptor o una hora d'Ajustos (o de l'entrada) també: viuen fora de Room.
+        val preferences = ViraPreferences.open(appContext)
+        preferences.registerOnSharedPreferenceChangeListener(preferenceListener)
     }
+
+    /// Android només guarda una referència feble a l'escoltador: ha de viure aquí.
+    private val preferenceListener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+        if (key == null || key in ViraNotificationPreferences.KEYS) {
+            preferenceContext?.let { context -> watchScope.launch { reschedule(context) } }
+        }
+    }
+
+    @Volatile private var preferenceContext: Context? = null
 
     private val watchScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
