@@ -1,10 +1,22 @@
 name: Android
 
+# Un sol disparador: cada push. Abans també hi havia `pull_request`, i cada commit d'una branca
+# amb PR es compilava dues vegades. El push ja deixa el resultat a la PR (és el mateix commit) i
+# és qui fa les captures de captures/<branca>, que els fils necessiten abans d'obrir cap PR.
 on:
   push:
     # Les branques de captures només guarden imatges.
     branches-ignore: ['captures/**']
-  pull_request:
+    # Un canvi que només toca textos de documentació no canvia l'APK ni les captures.
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+
+# Un push nou a la mateixa branca atura el que encara corria per a l'anterior: només compta
+# l'últim. A main no s'atura res, perquè cada build de main és una release.
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 permissions:
   contents: write
@@ -31,7 +43,7 @@ jobs:
       # El nom de l'artefacte no pot portar «/», i les branques dels fils sí (claude/…).
       - name: Nom de l'artefacte
         id: artefacte
-        run: echo "nom=vira-debug-${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}" | tr '/' '-' >> "$GITHUB_OUTPUT"
+        run: echo "nom=vira-debug-${GITHUB_REF_NAME}" | tr '/' '-' >> "$GITHUB_OUTPUT"
 
       - name: Desa l'APK de la branca
         uses: actions/upload-artifact@v4
@@ -52,11 +64,11 @@ jobs:
           fi
 
       - name: Fa les captures de la branca
-        if: github.event_name == 'push' && github.ref != 'refs/heads/main'
+        if: github.ref != 'refs/heads/main'
         run: ./gradlew updateDebugScreenshotTest --no-daemon --no-configuration-cache
 
       - name: Publica les captures a captures/<branca>
-        if: github.event_name == 'push' && github.ref != 'refs/heads/main'
+        if: github.ref != 'refs/heads/main'
         run: |
           set -e
           src=$(find app/src -type d -name reference -path '*creenshot*' | head -1)
