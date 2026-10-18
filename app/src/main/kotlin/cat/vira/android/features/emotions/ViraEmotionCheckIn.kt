@@ -5,6 +5,7 @@ import cat.vira.android.core.data.ViraStore
 import cat.vira.android.core.data.model.CoinReason
 import cat.vira.android.core.data.model.Emotion
 import cat.vira.android.core.data.model.EmotionEntry
+import cat.vira.android.features.progress.logic.ViraProgress
 
 /// Únic punt per convertir una selecció **confirmada** del check-in en un registre real
 /// (`ViraEmotionCheckIn` de l'iPhone).
@@ -14,11 +15,6 @@ import cat.vira.android.core.data.model.EmotionEntry
 /// si el disc rebutja el desat no queda res a mitges. Qualsevol altre camí que registri una emoció
 /// (els avisos, per exemple) ha de passar per aquí.
 object ViraEmotionCheckIn {
-
-    /// L'XP, les monedes i la ratxa (`ViraProgress.record(.emotion)` de l'iPhone). Els porta el fil
-    /// de Viri i ratxa; fins que arribin a `main`, la crida és buida.
-    // TODO(emocions): substituir per `ViraProgress.record(store, CoinReason.EMOTION)` en fusionar.
-    internal var progress: suspend (ViraStore, CoinReason) -> Unit = { _, _ -> }
 
     suspend fun record(
         store: ViraStore,
@@ -30,9 +26,10 @@ object ViraEmotionCheckIn {
             store.db.emotionEntries(),
             EmotionEntry(emotionRaw = emotion.raw, intensityRaw = intensity?.raw, note = note?.trim()?.ifEmpty { null }),
         )
-        progress(store, CoinReason.EMOTION)
-        val counter = store.counter()
-        store.save(store.db.progressCounters(), counter.copy(emotionCheckinsCount = counter.emotionCheckinsCount + 1))
+        // L'XP, les monedes i la ratxa (`ViraProgress.record(.emotion)` de l'iPhone), i el recompte.
+        val progress = ViraProgress(store)
+        progress.record(CoinReason.EMOTION)
+        progress.countEmotionCheckIn()
         entry
     }
 }

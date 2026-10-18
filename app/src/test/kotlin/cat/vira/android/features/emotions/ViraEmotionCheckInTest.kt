@@ -8,6 +8,8 @@ import cat.vira.android.core.data.ViraPreferences
 import cat.vira.android.core.data.ViraStore
 import cat.vira.android.core.data.model.Emotion
 import cat.vira.android.core.data.model.emotion
+import cat.vira.android.features.progress.logic.StreakRules
+import cat.vira.android.features.progress.logic.ViraProgress
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -50,6 +52,21 @@ class ViraEmotionCheckInTest {
         assertEquals(EmotionIntensity.MUCH, stored.intensity)
         assertEquals("Dia difícil", stored.note)
         assertEquals(1, store.counter().emotionCheckinsCount)
+    }
+
+    /// Registrar suma monedes i XP i omple la condició d'emoció del dia per a la ratxa, amb el
+    /// sostre diari de l'iPhone (10 monedes, dues vegades al dia).
+    @Test
+    fun registrarSumaMonedesIRatxa() = runBlocking {
+        ViraEmotionCheckIn.record(store, Emotion.CONTENT)
+        assertEquals(10, store.counter().coinBalance)
+        assertEquals(10, store.counter().totalXP)
+        assertFalse(StreakRules.DayRequirement.EMOTION in ViraProgress(store).missingRequirements())
+
+        ViraEmotionCheckIn.record(store, Emotion.TIRED)
+        ViraEmotionCheckIn.record(store, Emotion.SAD)
+        assertEquals(20, store.counter().coinBalance)
+        assertEquals(3, store.counter().emotionCheckinsCount)
     }
 
     @Test
