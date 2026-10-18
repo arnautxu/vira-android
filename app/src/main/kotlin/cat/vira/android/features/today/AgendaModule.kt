@@ -36,7 +36,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.Role
@@ -48,6 +47,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import cat.vira.android.R
+import cat.vira.android.core.design.viraLocale
 import cat.vira.android.core.data.model.PlanItem
 import cat.vira.android.core.design.LocalViraEnvironment
 import cat.vira.android.core.design.components.ViraCompletionCheck
@@ -315,7 +315,7 @@ internal fun TimeLabel(time: Instant?, zone: ZoneId, ink: androidx.compose.ui.gr
 
 @Composable
 internal fun formatTime(time: Instant, zone: ZoneId): String {
-    val locale = LocalConfiguration.current.locales[0]
+    val locale = viraLocale()
     return remember(time, zone, locale) {
         DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(locale).format(time.atZone(zone))
     }

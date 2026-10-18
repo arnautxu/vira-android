@@ -114,7 +114,7 @@ internal object TodayPlanRules {
 
     /// Dies addicionals de la sèrie, sense repetir el primer. La setmana acaba on la fa acabar la
     /// configuració regional, com `Calendar.dateInterval(of: .weekOfYear)` de l'iPhone.
-    fun additionalDays(recurrence: PlanItemRecurrence, start: Instant, zone: ZoneId, locale: Locale = Locale.getDefault()): List<Instant> {
+    fun additionalDays(recurrence: PlanItemRecurrence, start: Instant, zone: ZoneId, locale: Locale): List<Instant> {
         if (!createsBatch(recurrence)) return emptyList()
         val first: ZonedDateTime = start.atZone(zone).truncatedTo(ChronoUnit.DAYS)
         val last: ZonedDateTime = when (recurrence) {

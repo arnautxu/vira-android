@@ -8,6 +8,7 @@ import cat.vira.android.core.data.model.HabitLog
 import cat.vira.android.core.data.model.Medication
 import cat.vira.android.core.data.model.PlanItem
 import cat.vira.android.core.data.model.PlanItemStatus
+import cat.vira.android.core.design.ViraCapture
 import cat.vira.android.core.design.ViraTheme
 import cat.vira.android.core.design.components.ActiveCompletion
 import cat.vira.android.core.design.components.CompletionPhase
@@ -56,8 +57,10 @@ private fun data(now: Instant, items: List<PlanItem> = listOf(essay, doneTask, m
 
 @Composable
 private fun Today(data: TodayData, completion: TodayCompletion = TodayCompletion()) {
-    ViraTheme(reduceMotion = true) {
-        TodayContent(data, completion, TodayCallbacks(), isViriExpanded = true, isTomorrowExpanded = true)
+    ViraCapture {
+        ViraTheme(reduceMotion = true) {
+            TodayContent(data, completion, TodayCallbacks(), isViriExpanded = true, isTomorrowExpanded = true)
+        }
     }
 }
 
@@ -78,7 +81,7 @@ fun TodayNight() = Today(data(at(21)))
 
 /// Un dia sense res apuntat i sense nom.
 @PreviewTest @TodayCaptures @Composable
-fun TodayEmpty() = ViraTheme(reduceMotion = true) {
+fun TodayEmpty() = ViraCapture { ViraTheme(reduceMotion = true) {
     TodayContent(
         TodayData(now = at(16), zone = zone),
         TodayCompletion(),
@@ -86,14 +89,14 @@ fun TodayEmpty() = ViraTheme(reduceMotion = true) {
         isViriExpanded = true,
         isTomorrowExpanded = false,
     )
-}
+} }
 
 @PreviewTest @CaptureCaptures @Composable
-fun QuickCapture() = ViraTheme(reduceMotion = true) {
+fun QuickCapture() = ViraCapture { ViraTheme(reduceMotion = true) {
     QuickCaptureContent(initialDay = null, initialPeriod = null, onCancel = {}, onSave = { _, _, _, _, _ -> }, zone = zone, now = at(9))
-}
+} }
 
 @PreviewTest @CaptureCaptures @Composable
-fun QuickCaptureFromPlan() = ViraTheme(reduceMotion = true) {
+fun QuickCaptureFromPlan() = ViraCapture { ViraTheme(reduceMotion = true) {
     QuickCaptureContent(initialDay = tomorrow, initialPeriod = QuickCapturePeriod.Night, onCancel = {}, onSave = { _, _, _, _, _ -> }, zone = zone, now = at(9))
-}
+} }

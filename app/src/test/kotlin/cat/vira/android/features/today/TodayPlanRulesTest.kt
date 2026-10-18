@@ -31,7 +31,7 @@ class TodayPlanRulesTest {
 
     @Test
     fun cadaDiaFinsAFinalDeMesNoRepeteixElPrimer() {
-        val days = TodayPlanRules.additionalDays(PlanItemRecurrence.DAILY_UNTIL_MONTH_END, day(8, 29), zone)
+        val days = TodayPlanRules.additionalDays(PlanItemRecurrence.DAILY_UNTIL_MONTH_END, day(8, 29), zone, Locale.forLanguageTag("ca-ES"))
         assertEquals(listOf(day(8, 30), day(8, 31)), days)
     }
 

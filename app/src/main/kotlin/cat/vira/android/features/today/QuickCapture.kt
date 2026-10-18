@@ -58,7 +58,6 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -75,6 +74,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import cat.vira.android.R
+import cat.vira.android.core.design.viraLocale
 import cat.vira.android.core.data.model.PlanItemRecurrence
 import cat.vira.android.core.design.LocalViraEnvironment
 import cat.vira.android.core.design.components.ViraActionButton
@@ -134,13 +134,14 @@ fun QuickCaptureScreen(
     ) {
         val actions = rememberTodayActions()
         val scope = rememberCoroutineScope()
+        val locale = viraLocale()
         QuickCaptureContent(
             initialDay = initialDay,
             initialPeriod = initialPeriod,
             onCancel = onDismiss,
             onSave = { title, day, time, symbol, recurrence ->
                 scope.launch {
-                    if (actions.capture(title, day, time, symbol, recurrence) != null) onDismiss()
+                    if (actions.capture(title, day, time, symbol, recurrence, locale) != null) onDismiss()
                 }
             },
         )
@@ -482,7 +483,7 @@ private val PlanItemRecurrence.titleRes: Int
 
 @Composable
 private fun formatOtherDay(day: Instant, zone: ZoneId): String {
-    val locale = LocalConfiguration.current.locales[0]
+    val locale = viraLocale()
     return remember(day, locale) {
         DateTimeFormatter.ofPattern("EEE d MMM", locale).format(day.atZone(zone))
     }

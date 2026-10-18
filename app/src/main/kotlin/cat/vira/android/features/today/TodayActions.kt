@@ -14,6 +14,7 @@ import cat.vira.android.core.data.model.recurrence
 import cat.vira.android.core.data.model.status
 import java.time.Instant
 import java.time.ZoneId
+import java.util.Locale
 
 /// El que Avui escriu, sempre a través de `ViraStore` perquè tot quedi datat i viatgi.
 ///
@@ -121,6 +122,7 @@ internal class TodayActions(private val store: ViraStore, private val zone: () -
         time: Instant?,
         symbolName: String,
         recurrence: PlanItemRecurrence,
+        locale: Locale,
     ): PlanItem? {
         val trimmed = title.trim()
         if (trimmed.isEmpty()) return null
@@ -136,7 +138,7 @@ internal class TodayActions(private val store: ViraStore, private val zone: () -
             ),
         )
         if (batch) {
-            TodayPlanRules.additionalDays(recurrence, day, zone()).forEach { store.create(db.planItems(), copy(item, it)) }
+            TodayPlanRules.additionalDays(recurrence, day, zone(), locale).forEach { store.create(db.planItems(), copy(item, it)) }
         }
         return item
     }

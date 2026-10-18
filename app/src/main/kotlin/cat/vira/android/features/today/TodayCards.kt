@@ -29,7 +29,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
@@ -44,6 +43,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import cat.vira.android.R
+import cat.vira.android.core.design.viraLocale
 import cat.vira.android.core.data.model.Habit
 import cat.vira.android.core.design.LocalViraEnvironment
 import cat.vira.android.core.design.components.ViraPictogram
@@ -268,7 +268,7 @@ internal fun TodayTomorrowCard(
     modifier: Modifier = Modifier,
 ) {
     val area = ViraArea.Plan
-    val locale = LocalConfiguration.current.locales[0]
+    val locale = viraLocale()
     val weekday = day.atZone(zone).dayOfWeek.getDisplayName(TextStyle.FULL, locale)
     Column(
         modifier
