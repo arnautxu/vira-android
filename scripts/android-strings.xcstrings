@@ -185,6 +185,29 @@
           }
         }
       }
+    },
+    "settings.motivation.streak_live.hint": {
+      "comment": "Android: l'iPhone diu «Dynamic Island»; aquí és un avís fix.",
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Surt com a avís fix quan queda una hora i el dia encara no compta."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sale como aviso fijo cuando queda una hora y el día aún no cuenta."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shows up as a pinned notification when an hour is left and the day doesn't count yet."
+          }
+        }
+      }
     }
   }
 }

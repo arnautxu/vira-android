@@ -16,6 +16,8 @@ import cat.vira.android.core.design.PendingScreen
 import cat.vira.android.core.design.components.ViraActionButton
 import cat.vira.android.core.design.components.ViraActionHierarchy
 import cat.vira.android.core.design.tokens.ViraSpacing
+import cat.vira.android.features.help.HelpBreatheScreen
+import cat.vira.android.features.help.HelpScreen
 import cat.vira.android.features.settings.SettingsScreen
 import java.util.UUID
 
@@ -65,12 +67,12 @@ internal object ViraFeatureSlots {
     /// Fil Ajuda ara (`features/help`): `HelpScreen(onClose, onOpenCheckIn)`. `onOpenCheckIn`
     /// tanca Ajuda ara i obre el check-in d'Emocions.
     @Composable
-    fun Help(onClose: () -> Unit, onOpenCheckIn: () -> Unit) = PendingModal(onClose)
+    fun Help(onClose: () -> Unit, onOpenCheckIn: () -> Unit) = HelpScreen(onClose, onOpenCheckIn)
 
     /// Fil Ajuda ara: la respiració directa (`HelpBreatheScreen(onClose)`), des dels widgets, el
     /// panell ràpid i Mindfulness.
     @Composable
-    fun Breathe(onClose: () -> Unit) = PendingModal(onClose)
+    fun Breathe(onClose: () -> Unit) = HelpBreatheScreen(onClose)
 
     /// Fil Viri i ratxa (`features/progress`): concedeix la recompensa d'una acció feta i en torna
     /// (monedes, XP). Ha de passar per `ViraProgress.record`, que també compta el dia per a la ratxa;
