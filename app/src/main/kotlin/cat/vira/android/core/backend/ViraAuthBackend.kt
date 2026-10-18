@@ -46,6 +46,9 @@ interface ViraAuthBackend {
 
     suspend fun signOut()
 
+    /// Oblida la sessió desada al telèfon sense parlar amb el servidor (el compte ja no hi és).
+    suspend fun forgetSession()
+
     suspend fun updateMetadata(metadata: ViraUserMetadata): ViraUser
 }
 

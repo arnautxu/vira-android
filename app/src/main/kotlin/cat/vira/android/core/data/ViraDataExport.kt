@@ -2,6 +2,7 @@
 
 package cat.vira.android.core.data
 
+import androidx.room.withTransaction
 import cat.vira.android.core.data.model.AccessoryOwnership
 import cat.vira.android.core.data.model.AssistanceLocalNote
 import cat.vira.android.core.data.model.BadgeOwnership
@@ -78,7 +79,13 @@ object ViraDataExport {
 
     /// Llegeix totes les taules. Sense filtres ni límits: l'exportació és, per definició, **tot**.
     /// Emocions i medicació hi surten: l'usuari és qui ho demana i és seu.
-    suspend fun snapshot(db: ViraDatabase, appVersion: String, now: Instant = ViraTime.now()) = ViraDataExportSnapshot(
+    /// Totes les lectures en una transacció: si l'usuari esborra alguna cosa a mitja exportació, la
+    /// fotografia és d'abans o de després, mai una barreja.
+    suspend fun snapshot(db: ViraDatabase, appVersion: String, now: Instant = ViraTime.now()) = db.withTransaction {
+        read(db, appVersion, now)
+    }
+
+    private suspend fun read(db: ViraDatabase, appVersion: String, now: Instant) = ViraDataExportSnapshot(
         exportedAt = now,
         appVersion = appVersion,
         profile = db.profiles().all().firstOrNull()?.let(::ProfileDTO),
@@ -107,15 +114,17 @@ object ViraDataExport {
     fun encode(snapshot: ViraDataExportSnapshot): String =
         pretty.encodeToString(JsonElement.serializer(), sorted(json.encodeToJsonElement(ViraDataExportSnapshot.serializer(), snapshot)))
 
-    /// Escriu el fitxer a `directory` (la memòria cau de l'app, per compartir-lo) i el retorna. Cada
-    /// exportació porta la data al nom: no trepitja l'anterior mentre el full de compartir la té oberta.
+    /// Escriu el fitxer a `directory` (la memòria cau de l'app, per compartir-lo) i el retorna. El nom
+    /// és el de l'iPhone (`vira-AAAA-MM-DD.json`); cada exportació va a una carpeta pròpia perquè dues
+    /// del mateix dia no es trepitgin mentre el full de compartir encara en té una d'oberta.
     suspend fun writeSnapshotFile(
         db: ViraDatabase,
         directory: File,
         appVersion: String,
         today: LocalDate = LocalDate.now(ZoneId.systemDefault()),
     ): File {
-        val file = File(directory, "vira-${today.format(DateTimeFormatter.ISO_LOCAL_DATE)}.json")
+        val folder = File(directory, "export-${UUID.randomUUID()}").apply { mkdirs() }
+        val file = File(folder, "vira-${today.format(DateTimeFormatter.ISO_LOCAL_DATE)}.json")
         file.writeText(encode(snapshot(db, appVersion)))
         return file
     }

@@ -163,6 +163,41 @@ class ViraSyncEngineTest {
     }
 
     @Test
+    fun unEsborratQueNoHaArribatNoEsRessuscita() = runBlocking {
+        val item = store.create(db.planItems(), PlanItem(title = "Fora"))
+        store.delete(item)
+        server.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse {
+                requests += request
+                val table = request.requestUrl!!.pathSegments.last()
+                return when {
+                    request.method == "DELETE" -> MockResponse().setResponseCode(503)
+                    request.method == "GET" && table == "plan_items" -> MockResponse().setBody(
+                        """[{"id":"${item.id}","title":"Fora","notes":null,"day":"2026-10-18T00:00:00+00:00",
+                        "time":null,"status":"pending","completed_at":null,"reminder_offset_minutes":null,
+                        "recurrence":"none","symbol_name":"picto-flag","sort_index":0,
+                        "created_at":"2026-10-17T10:00:00+00:00","updated_at":"2030-01-01T00:00:00+00:00"}]""",
+                    )
+                    request.method == "GET" -> MockResponse().setBody("[]")
+                    else -> MockResponse().setResponseCode(201)
+                }
+            }
+        }
+        engine(ViraConsentStatus.GRANTED).sync()
+
+        assertTrue(db.planItems().all().isEmpty())
+        assertEquals(listOf(item.id), db.tombstones().recordIDs("plan_items"))
+    }
+
+    @Test
+    fun elsEsborratsVanATrossos() = runBlocking {
+        repeat(ViraSyncEngine.TOMBSTONE_CHUNK + 1) { store.delete(store.create(db.planItems(), PlanItem(title = "$it"))) }
+        engine(ViraConsentStatus.GRANTED).sync()
+        assertEquals(2, requests.count { it.method == "DELETE" })
+        assertTrue(db.tombstones().all().isEmpty())
+    }
+
+    @Test
     fun unaTaulaQueFallaNoAturaLesAltres() = runBlocking {
         server.dispatcher = object : Dispatcher() {
             override fun dispatch(request: RecordedRequest): MockResponse {
@@ -217,6 +252,7 @@ class ViraSyncEngineTest {
         override suspend fun session() = session
         override suspend fun storedSession() = session
         override suspend fun signOut() = Unit
+        override suspend fun forgetSession() = Unit
         override suspend fun updateMetadata(metadata: ViraUserMetadata) = user
     }
 }

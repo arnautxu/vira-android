@@ -116,11 +116,12 @@ class ViraSession(
     suspend fun handleCallback(uri: Uri) {
         if (uri.scheme != ViraBackendConfig.CALLBACK_SCHEME || uri.host != ViraBackendConfig.CALLBACK_HOST) return
         val isRecovery = uri.getQueryParameter("type") == "recovery" || hasPendingRecoveryRequest()
-        attempt {
+        val adopted = attempt {
             adopt(requireAuth().session(fromCallback = uri))
             if (isRecovery) _isRecoveringPassword.value = true
         }
-        preferences.edit().remove(PASSWORD_RECOVERY_REQUESTED_AT).apply()
+        // Només si ha anat bé: un reintent sense xarxa sovint torna sense `type=recovery`.
+        if (adopted != null) preferences.edit().remove(PASSWORD_RECOVERY_REQUESTED_AT).apply()
     }
 
     suspend fun updatePassword(password: String) {
@@ -132,6 +133,7 @@ class ViraSession(
 
     suspend fun signOut() {
         runCatching { auth?.signOut() }
+        runCatching { auth?.forgetSession() }
         clearLocalSession()
     }
 
@@ -140,6 +142,8 @@ class ViraSession(
     suspend fun deleteAccount() {
         val token = accessToken()
         rest.rpc("delete_current_user", JsonObject(emptyMap()), token)
+        // El compte ja no existeix: la sessió desada tampoc, o tornaria en reobrir l'app.
+        runCatching { auth?.forgetSession() }
         clearLocalSession()
     }
 
@@ -153,13 +157,17 @@ class ViraSession(
             val renewed = auth.session()
             if (generation != dataGeneration) throw CancellationException("Ha canviat el compte")
             stored = renewed
+            // El refresc porta les metadades d'ara: un permís del tutor concedit o retirat en un
+            // altre lloc ha d'arribar a `ViraSyncScope` sense tornar a entrar.
+            if (user != renewed.user) _state.value = State.SignedIn(renewed.user)
             return renewed.accessToken
         } catch (error: CancellationException) {
             throw error
         } catch (error: ViraBackendException) {
             if (generation != dataGeneration) throw CancellationException("Ha canviat el compte")
-            // Sense xarxa la sessió segueix sent bona: només es tanca quan el servidor diu que no.
-            if (error.error == ViraBackendError.OFFLINE) throw error
+            // Sense xarxa o amb el servidor caigut un moment, la sessió segueix sent bona: només es
+            // tanca quan el servidor diu que no.
+            if (error.error.isRetryable) throw error
             invalidate()
             throw ViraBackendException(ViraBackendError.SESSION_EXPIRED, error)
         }

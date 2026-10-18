@@ -19,6 +19,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import java.time.Duration
 import java.time.Instant
@@ -201,15 +203,18 @@ class ViraSyncEngine(
             val page = rest.select(table.table, query, token).map { it.jsonObject }
             requireCurrentAccount()
             if (!allowsNow(table)) return
-            val rows = page.map(table::decode)
-            val batchNewest = rows.maxOfOrNull { it.updatedAt } ?: break
+            val batchNewest = page.map(table::decode).maxOfOrNull { it.updatedAt } ?: break
+            // Si l'esborrat d'aquest telèfon encara no ha arribat al servidor (ha fallat), la fila
+            // torna a baixar: no s'ha de ressuscitar.
+            val buried: Set<UUID?> = db.tombstones().recordIDs(table.table).toSet()
+            val rows = page.filter { it.recordID() !in buried }.map(table::decode)
 
             // Res d'això és un canvi local: s'escriu en cru, sense segellar. Si es datés amb l'hora
             // d'ara, es tornaria a enviar tot seguit i la pilota no pararia mai.
             db.withTransaction { table.apply(rows, db) }
 
             newest = maxOf(newest ?: batchNewest, batchNewest)
-            if (rows.size < PAGE_SIZE) break
+            if (page.size < PAGE_SIZE) break
             boundary = ViraSyncPage.after(ViraSyncPage.boundary(page.last(), table.tieColumns))
         }
         newest?.let { cursors.set("pull.${table.table}", it) }
@@ -222,9 +227,10 @@ class ViraSyncEngine(
         requireCurrentAccount()
         val identity = identity ?: throw AccountChanged()
         val tombstones = db.tombstones().all()
-        for ((table, group) in tombstones.groupBy { it.table }) {
+        // A trossos: tots els ids van a l'adreça, i una de massa llarga no passaria mai.
+        for (group in tombstones.groupBy { it.table }.values.flatMap { it.chunked(TOMBSTONE_CHUNK) }) {
             rest.delete(
-                table,
+                group.first().table,
                 listOf(
                     Param("user_id", "eq.${identity.userId}"),
                     Param("id", "in.(${group.joinToString(",") { it.recordID.toString() }})"),
@@ -285,6 +291,9 @@ class ViraSyncEngine(
     private fun allowsNow(table: ViraSyncTable<*>) =
         ViraSyncScope.current(session, preferences).allows(table.layer)
 
+    private fun JsonObject.recordID(): UUID? =
+        (get("id") as? JsonPrimitive)?.contentOrNull?.let { runCatching { UUID.fromString(it) }.getOrNull() }
+
     private fun log(line: String) {
         try {
             Log.w("ViraSync", line)
@@ -296,6 +305,9 @@ class ViraSyncEngine(
     companion object {
         /// Files per pàgina. PostgREST en torna 1.000 com a màxim.
         const val PAGE_SIZE = 500
+
+        /// Ids per esborrat: prou curt perquè l'adreça no passi de 8 kB.
+        const val TOMBSTONE_CHUNK = 100
 
         /// Cada quant es torna a sincronitzar sola: cinc minuts, com a l'iPhone.
         val AUTOMATIC_INTERVAL: Duration = Duration.ofMinutes(5)

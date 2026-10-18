@@ -127,6 +127,8 @@ class ViraSupabaseAuth(
 
     override suspend fun signOut() = mapping { auth.signOut() }
 
+    override suspend fun forgetSession() = mapping { auth.clearSession() }
+
     override suspend fun updateMetadata(metadata: ViraUserMetadata): ViraUser = mapping {
         auth.updateUser { data = metadata.json }.toVira()
     }
