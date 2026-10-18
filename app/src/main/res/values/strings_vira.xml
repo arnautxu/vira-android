@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Generat per scripts/export-strings.py des de Localizable.xcstrings, EmotionIntensity.xcstrings de l'iPhone (commit 2a74e5d). No es toca a mà. -->
+<!-- Generat per scripts/export-strings.py des de Localizable.xcstrings, EmotionIntensity.xcstrings de l'iPhone (commit 2a74e5d) + android-strings.xcstrings. No es toca a mà. -->
 <resources>
     <string name="a11y_error">Error: %1$s</string>
     <plurals name="a11y_items_count">
@@ -915,7 +915,7 @@
     <string name="habits_new">Nou hàbit</string>
     <string name="habits_notes_placeholder">Descripció (opcional)</string>
     <string name="habits_reminder">Avís</string>
-    <string name="habits_reminder_denied">Els avisos estan desactivats a Ajustos d\'iOS.</string>
+    <string name="habits_reminder_denied">Els avisos estan desactivats als ajustos del telèfon.</string>
     <string name="habits_reminder_on">Recorda-m\'ho</string>
     <string name="habits_row_done_today">Fet avui.</string>
     <string name="habits_streak_days">%1$d dies seguits</string>
@@ -1586,16 +1586,17 @@
     <string name="settings_parent_panel_section">Família</string>
     <string name="settings_parent_panel_title">Panell de pares</string>
     <string name="settings_pending_title">Ajustos</string>
-    <string name="settings_privacy_lock">Bloqueig amb Face ID o codi</string>
+    <string name="settings_privacy_lock">Bloqueig amb empremta, cara o codi</string>
     <string name="settings_privacy_lock_button">Desbloqueja</string>
     <string name="settings_privacy_lock_reason">Desbloqueja Vira</string>
     <string name="settings_privacy_lock_title">Vira és bloquejada</string>
-    <string name="settings_privacy_lock_unavailable">Activa Face ID o un codi al dispositiu per fer-ho servir</string>
+    <string name="settings_privacy_lock_unavailable">Activa l\'empremta, la cara o un codi al telèfon per fer-ho servir</string>
     <string name="settings_privacy_section">Privacitat</string>
     <string name="settings_privacy_viri">Jo vigilo qui pot veure les teves coses.</string>
     <string name="settings_reminders_denied">Has de donar permís des dels Ajustos del telèfon.</string>
     <string name="settings_reminders_footer">Els que tenen data entren com a tasques teves. Marcar-les aquí també les marca allà.</string>
     <string name="settings_reminders_title">Recordatoris de l\'iPhone</string>
+    <string name="settings_search_empty">Cap ajust amb aquestes paraules</string>
     <string name="settings_search_keywords_about">sobre vira, versió, avís, mèdic, informació</string>
     <string name="settings_search_keywords_account">compte, correu, sessió, contrasenya, sincronització, família, pares, tutor, panell</string>
     <string name="settings_search_keywords_app">com es veu vira, mòduls, hàbits, medicació, mindfulness, calendari, recordatoris, modes de focus, concentració</string>

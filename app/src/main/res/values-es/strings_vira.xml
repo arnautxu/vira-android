@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Generat per scripts/export-strings.py des de Localizable.xcstrings, EmotionIntensity.xcstrings de l'iPhone (commit 2a74e5d). No es toca a mà. -->
+<!-- Generat per scripts/export-strings.py des de Localizable.xcstrings, EmotionIntensity.xcstrings de l'iPhone (commit 2a74e5d) + android-strings.xcstrings. No es toca a mà. -->
 <resources>
     <string name="a11y_error">Error: %1$s</string>
     <plurals name="a11y_items_count">
@@ -915,7 +915,7 @@
     <string name="habits_new">Nuevo hábito</string>
     <string name="habits_notes_placeholder">Descripción (opcional)</string>
     <string name="habits_reminder">Aviso</string>
-    <string name="habits_reminder_denied">Los avisos están desactivados en Ajustes de iOS.</string>
+    <string name="habits_reminder_denied">Los avisos están desactivados en los ajustes del teléfono.</string>
     <string name="habits_reminder_on">Recuérdamelo</string>
     <string name="habits_row_done_today">Hecho hoy.</string>
     <string name="habits_streak_days">%1$d días seguidos</string>
@@ -1586,16 +1586,17 @@
     <string name="settings_parent_panel_section">Familia</string>
     <string name="settings_parent_panel_title">Panel de padres</string>
     <string name="settings_pending_title">Ajustes</string>
-    <string name="settings_privacy_lock">Bloqueo con Face ID o código</string>
+    <string name="settings_privacy_lock">Bloqueo con huella, cara o código</string>
     <string name="settings_privacy_lock_button">Desbloquear</string>
     <string name="settings_privacy_lock_reason">Desbloquea Vira</string>
     <string name="settings_privacy_lock_title">Vira está bloqueada</string>
-    <string name="settings_privacy_lock_unavailable">Activa Face ID o un código en el dispositivo para usarlo</string>
+    <string name="settings_privacy_lock_unavailable">Activa la huella, la cara o un código en el teléfono para usarlo</string>
     <string name="settings_privacy_section">Privacidad</string>
     <string name="settings_privacy_viri">Yo vigilo quién puede ver tus cosas.</string>
     <string name="settings_reminders_denied">Tienes que dar permiso desde los Ajustes del móvil.</string>
     <string name="settings_reminders_footer">Los que tienen fecha entran como tareas tuyas. Marcarlas aquí también las marca allí.</string>
     <string name="settings_reminders_title">Recordatorios del iPhone</string>
+    <string name="settings_search_empty">Ningún ajuste con estas palabras</string>
     <string name="settings_search_keywords_about">sobre vira, versión, aviso, médico, información</string>
     <string name="settings_search_keywords_account">cuenta, correo, sesión, contraseña, sincronización, familia, padres, tutor, panel</string>
     <string name="settings_search_keywords_app">cómo se ve vira, módulos, hábitos, medicación, mindfulness, calendario, recordatorios, modos de foco, concentración</string>

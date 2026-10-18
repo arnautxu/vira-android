@@ -1,0 +1,98 @@
+{
+  "sourceLanguage": "ca",
+  "version": "1.0",
+  "strings": {
+    "habits.reminder.denied": {
+      "comment": "Android: l'iPhone diu «Ajustos d'iOS».",
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Els avisos estan desactivats als ajustos del telèfon."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los avisos están desactivados en los ajustes del teléfono."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notifications are turned off in your phone's settings."
+          }
+        }
+      }
+    },
+    "settings.privacy.lock": {
+      "comment": "Android: l'iPhone diu «Face ID».",
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bloqueig amb empremta, cara o codi"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bloqueo con huella, cara o código"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lock with fingerprint, face or PIN"
+          }
+        }
+      }
+    },
+    "settings.privacy.lock.unavailable": {
+      "comment": "Android: l'iPhone diu «Face ID».",
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Activa l'empremta, la cara o un codi al telèfon per fer-ho servir"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Activa la huella, la cara o un código en el teléfono para usarlo"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn on fingerprint, face or a screen lock on this phone to use it"
+          }
+        }
+      }
+    },
+    "settings.search.empty": {
+      "comment": "Android: l'iPhone fa servir el buit de cerca del sistema.",
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cap ajust amb aquestes paraules"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ningún ajuste con estas palabras"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No settings match these words"
+          }
+        }
+      }
+    }
+  }
+}
