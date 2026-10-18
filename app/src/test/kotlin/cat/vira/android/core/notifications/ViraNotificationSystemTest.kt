@@ -163,9 +163,9 @@ class ViraNotificationSystemTest {
     fun lAlarmaNoPublicaUnAvisDUnaFilaQueJaNoHiEs() = runBlocking {
         app.streak = ViraStreakState(isVisible = true, dayIsOpen = true)
         // Un hàbit que no és a la base de dades: un compte esborrat, o un altre compte.
-        assertFalse(ViraNotifications.isStillPending(app, planned("habit-a")))
+        assertFalse(ViraNotifications.isStillPending(app, planned("habit-a"), ZoneId.of("UTC"), now))
         val viri = planned("${ViraStreakNotifications.PREFIX}2027-1-15").copy(actions = ViraActionSet.VIRI)
-        assertTrue("els de Viri no recorden cap fila", ViraNotifications.isStillPending(app, viri))
+        assertTrue("els de Viri no recorden cap fila", ViraNotifications.isStillPending(app, viri, ZoneId.of("UTC"), now))
     }
 
     @Test
