@@ -99,7 +99,7 @@ internal fun ColumnScope.EmotionDetailContent(
     )
     Column(
         modifier = Modifier
-            .weight(1f, fill = false)
+            .weight(1f)
             .verticalScroll(rememberScrollState())
             .padding(ViraSpacing.contentInset),
         horizontalAlignment = Alignment.CenterHorizontally,

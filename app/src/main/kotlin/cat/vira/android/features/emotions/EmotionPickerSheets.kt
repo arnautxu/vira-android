@@ -55,7 +55,8 @@ internal fun ColumnScope.EmotionOtherPickerContent(emotions: List<Emotion>, onCl
     EmotionSheetBar(stringResource(R.string.emotions_other_title), stringResource(R.string.action_close) to onClose)
     Column(
         Modifier
-            .weight(1f, fill = false)
+            .weight(1f)
+            .fillMaxWidth()
             .viraSectionBackground(ViraArea.Emotions)
             .verticalScroll(rememberScrollState())
             .padding(horizontal = ViraSpacing.screenMargin, vertical = ViraSpacing.l),
@@ -90,7 +91,8 @@ internal fun ColumnScope.EmotionPrimaryPickerContent(
     )
     Column(
         Modifier
-            .weight(1f, fill = false)
+            .weight(1f)
+            .fillMaxWidth()
             .viraSectionBackground(ViraArea.Emotions)
             .verticalScroll(rememberScrollState())
             .padding(horizontal = ViraSpacing.screenMargin, vertical = ViraSpacing.m),

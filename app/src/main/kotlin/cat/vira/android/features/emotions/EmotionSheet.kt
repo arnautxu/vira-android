@@ -1,7 +1,8 @@
 package cat.vira.android.features.emotions
 
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.layout.Layout
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,7 +14,6 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -50,27 +50,44 @@ internal fun EmotionSheetBar(
     trailing: Pair<String, () -> Unit>? = null,
     trailingEnabled: Boolean = true,
 ) {
-    Box(modifier.fillMaxWidth().padding(horizontal = ViraSpacing.xs)) {
-        ViraActionButton(
-            leading.first, leading.second,
-            modifier = Modifier.align(Alignment.CenterStart),
-            hierarchy = ViraActionHierarchy.Textual, area = ViraArea.Emotions,
-        )
-        Text(
-            title,
-            style = ViraFont.headline,
-            color = ViraColor.textPrimary,
-            textAlign = TextAlign.Center,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.align(Alignment.Center).fillMaxWidth(0.5f).semantics { heading() },
-        )
-        if (trailing != null) {
+    // Com la barra de navegació d'iOS: el títol es queda centrat i, quan els botons creixen amb
+    // la lletra, s'escurça amb punts suspensius en lloc de passar-los per sobre.
+    Layout(
+        content = {
             ViraActionButton(
-                trailing.first, trailing.second,
-                modifier = Modifier.align(Alignment.CenterEnd),
-                hierarchy = ViraActionHierarchy.Textual, area = ViraArea.Emotions, enabled = trailingEnabled,
+                leading.first, leading.second,
+                hierarchy = ViraActionHierarchy.Textual, area = ViraArea.Emotions,
             )
+            Text(
+                title,
+                style = ViraFont.headline,
+                color = ViraColor.textPrimary,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.semantics { heading() },
+            )
+            if (trailing != null) {
+                ViraActionButton(
+                    trailing.first, trailing.second,
+                    hierarchy = ViraActionHierarchy.Textual, area = ViraArea.Emotions, enabled = trailingEnabled,
+                )
+            }
+        },
+        modifier = modifier.fillMaxWidth().padding(horizontal = ViraSpacing.xs),
+    ) { measurables, constraints ->
+        val width = constraints.maxWidth
+        val buttons = Constraints(maxWidth = (width * 0.4f).toInt())
+        val lead = measurables[0].measure(buttons)
+        val trail = measurables.getOrNull(2)?.measure(buttons)
+        val side = maxOf(lead.width, trail?.width ?: 0)
+        val titleWidth = (width - 2 * side).coerceAtLeast(0)
+        val label = measurables[1].measure(Constraints(minWidth = titleWidth, maxWidth = titleWidth))
+        val height = maxOf(lead.height, trail?.height ?: 0, label.height)
+        layout(width, height) {
+            lead.placeRelative(0, (height - lead.height) / 2)
+            label.placeRelative(side, (height - label.height) / 2)
+            trail?.placeRelative(width - trail.width, (height - trail.height) / 2)
         }
     }
 }

@@ -178,13 +178,16 @@ private fun EmotionHistoryHero(
 private fun HeroSummary(history: EmotionHistory, range: EmotionHistoryRange, zone: ZoneId, modifier: Modifier) {
     val context = LocalContext.current
     val count = viraPluralString(R.plurals.emotions_history_count, history.entries.size, null, history.entries.size)
-    val first = history.days.first().date.atStartOfDay(zone).toInstant().toEpochMilli()
-    val last = history.days.last().date.atStartOfDay(zone).toInstant().toEpochMilli()
+    // Migdia i no mitjanit: `formatDateRange` llegeix una fi a mitjanit com a exclosa i
+    // diria "8–13" per a una setmana que acaba avui, dia 14.
+    val first = history.days.first().date.atTime(12, 0).atZone(zone).toInstant().toEpochMilli()
+    val last = history.days.last().date.atTime(12, 0).atZone(zone).toInstant().toEpochMilli()
     // "9 registres · 5–11 oct.": el període en dates, que s'entén d'un cop d'ull sense comptar.
     val interval = DateUtils.formatDateRange(
-        context, first, last,
+        context, java.util.Formatter(StringBuilder(), java.util.Locale.getDefault()), first, last,
         DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_NO_YEAR or DateUtils.FORMAT_ABBREV_MONTH,
-    )
+        zone.id,
+    ).toString()
     val shape = RoundedCornerShape(ViraRadius.m)
     Column(
         modifier = modifier
