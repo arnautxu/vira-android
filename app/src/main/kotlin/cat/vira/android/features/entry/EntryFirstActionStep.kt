@@ -167,7 +167,10 @@ fun EntryFirstCheckInStep(services: EntryServices, onDone: (EntryFirstActionOutc
 fun EntryFirstFocusStep(services: EntryServices, onDone: (EntryFirstActionOutcome) -> Unit) {
     val host = LocalEntryFirstActionHosts.current.focus
     val scope = rememberCoroutineScope()
-    var isPresented by rememberSaveable { mutableStateOf(false) }
+    // Es desa el procés que l'ha obert, i no un sí o un no: girar la pantalla la torna a obrir sobre
+    // la sessió viva, però si Android ha matat el procés el controlador de la sessió ja no hi és, i
+    // tornar-la a obrir en començaria una altra de duplicada.
+    var presentedInProcess by rememberSaveable { mutableStateOf("") }
     var before by rememberSaveable(stateSaver = EntryRewardSaver) { mutableStateOf(EntryReward.NONE) }
     // Desat com a mil·lisegons: si la pantalla gira a mig focus, la sessió viva s'ha de seguir
     // comptant des d'aquí, i no des d'un tall nou que la deixaria fora.
@@ -178,12 +181,12 @@ fun EntryFirstFocusStep(services: EntryServices, onDone: (EntryFirstActionOutcom
             before = services.rewardSnapshot()
             // Un segon de marge: la sessió es crea just després de presentar-se.
             startedAtMillis = entryNow().minusSeconds(1).toEpochMilli()
-            isPresented = true
+            presentedInProcess = ProcessToken
         }
     })
-    if (isPresented) {
+    if (presentedInProcess == ProcessToken) {
         val close: () -> Unit = {
-            isPresented = false
+            presentedInProcess = ""
             scope.launch {
                 val completed = services.focusCompletedSince(Instant.ofEpochMilli(startedAtMillis)) ?: return@launch
                 onDone(EntryFirstActionOutcome.Focus(completed, services.rewardSnapshot().earned(before)))
@@ -201,6 +204,9 @@ private val EntryRewardSaver = Saver<EntryReward, IntArray>(
     save = { intArrayOf(it.coins, it.xp) },
     restore = { EntryReward(it[0], it[1]) },
 )
+
+/// Diferent a cada procés: el que una pantalla desada porta d'un procés mort no hi coincideix.
+private val ProcessToken = java.util.UUID.randomUUID().toString()
 
 /// Els dos minuts del focus de la primera acció.
 const val FOCUS_SECONDS = 120
