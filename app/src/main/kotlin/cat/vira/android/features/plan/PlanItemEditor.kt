@@ -22,8 +22,8 @@ import java.time.ZoneId
 /// moment en què ja saps què vols canviar, i és aquí on tenen sentit el dia concret, les notes i
 /// l'esborrat. Els camps són els mateixos que es poden triar en crear-lo, ni un més.
 ///
-/// `isNew` és el pont fins que Avui tingui la captura ràpida: el "+" i "Afegir aquí" hi arriben
-/// amb un ítem en blanc del dia i la franja, i sense el botó d'esborrar.
+/// `isNew` crea en lloc de desar i amaga el botó d'esborrar. Pla crea amb la captura ràpida
+/// d'Avui; queda per a qui necessiti l'editor sencer per a un ítem nou.
 @Composable
 fun PlanItemEditor(
     item: PlanItem,
