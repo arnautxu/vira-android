@@ -151,9 +151,16 @@ class ViraNotificationSystemTest {
 
     @Test
     fun enArrencarElTelefonNomesTornenLesQueHanDeSonar() {
-        scheduler.replace(listOf("habit-"), listOf(planned("habit-past", minutes = -5), planned("habit-future")))
+        scheduler.replace(
+            listOf("habit-"),
+            listOf(planned("habit-old", minutes = -90), planned("habit-late", minutes = -5), planned("habit-future")),
+            now.minusSeconds(3 * 3600),
+        )
         scheduler.rearm(now)
-        assertEquals(listOf("habit-future"), scheduler.armed().map { it.id })
+        assertEquals(
+            "la de fa cinc minuts encara sona; la de fa hora i mitja ja no",
+            listOf("habit-late", "habit-future"), scheduler.armed().map { it.id },
+        )
     }
 
     @Test

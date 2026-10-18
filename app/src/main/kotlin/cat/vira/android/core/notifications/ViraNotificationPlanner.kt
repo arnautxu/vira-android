@@ -265,7 +265,7 @@ object ViraNotificationPlanner {
                 val habitId = notification.habitId?.toUuidOrNull()
                 val day = notification.dayMillis?.let { LocalDate.ofInstant(Instant.ofEpochMilli(it), zone) }
                 habitId != null && day != null &&
-                    inputs.habits.any { it.id == habitId && !it.isArchived } &&
+                    inputs.habits.any { it.id == habitId && !it.isArchived && it.reminderTime != null && it.isScheduled(day) } &&
                     inputs.habitLogs.none { it.habitId == habitId && LocalDate.ofInstant(it.day, zone) == day }
             }
             ViraActionSet.MEDICATION -> {

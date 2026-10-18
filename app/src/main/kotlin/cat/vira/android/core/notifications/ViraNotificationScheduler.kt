@@ -74,9 +74,11 @@ class ViraNotificationScheduler(private val context: Context) {
         write(read().filter { it.id != id })
     }
 
-    /// Després d'arrencar el telèfon: torna a posar les que encara han de sonar i oblida la resta.
+    /// Després d'arrencar el telèfon: torna a posar les que encara han de sonar, i les que ho havien
+    /// de fer mentre era apagat fa poc (dins de la mateixa tolerància que `replace`; sonen de
+    /// seguida). La resta s'obliden.
     fun rearm(now: Instant) = synchronized(LOCK) {
-        val future = read().filter { it.fireAt.isAfter(now) }
+        val future = read().filter { it.fireAt.isAfter(now.minus(OVERDUE_GRACE)) }
         future.forEach(::arm)
         write(future)
     }

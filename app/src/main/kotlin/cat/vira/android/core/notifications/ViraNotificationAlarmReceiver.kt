@@ -61,6 +61,8 @@ class ViraNotificationAlarmReceiver : BroadcastReceiver() {
                 .setWhen(notification.fireAtMillis)
                 .setShowWhen(true)
                 .setAutoCancel(true)
+                // Si es torna a publicar per treure'n el detall, que no torni a sonar.
+                .setOnlyAlertOnce(true)
                 .setContentIntent(openApp(context, notification))
                 // Per poder retirar-lo de la pantalla si mentrestant es marca a l'app.
                 .addExtras(Bundle().apply { putString(EXTRA_PAYLOAD, Json.encodeToString(ViraPlannedNotification.serializer(), notification)) })

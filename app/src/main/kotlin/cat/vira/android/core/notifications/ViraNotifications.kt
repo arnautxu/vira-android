@@ -102,6 +102,7 @@ object ViraNotifications {
         val preferences = ViraPreferences.open(context)
         if (!canPost(context) || !ViraNotificationPreferences.remindersEnabled(preferences)) {
             scheduler.cancelAll(reminderPrefixes)
+            refreshShown(context, reminderPrefixes) { true }
             return
         }
         val settings = ViraNotificationSettings(
@@ -121,9 +122,11 @@ object ViraNotifications {
         scheduler.replace(reminderPrefixes, planned, now) {
             ViraNotificationPlanner.isStillPending(it, inputs, zone) && muted?.contains(it.fireAt) != true
         }
-        // Els que ja són a la pantalla d'una cosa que s'ha marcat a l'app, fora: tenen botons que
-        // actuarien sobre una cosa resolta.
-        dismissShown(context, reminderPrefixes) { !ViraNotificationPlanner.isStillPending(it, inputs, zone) }
+        // Els que ja són a la pantalla d'una cosa que s'ha marcat a l'app, o d'una categoria apagada,
+        // fora: tenen botons que actuarien sobre una cosa resolta.
+        refreshShown(context, reminderPrefixes) {
+            !isWanted(context, it) || !ViraNotificationPlanner.isStillPending(it, inputs, zone)
+        }
     }
 
     private suspend fun rescheduleStreak(context: Context, host: ViraNotificationHost, now: Instant, zone: ZoneId) {
@@ -136,6 +139,7 @@ object ViraNotifications {
             state == null || !state.isVisible
         ) {
             scheduler.cancelAll(streakPrefixes)
+            refreshShown(context, streakPrefixes) { true }
             return
         }
         val time = ViraNotificationPreferences.viriTime(preferences)
@@ -182,12 +186,13 @@ object ViraNotifications {
         ViraStreakNotifications.clearPendingEvent(ViraPreferences.open(context))
         // També els que ja són a la pantalla: un avís de medicació del compte anterior no hi pot
         // quedar.
-        dismissShown(context, prefixes) { true }
+        refreshShown(context, prefixes) { true }
     }
 
-    /// Treu de la pantalla els avisos propis publicats que compleixen `doomed`. Només els propis
-    /// (l'etiqueta és l'identificador); l'avís fix de Concentra't no es toca.
-    private fun dismissShown(context: Context, prefixes: List<String>, doomed: (ViraPlannedNotification) -> Boolean) {
+    /// Posa al dia els avisos propis que ja són a la pantalla: treu els que compleixen `doomed` i
+    /// torna a publicar, en silenci, els que diuen més del que el detall d'ara permet (el nom del
+    /// fàrmac). Només els propis (l'etiqueta és l'identificador); l'avís fix de Concentra't no.
+    private fun refreshShown(context: Context, prefixes: List<String>, doomed: (ViraPlannedNotification) -> Boolean) {
         val manager = context.getSystemService(NotificationManager::class.java) ?: return
         for (shown in manager.activeNotifications) {
             val tag = shown.tag ?: continue
@@ -197,7 +202,12 @@ object ViraNotifications {
                 runCatching { Json.decodeFromString(ViraPlannedNotification.serializer(), it) }.getOrNull()
             }
             // Sense poder llegir què recorda, no es pot dir que encara toqui: fora.
-            if (notification == null || doomed(notification)) manager.cancel(tag, shown.id)
+            if (notification == null || doomed(notification)) {
+                manager.cancel(tag, shown.id)
+                continue
+            }
+            val current = presented(context, notification)
+            if (current != notification) manager.notify(tag, shown.id, ViraNotificationAlarmReceiver.build(context, current))
         }
     }
 
