@@ -54,6 +54,8 @@ import cat.vira.android.core.design.tokens.ViraFont
 import cat.vira.android.core.design.tokens.ViraRadius
 import cat.vira.android.core.design.tokens.ViraSpacing
 import cat.vira.android.core.design.tokens.ViraTouch
+import cat.vira.android.features.today.QuickCapturePeriod
+import cat.vira.android.features.today.QuickCaptureScreen
 import java.time.LocalDate
 import java.time.ZoneId
 
@@ -113,12 +115,12 @@ fun CalendarSection(
     }
 
     editing?.let { item -> PlanItemEditor(item, actions, onDismiss = { editing = null }) }
+    // El "+" i "Afegir aquí" obren la captura ràpida d'Avui amb el dia i la franja ja posats.
     chrome.capture?.let { request ->
-        PlanItemEditor(
-            item = PlanItemEditorDefaults.newItem(request.day, request.period, zone),
-            actions = actions,
-            isNew = true,
+        QuickCaptureScreen(
             onDismiss = { chrome.capture = null },
+            initialDay = PlanDay.start(request.day, zone),
+            initialPeriod = request.period?.let { QuickCapturePeriod.valueOf(it.name) },
         )
     }
 }

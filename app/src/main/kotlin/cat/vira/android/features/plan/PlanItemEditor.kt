@@ -100,16 +100,3 @@ fun PlanItemEditor(
         }
     }
 }
-
-object PlanItemEditorDefaults {
-    /// Un ítem en blanc del dia; des d'una franja, amb l'hora que hi proposa (`defaultHour`).
-    fun newItem(day: LocalDate, period: DayPeriod?, zone: ZoneId = ZoneId.systemDefault()): PlanItem {
-        val time = period?.let { PlanDay.at(day, it.defaultHour, 0, zone) }
-        return PlanItem(
-            day = PlanDay.start(day, zone),
-            time = time,
-            symbolName = ViraPictogramName.flag,
-            sortIndex = PlanItemOrder.defaultRank(time, zone),
-        )
-    }
-}
