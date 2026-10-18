@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
@@ -37,67 +36,74 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import cat.vira.android.R
-import cat.vira.android.core.design.PendingScreen
 import cat.vira.android.core.design.tokens.ViraArea
 import cat.vira.android.core.design.components.viraPressable
-import cat.vira.android.core.design.components.viraSectionBackground
 import cat.vira.android.core.design.tokens.ViraColor
 import cat.vira.android.core.design.tokens.ViraRadius
 import cat.vira.android.core.design.tokens.ViraSpacing
 import cat.vira.android.core.design.tokens.ViraTouch
-import cat.vira.android.features.progress.ui.ProgressBackButton
 import cat.vira.android.features.progress.ui.SlidersMark
+import cat.vira.android.features.shop.CardsScreen
+import cat.vira.android.features.shop.EquippedAccessory
+import cat.vira.android.features.shop.EquippedSkinPortrait
+import cat.vira.android.features.shop.PersonalRewardsScreen
+import cat.vira.android.features.shop.PinnedBadgesShelf
+import cat.vira.android.features.shop.ProfileCustomizeSheet
+import cat.vira.android.features.shop.ShopScreen
 
 /// Les peces de la pestanya Viri que són d'un altre fil: **Botiga i premis** (`features/shop`).
-///
-/// És l'única cosa d'aquesta carpeta que un altre fil toca: quan la seva peça arriba a `main`,
-/// substitueix aquí la línia que li toca per la crida a la seva, i res més. Fins aleshores, cada
-/// lloc ensenya el que hi havia abans de la skin (el Viri de sempre, ranures buides) o el
-/// marcador de l'esquelet.
 internal object ProgressSlots {
 
-    /// La Botiga: `ShopScreen(onBack)`. S'hi arriba des de «Vesteix-lo» i des de la fitxa «Botiga».
-    /// Les pantalles de Botiga porten la seva barra amb la fletxa; el marcador, la nostra.
+    /// La Botiga. S'hi arriba des de «Vesteix-lo» i des de la fitxa «Botiga». Porta la seva barra
+    /// amb la fletxa.
     @Composable
-    fun Shop(onBack: () -> Unit) = PendingPage(onBack)
+    fun Shop(onBack: () -> Unit) = ShopScreen(onBack)
 
-    /// Els meus premis: `PersonalRewardsScreen(onBack)`.
+    /// Els meus premis.
     @Composable
-    fun PersonalRewards(onBack: () -> Unit) = PendingPage(onBack)
+    fun PersonalRewards(onBack: () -> Unit) = PersonalRewardsScreen(onBack)
 
-    /// La col·lecció de cartes: `CardsScreen(onBack)`. Només amb `ViraReleaseGate.cards`.
+    /// La col·lecció de cartes. Només amb `ViraReleaseGate.cards`.
     @Composable
-    fun Cards(onBack: () -> Unit) = PendingPage(onBack)
+    fun Cards(onBack: () -> Unit) = CardsScreen(onBack)
 
-    /// El Viri amb la skin posada, omplint el marc: `EquippedSkinPortrait(modifier)`, amb
-    /// `EquippedAccessory` a dalt a la dreta. Sense skin, el Viri de sempre.
+    /// La fulla de personalitzar el perfil (malnom, skin i badges). És una fulla de baix pròpia.
     @Composable
-    fun Portrait(modifier: Modifier) {
-        Image(
-            painter = painterResource(R.drawable.viri_entry_waving),
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = modifier,
-        )
-    }
-
-    /// El prestatge de cartes penjades, un sol botó: `PinnedBadgesShelf(onCustomize, modifier, ink)`.
-    @Composable
-    fun Shelf(onCustomize: () -> Unit, ink: Color, modifier: Modifier) = EmptyShelf(onCustomize, ink, modifier)
-
-    /// La fulla de personalitzar el perfil: `ProfileCustomizeSheet(onDismiss)`. Mentre no hi és,
-    /// es tanca sola.
-    @Composable
-    fun Customize(onDismiss: () -> Unit) {
-        LaunchedEffect(Unit) { onDismiss() }
-    }
+    fun Customize(onDismiss: () -> Unit) = ProfileCustomizeSheet(onDismiss)
 }
 
-@Composable
-private fun PendingPage(onBack: () -> Unit) {
-    Column(Modifier.fillMaxSize().viraSectionBackground(ViraArea.Rewards)) {
-        ProgressBackButton(onBack, Modifier.padding(horizontal = ViraSpacing.xs))
-        Box(Modifier.weight(1f)) { PendingScreen() }
+/// Les dues peces de la capçalera del perfil que llegeixen la base de dades de Botiga: el retrat
+/// (skin i accessori posats) i el prestatge de badges. La capçalera no llegeix res ella mateixa;
+/// les captures fan servir [Placeholder], que no necessita base de dades.
+internal class ProfileArt(
+    val portrait: @Composable (modifier: Modifier) -> Unit,
+    val shelf: @Composable (onCustomize: () -> Unit, ink: Color, modifier: Modifier) -> Unit,
+) {
+    companion object {
+        /// El que hi ha a la base de dades: la skin posada omplint el marc, l'accessori al racó de
+        /// dalt a la dreta i els badges penjats. Sense skin, el Viri de sempre.
+        val Equipped = ProfileArt(
+            portrait = { modifier ->
+                Box(modifier) {
+                    EquippedSkinPortrait(Modifier.fillMaxSize())
+                    EquippedAccessory(Modifier.align(Alignment.TopEnd))
+                }
+            },
+            shelf = { onCustomize, ink, modifier -> PinnedBadgesShelf(onCustomize, modifier, ink) },
+        )
+
+        /// Sense skin ni badges: el Viri de sempre i quatre ranures buides.
+        val Placeholder = ProfileArt(
+            portrait = { modifier ->
+                Image(
+                    painter = painterResource(R.drawable.viri_entry_waving),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = modifier,
+                )
+            },
+            shelf = { onCustomize, ink, modifier -> EmptyShelf(onCustomize, ink, modifier) },
+        )
     }
 }
 

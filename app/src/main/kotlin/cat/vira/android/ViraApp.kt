@@ -15,8 +15,12 @@ import cat.vira.android.core.notifications.ViraNotificationChannel
 import cat.vira.android.core.notifications.ViraNotificationEffects
 import cat.vira.android.core.notifications.ViraNotificationHost
 import cat.vira.android.core.notifications.ViraNotificationWorker
+import cat.vira.android.core.notifications.ViraStreakReconcile
+import cat.vira.android.core.notifications.ViraStreakState
 import cat.vira.android.core.notifications.ViraNotifications
 import cat.vira.android.features.emotions.ViraEmotionCheckIn
+import cat.vira.android.features.progress.logic.StreakRules.ReconcileOutcome
+import cat.vira.android.features.progress.logic.ViraProgress
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -39,6 +43,22 @@ class ViraApp : Application(), ViraNotificationHost {
     override var notificationEffects = ViraNotificationEffects(
         // El mateix registre que el check-in d'Emocions, sense intensitat ni nota.
         logEmotion = { ViraEmotionCheckIn.record(ViraStore(backend.db), it) },
+        // Viri i ratxa: la ratxa amagada no avisa, i el dia és obert mentre li falti alguna cosa
+        // (`ViraStreakNotifications.reschedule`). En segon pla, el mateix posar al dia que en obrir.
+        streakState = { now ->
+            val store = ViraStore(backend.db)
+            ViraStreakState(
+                isVisible = store.streak().isVisible,
+                dayIsOpen = ViraProgress(store).missingRequirements(now).isNotEmpty(),
+            )
+        },
+        reconcileStreak = { now ->
+            when (ViraProgress(ViraStore(backend.db)).reconcileOnLaunch(now)) {
+                ReconcileOutcome.Unchanged -> ViraStreakReconcile.UNCHANGED
+                is ReconcileOutcome.Protected -> ViraStreakReconcile.PROTECTED
+                is ReconcileOutcome.Reset -> ViraStreakReconcile.RESET
+            }
+        },
     )
 
     /// La finestra de «Desfer» i la recompensa que ve després (`ViraCompletionQueue`). És del
