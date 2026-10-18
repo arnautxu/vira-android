@@ -1,5 +1,6 @@
 package cat.vira.android.features.settings
 
+import androidx.compose.runtime.saveable.SaverScope
 import cat.vira.android.features.settings.export.ViraResourceNames
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -64,5 +65,21 @@ class SettingsLogicTest {
             val values = mapOf(ViraLegalDocument.PRIVACY_POLICY.key to value)
             assertNull(value, ViraLegalDocuments.url(ViraLegalDocument.PRIVACY_POLICY, values))
         }
+    }
+
+    @Test
+    fun laPilaDAjustosEsDesaIEsRecuperaIgual() {
+        val stack = listOf(SettingsPage.Category(SettingsCategory.APP), SettingsPage.FocusModes)
+        val saved = with(SettingsPage.stackSaver) { SaverScope { true }.save(stack) }
+        assertEquals(stack, SettingsPage.stackSaver.restore(saved!!))
+    }
+
+    @Test
+    fun esborrarTreuTotesLesClausDAjustos() {
+        val keys = SettingsKeys::class.java.declaredFields
+            .filter { java.lang.reflect.Modifier.isStatic(it.modifiers) && it.type == String::class.java }
+            .map { it.isAccessible = true; it.get(null) as String }
+            .filter { it.startsWith("settings.") }
+        assertEquals(keys.toSet(), SettingsKeys.erasable.toSet())
     }
 }

@@ -47,6 +47,15 @@ object SettingsKeys {
     const val EMOTION_DEFAULT_MINUTE = 0
     const val VIRI_DEFAULT_HOUR = 20
     const val VIRI_DEFAULT_MINUTE = 30
+
+    /// Totes les claus d'aquí: «Esborrar-ho tot» les torna als valors de fàbrica.
+    val erasable = listOf(
+        REMINDERS_HABITS, REMINDERS_MEDICATION, REMINDERS_PLAN, REMINDERS_EMOTION,
+        EMOTION_REMINDER_HOUR, EMOTION_REMINDER_MINUTE, NOTIFICATION_DETAIL_MEDICATION,
+        VIRI_MESSAGES, VIRI_MESSAGE_HOUR, VIRI_MESSAGE_MINUTE,
+        MODULE_HABITS, MODULE_MEDICATION, MODULE_MINDFULNESS, CALENDAR,
+        SOUND_MODE, HAPTICS, STREAK_LIVE_ACTIVITY, PROGRESS_VISIBLE, SHOP_VISIBLE,
+    )
 }
 
 /// Aparença de l'app (`ViraAppearance`). El valor desat és el de l'iPhone.

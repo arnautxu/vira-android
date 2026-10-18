@@ -28,6 +28,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -105,6 +107,23 @@ fun SettingsHost(backend: SettingsBackend, content: @Composable () -> Unit) {
 sealed interface SettingsPage {
     data class Category(val category: SettingsCategory) : SettingsPage
     data object FocusModes : SettingsPage
+
+    companion object {
+        private const val FOCUS_MODES = "focusModes"
+
+        /// La pila com a noms, que és el que sap desar el sistema (i sobreviu si es recrea el procés).
+        val stackSaver = Saver<List<SettingsPage>, ArrayList<String>>(
+            save = { stack ->
+                ArrayList(stack.map { page -> if (page is Category) page.category.name else FOCUS_MODES })
+            },
+            restore = { names ->
+                names.mapNotNull { name ->
+                    if (name == FOCUS_MODES) FocusModes
+                    else SettingsCategory.entries.firstOrNull { it.name == name }?.let(::Category)
+                }
+            },
+        )
+    }
 }
 
 @Composable
@@ -114,7 +133,8 @@ fun SettingsNavigation(
     onEditFocusProfile: ((FocusProfile?) -> Unit)? = null,
     initialStack: List<SettingsPage> = emptyList(),
 ) {
-    var stack by remember { mutableStateOf(initialStack) }
+    // Desable: obrir l'editor d'un mode treu Ajustos de la composició, i en tornar s'ha de ser on s'era.
+    var stack by rememberSaveable(stateSaver = SettingsPage.stackSaver) { mutableStateOf(initialStack) }
     fun push(page: SettingsPage) { stack = stack + page }
     fun pop() { stack = stack.dropLast(1) }
     BackHandler { if (stack.isEmpty()) onClose() else pop() }
