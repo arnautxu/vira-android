@@ -25,7 +25,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
@@ -33,7 +32,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import cat.vira.android.R
-import cat.vira.android.core.data.ViraPreferences
+import cat.vira.android.app.LocalViraBackend
 import cat.vira.android.core.data.model.Emotion
 import cat.vira.android.core.design.components.ViraInlineError
 import cat.vira.android.core.design.components.viraPressable
@@ -61,8 +60,7 @@ fun EmotionCheckInScreen(
     onHelpNow: () -> Unit = {},
     onRecorded: (() -> Unit)? = null,
 ) {
-    val context = LocalContext.current
-    val preferences = remember { ViraPreferences.open(context) }
+    val preferences = LocalViraBackend.current.preferences
     val store = rememberEmotionStore()
     val scope = rememberCoroutineScope()
     val haptics = LocalHapticFeedback.current

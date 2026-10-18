@@ -1,6 +1,7 @@
 package cat.vira.android.features.emotions
 
 import androidx.compose.runtime.Composable
+import cat.vira.android.app.EmotionsSection
 import cat.vira.android.core.data.model.Emotion
 import cat.vira.android.core.data.model.EmotionEntry
 import cat.vira.android.core.design.ViraScreenCaptures
@@ -34,7 +35,7 @@ private fun Screen(content: @Composable () -> Unit) = ViraTheme(reduceMotion = t
 
 @PreviewTest @ViraScreenCaptures @Composable
 fun CheckIn() = Screen {
-    EmotionsTab(EmotionsSection.entries, EmotionsSection.CHECK_IN, {}) {
+    EmotionsTab(EmotionsSection.entries, EmotionsSection.CheckIn, {}) {
         EmotionCheckInContent(Emotion.primary, hasSaveError = false, onSelect = {}, onOther = {}, onCustomize = {})
     }
 }
@@ -68,28 +69,28 @@ fun OtherEmotion() = Screen {
 
 @PreviewTest @ViraScreenCaptures @Composable
 fun HistoryWeek() = Screen {
-    EmotionsTab(EmotionsSection.entries, EmotionsSection.HISTORY, {}) {
+    EmotionsTab(EmotionsSection.entries, EmotionsSection.History, {}) {
         EmotionHistoryContent(sample, EmotionHistoryRange.WEEK, {}, {}, now = now, zone = zone)
     }
 }
 
 @PreviewTest @ViraScreenCaptures @Composable
 fun HistoryMonth() = Screen {
-    EmotionsTab(EmotionsSection.entries, EmotionsSection.HISTORY, {}) {
+    EmotionsTab(EmotionsSection.entries, EmotionsSection.History, {}) {
         EmotionHistoryContent(sample, EmotionHistoryRange.MONTH, {}, {}, now = now, zone = zone)
     }
 }
 
 @PreviewTest @ViraScreenCaptures @Composable
 fun HistoryEmpty() = Screen {
-    EmotionsTab(EmotionsSection.entries, EmotionsSection.HISTORY, {}) {
+    EmotionsTab(EmotionsSection.entries, EmotionsSection.History, {}) {
         EmotionHistoryContent(emptyList(), EmotionHistoryRange.WEEK, {}, {}, now = now, zone = zone)
     }
 }
 
 @PreviewTest @ViraScreenCaptures @Composable
 fun Mindfulness() = Screen {
-    EmotionsTab(EmotionsSection.entries, EmotionsSection.MINDFULNESS, {}) { MindfulnessContent({}, {}) }
+    EmotionsTab(EmotionsSection.entries, EmotionsSection.Mindfulness, {}) { MindfulnessContent({}, {}) }
 }
 
 @PreviewTest @ViraScreenCaptures @Composable
