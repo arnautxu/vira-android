@@ -151,7 +151,9 @@ private fun ProfileRoute(backend: ViraBackend, onOpen: (ProgressDestination) -> 
         },
         onOpen = onOpen,
         onNavigate = navigator::navigate,
-        onCustomize = { customizing = true },
+        // La fulla només es dibuixa quan el perfil existeix: si encara no hi ha cap fila (malnom
+        // saltat a l'entrada, primer inici sense perfil al servidor), es crea abans d'obrir-la.
+        onCustomize = { scope.launch { store.profile(); customizing = true } },
         art = ProfileArt.Equipped,
     )
     if (customizing) ProgressSlots.Customize(onDismiss = { customizing = false })
