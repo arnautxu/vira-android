@@ -9,6 +9,7 @@ import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
+import java.util.UUID
 
 /// Les cares de cada pestanya que es poden obrir des de fora, calcades de `PlanSection`,
 /// `EmotionsSection` i `ProgressDestination` de l'iPhone. Viuen aquí, a l'arrel, i no a la carpeta
@@ -29,6 +30,10 @@ sealed interface ViraDestination {
     data object Friends : ViraDestination
     data object Streak : ViraDestination
 }
+
+/// La tasca a què es lliga una sessió de Concentra't oberta des d'una fila (`FocusStartRequest`
+/// amb `linkedTitle` i `linkedItemID` a l'iPhone).
+data class ViraFocusLink(val title: String, val itemId: UUID)
 
 /// Les pantalles que s'obren per sobre de les pestanyes. A l'iPhone, Concentra't és a pantalla
 /// completa i la resta són fulls; aquí totes són destins de la navegació de l'arrel, i el gest
@@ -90,8 +95,14 @@ class ViraNavigator internal constructor(
         }
     }
 
+    /// La tasca de la sessió que s'acaba d'obrir, si n'hi ha. La llegeix Concentra't.
+    var focusLink by mutableStateOf<ViraFocusLink?>(null)
+
     /// Concentra't és «un estat en què entres», no lligat a cap pestanya.
-    fun startFocus() = presentModal(ViraModal.Focus)
+    fun startFocus(link: ViraFocusLink? = null) {
+        focusLink = link
+        presentModal(ViraModal.Focus)
+    }
     fun openHelp() = presentModal(ViraModal.Help)
     fun openBreathe() = presentModal(ViraModal.Breathe)
     fun openSettings() = presentModal(ViraModal.Settings)
