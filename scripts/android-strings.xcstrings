@@ -93,6 +93,52 @@
           }
         }
       }
+    },
+    "tutorial.integrations.title": {
+      "comment": "Android: l'iPhone diu «iPhone».",
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vira al teu mòbil"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vira en tu móvil"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vira on your phone"
+          }
+        }
+      }
+    },
+    "tutorial.integrations.outside": {
+      "comment": "Android: l'iPhone parla de Siri i de la cerca, que Android no té.",
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "També pots afegir Vira a la pantalla d'inici i als botons del panell ràpid."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "También puedes añadir Vira a la pantalla de inicio y a los botones del panel rápido."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You can also add Vira to your home screen and to the quick settings tiles."
+          }
+        }
+      }
     }
   }
 }

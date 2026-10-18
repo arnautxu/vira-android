@@ -1935,8 +1935,8 @@
     <string name="tutorial_emotions_message">Registra com et sents i mira com ha anat la setmana.</string>
     <string name="tutorial_emotions_title">Com estàs</string>
     <string name="tutorial_integrations_message">Vira pot treballar amb el que ja fas servir.</string>
-    <string name="tutorial_integrations_outside">També pots demanar-ho a Siri i trobar el teu pla amb la cerca.</string>
-    <string name="tutorial_integrations_title">Vira al teu iPhone</string>
+    <string name="tutorial_integrations_outside">També pots afegir Vira a la pantalla d\'inici i als botons del panell ràpid.</string>
+    <string name="tutorial_integrations_title">Vira al teu mòbil</string>
     <string name="tutorial_plan_message">Calendari, hàbits i medicació. Tot el que té una hora és aquí.</string>
     <string name="tutorial_plan_title">El teu pla</string>
     <string name="tutorial_profile_message">La ratxa, els premis i la botiga. Res es perd pel camí.</string>

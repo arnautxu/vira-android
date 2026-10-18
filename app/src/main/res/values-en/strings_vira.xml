@@ -1935,8 +1935,8 @@
     <string name="tutorial_emotions_message">Log how you feel and see how the week went.</string>
     <string name="tutorial_emotions_title">How you are</string>
     <string name="tutorial_integrations_message">Vira can work with what you already use.</string>
-    <string name="tutorial_integrations_outside">You can also ask Siri and find your plan with search.</string>
-    <string name="tutorial_integrations_title">Vira on your iPhone</string>
+    <string name="tutorial_integrations_outside">You can also add Vira to your home screen and to the quick settings tiles.</string>
+    <string name="tutorial_integrations_title">Vira on your phone</string>
     <string name="tutorial_plan_message">Calendar, habits and medication. Everything with a time lives here.</string>
     <string name="tutorial_plan_title">Your plan</string>
     <string name="tutorial_profile_message">Your streak, rewards and shop. Nothing gets lost along the way.</string>

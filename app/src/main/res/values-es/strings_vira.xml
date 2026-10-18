@@ -1935,8 +1935,8 @@
     <string name="tutorial_emotions_message">Registra cómo te sientes y mira cómo ha ido la semana.</string>
     <string name="tutorial_emotions_title">Cómo estás</string>
     <string name="tutorial_integrations_message">Vira puede trabajar con lo que ya usas.</string>
-    <string name="tutorial_integrations_outside">También puedes pedírselo a Siri y encontrar tu plan con la búsqueda.</string>
-    <string name="tutorial_integrations_title">Vira en tu iPhone</string>
+    <string name="tutorial_integrations_outside">También puedes añadir Vira a la pantalla de inicio y a los botones del panel rápido.</string>
+    <string name="tutorial_integrations_title">Vira en tu móvil</string>
     <string name="tutorial_plan_message">Calendario, hábitos y medicación. Todo lo que tiene una hora está aquí.</string>
     <string name="tutorial_plan_title">Tu plan</string>
     <string name="tutorial_profile_message">La racha, los premios y la tienda. No se pierde nada por el camino.</string>
