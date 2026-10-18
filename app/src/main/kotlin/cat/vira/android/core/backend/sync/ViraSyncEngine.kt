@@ -12,6 +12,7 @@ import cat.vira.android.core.data.ViraDataEraser
 import cat.vira.android.core.data.ViraDatabase
 import cat.vira.android.core.data.ViraStore
 import cat.vira.android.core.data.ViraTime
+import cat.vira.android.core.data.model.SyncTombstone
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -171,7 +172,9 @@ class ViraSyncEngine(
             }
         }
 
-        attempt("tombstones") { flushTombstones(token) }
+        // Cada tros pel seu compte: un que el servidor rebutgi sempre no ha de deixar els de les
+        // altres taules sense esborrar.
+        for (group in tombstoneGroups()) attempt("tombstones ${group.first().table}") { flushTombstones(group, token) }
         for (table in tables) {
             // Sense el pare, els fills que arribessin es descartarien i el cursor ja els hauria passat.
             if (PARENTS[table.table] in failed) {
@@ -262,23 +265,23 @@ class ViraSyncEngine(
     // Esborrats
 
     /// Els esborrats van primer: no té sentit baixar-se una fila que aquest telèfon acaba de treure.
-    private suspend fun flushTombstones(token: String) {
+    /// A trossos: tots els ids van a l'adreça, i una de massa llarga no passaria mai.
+    private suspend fun tombstoneGroups() =
+        db.tombstones().all().groupBy { it.table }.values.flatMap { it.chunked(TOMBSTONE_CHUNK) }
+
+    private suspend fun flushTombstones(group: List<SyncTombstone>, token: String) {
         requireCurrentAccount()
         val identity = identity ?: throw AccountChanged()
-        val tombstones = db.tombstones().all()
-        // A trossos: tots els ids van a l'adreça, i una de massa llarga no passaria mai.
-        for (group in tombstones.groupBy { it.table }.values.flatMap { it.chunked(TOMBSTONE_CHUNK) }) {
-            rest.delete(
-                group.first().table,
-                listOf(
-                    Param("user_id", "eq.${identity.userId}"),
-                    Param("id", "in.(${group.joinToString(",") { it.recordID.toString() }})"),
-                ),
-                token,
-            )
-            requireCurrentAccount()
-            db.tombstones().deleteRaw(group)
-        }
+        rest.delete(
+            group.first().table,
+            listOf(
+                Param("user_id", "eq.${identity.userId}"),
+                Param("id", "in.(${group.joinToString(",") { it.recordID.toString() }})"),
+            ),
+            token,
+        )
+        requireCurrentAccount()
+        db.tombstones().deleteRaw(group)
     }
 
     /// «Esborrar-ho tot», telèfon **i** compte (2026-08-12).

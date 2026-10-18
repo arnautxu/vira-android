@@ -215,6 +215,9 @@ class ViraSession(
         } catch (error: CancellationException) {
             throw error
         } catch (_: Exception) {
+            // Sense resposta d'aquesta passada, no val la d'abans: un permís retirat mentre el
+            // servidor no contesta no ha de deixar sortir res. La pista de la interfície no es toca.
+            if (generation == dataGeneration) verifiedConsent = null
             return
         }
         if (generation == dataGeneration) applyVerifiedConsent(status)
@@ -258,7 +261,10 @@ class ViraSession(
     }
 
     private suspend fun updateMetadata(metadata: ViraUserMetadata) {
+        val generation = dataGeneration
         val updated = requireAuth().updateMetadata(metadata)
+        // Si mentrestant s'ha tancat o canviat de compte, la resposta ja no és de ningú d'aquí.
+        if (generation != dataGeneration) throw CancellationException("Ha canviat el compte")
         stored = stored?.copy(user = updated)
         _state.value = State.SignedIn(updated)
     }

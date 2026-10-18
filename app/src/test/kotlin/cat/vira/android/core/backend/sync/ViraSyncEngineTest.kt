@@ -221,6 +221,30 @@ class ViraSyncEngineTest {
     }
 
     @Test
+    fun unEsborratRebutjatNoAturaElsDeLesAltresTaules() = runBlocking {
+        store.delete(store.create(db.planItems(), PlanItem(title = "Fora")))
+        store.delete(store.create(db.habits(), cat.vira.android.core.data.model.Habit(title = "Fora")))
+        server.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse {
+                requests += request
+                val table = request.requestUrl!!.pathSegments.last()
+                return when {
+                    request.method == "DELETE" && table == "plan_items" ->
+                        MockResponse().setResponseCode(400).setBody("""{"code":"PGRST204"}""")
+                    request.method == "GET" -> MockResponse().setBody("[]")
+                    else -> MockResponse().setResponseCode(201)
+                }
+            }
+        }
+        val engine = engine(ViraConsentStatus.GRANTED)
+        engine.sync()
+
+        assertEquals(1, db.tombstones().recordIDs("plan_items").size)
+        assertTrue(db.tombstones().recordIDs("habits").isEmpty())
+        assertTrue(engine.state.value is ViraSyncEngine.State.Failed)
+    }
+
+    @Test
     fun unaTaulaQueFallaNoAturaLesAltres() = runBlocking {
         server.dispatcher = object : Dispatcher() {
             override fun dispatch(request: RecordedRequest): MockResponse {
