@@ -10,6 +10,9 @@ import androidx.compose.ui.res.stringResource
 import cat.vira.android.R
 import cat.vira.android.core.design.components.ViraCelebrationMoment
 import cat.vira.android.core.design.tokens.ViraArea
+import cat.vira.android.features.progress.CelebrationPill
+import cat.vira.android.features.progress.CelebrationSummaryCard
+import cat.vira.android.features.progress.CelebrationSummaryRow
 
 /// El moment de bescanviar un premi personal (`RewardCelebrationView`), amb Viri relaxat.
 ///

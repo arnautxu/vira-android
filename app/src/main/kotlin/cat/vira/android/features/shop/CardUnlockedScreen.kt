@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -25,6 +26,10 @@ import cat.vira.android.core.design.LocalViraEnvironment
 import cat.vira.android.core.design.components.ViraCelebrationMoment
 import cat.vira.android.core.design.tokens.ViraGradient
 import cat.vira.android.core.design.tokens.ViraSpacing
+import cat.vira.android.features.progress.CelebrationPill
+import cat.vira.android.features.progress.CelebrationProgressBar
+import cat.vira.android.features.progress.CelebrationSummaryCard
+import cat.vira.android.features.progress.CelebrationSummaryRow
 import kotlinx.coroutines.delay
 
 /// La carta nova, just després de la celebració de la fita (`CardUnlockedView`). Dues pantalles i
@@ -62,7 +67,7 @@ fun CardUnlockedScreen(card: CardItem, owned: Int, onContinue: () -> Unit, modif
             CelebrationSummaryCard(
                 area,
                 pills = listOf(
-                    CelebrationPill(stringResource(card.rarity.labelRes), card.rarity.symbol, isFilled = true),
+                    CelebrationPill(stringResource(card.rarity.labelRes), isFilled = true, icon = { ShopSymbolIcon(card.rarity.symbol, LocalContentColor.current, size = 12.dp) }),
                     CelebrationPill(stringResource(card.descriptionRes)),
                 ),
             ) {
