@@ -16,6 +16,7 @@ import cat.vira.android.core.design.PendingScreen
 import cat.vira.android.core.design.components.ViraActionButton
 import cat.vira.android.core.design.components.ViraActionHierarchy
 import cat.vira.android.core.design.tokens.ViraSpacing
+import cat.vira.android.features.plan.HabitCelebrationScreen
 import java.util.UUID
 
 /// Quin tros del flux d'entrada demana l'arrel (`EntryFlowView(steps:)` a l'iPhone).
@@ -76,16 +77,9 @@ internal object ViraFeatureSlots {
     suspend fun commitReward(backend: ViraBackend, reason: CoinReason): Pair<Int, Int> = 0 to 0
 
     /// Fil Pla (`HabitCelebrationView`): la celebració a pantalla completa del primer hàbit del dia.
-    /// Mentre no hi és, es tanca sola.
     @Composable
-    fun HabitCelebration(title: String, coins: Int, xp: Int, onContinue: () -> Unit) {
-        LaunchedEffect(Unit) { onContinue() }
-    }
-
-    /// Fil Concentra't: `FocusProfileEditorScreen` amb el mode `profileId` (`null`, un de nou). Es desa
-    /// sol.
-    @Composable
-    fun FocusProfileEditor(profileId: UUID?, onClose: () -> Unit) = PendingModal(onClose)
+    fun HabitCelebration(title: String, coins: Int, xp: Int, onContinue: () -> Unit) =
+        HabitCelebrationScreen(title, coins, xp, onContinue)
 
     /// Fil Ajustos i compte (`features/settings`). Per editar un mode de Concentra't,
     /// `LocalViraNavigator.current.editFocusProfile(id)`.
