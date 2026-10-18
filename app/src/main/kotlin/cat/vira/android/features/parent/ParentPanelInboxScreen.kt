@@ -51,6 +51,7 @@ internal fun ParentPanelInboxScreen(deps: ParentDeps, onBack: () -> Unit) {
     var reminders by remember { mutableStateOf<List<ParentReminder>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var remindersLoaded by remember { mutableStateOf(false) }
+    var messagesLoaded by remember { mutableStateOf(false) }
     var isRefreshing by remember { mutableStateOf(false) }
     var resolving by remember { mutableStateOf<java.util.UUID?>(null) }
     var error by remember { mutableStateOf<ViraBackendError?>(null) }
@@ -61,6 +62,7 @@ internal fun ParentPanelInboxScreen(deps: ParentDeps, onBack: () -> Unit) {
         parentAttempt({ error = it }) {
             val token = deps.session.accessToken()
             messages = deps.client.messages(token)
+            messagesLoaded = true
             reminders = deps.client.reminders(token)
             remindersLoaded = true
             // Marcar-los com a llegits en obrir la llista: no hi ha cap acció que ho hagi de fer a
@@ -88,6 +90,7 @@ internal fun ParentPanelInboxScreen(deps: ParentDeps, onBack: () -> Unit) {
                 messages = messages,
                 reminders = reminders,
                 remindersLoaded = remindersLoaded,
+                messagesLoaded = messagesLoaded,
                 error = error?.takeIf { it != ViraBackendError.CANCELLED }?.let { stringResource(it.message()) },
                 onResolve = resolve@{ reminder, accepted ->
                     // Un recordatori a la vegada: dos tocs ràpids a «Accepta» no han de crear dues tasques.
@@ -96,13 +99,15 @@ internal fun ParentPanelInboxScreen(deps: ParentDeps, onBack: () -> Unit) {
                     scope.launch {
                         // Acceptar-lo el converteix en una tasca teva, igual que si l'haguessis
                         // apuntat tu. A partir d'aquí ja no és de ningú altre.
-                        // Primer es marca al servidor i després es crea la tasca: si la xarxa falla,
-                        // el recordatori segueix pendent i tornar-hi no en deixa dues.
-                        val resolved = parentAttempt({ error = it }) { deps.client.resolve(reminder, accepted, deps.session.accessToken()) }
-                        if (resolved != null && accepted) {
+                        // Primer la tasca i després el servidor, i la tasca porta l'identificador del
+                        // recordatori: si es talla entre els dos passos, tornar a acceptar-lo troba la
+                        // mateixa tasca i no en fa una altra; i un recordatori ja tancat al servidor
+                        // sempre té la seva tasca.
+                        if (accepted && deps.store.db.planItems().byId(reminder.id) == null) {
                             val day = startOfDay(reminder.day ?: ViraTime.now())
-                            deps.store.create(deps.store.db.planItems(), PlanItem(title = reminder.title, day = day))
+                            deps.store.create(deps.store.db.planItems(), PlanItem(id = reminder.id, title = reminder.title, day = day))
                         }
+                        val resolved = parentAttempt({ error = it }) { deps.client.resolve(reminder, accepted, deps.session.accessToken()) }
                         // Si ha fallat, l'error es queda a la vista: tornar a carregar l'esborraria.
                         if (resolved != null) load()
                         resolving = null
@@ -122,6 +127,7 @@ internal fun ParentPanelInboxContent(
     error: String?,
     onResolve: (ParentReminder, Boolean) -> Unit,
     remindersLoaded: Boolean = true,
+    messagesLoaded: Boolean = true,
 ) {
     val locale = viraLocale()
     val pending = reminders.filter { it.isPending }
@@ -164,7 +170,9 @@ internal fun ParentPanelInboxContent(
             header = stringResource(R.string.parent_inbox_messages),
             footer = stringResource(R.string.parent_inbox_footnote),
             rows = {
-                if (messages.isEmpty()) {
+                if (messages.isEmpty() && !messagesLoaded) {
+                    row { ParentProgressInline() }
+                } else if (messages.isEmpty()) {
                     row { Text(stringResource(R.string.parent_inbox_messages_empty), style = ViraFont.footnote, color = ViraColor.textSecondary) }
                 }
                 messages.forEach { message ->

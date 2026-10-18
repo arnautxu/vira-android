@@ -79,6 +79,18 @@ class ParentLinkClientTest {
         assertFalse(body.contains("parent_user_id"))
     }
 
+    /// Un reintent del mateix full porta el mateix identificador: el servidor no en fa dos.
+    @Test
+    fun unReintentReutilitzaLIdentificador() = runBlocking {
+        val id = UUID.randomUUID()
+        server.enqueue(MockResponse().setResponseCode(201))
+        server.enqueue(MockResponse().setResponseCode(201))
+        client.send("Ànims!", UUID.randomUUID(), "token", id)
+        client.propose("Dutxa't", null, UUID.randomUUID(), "token", id)
+        assertTrue(server.takeRequest().body.readUtf8().contains("\"id\":\"$id\""))
+        assertTrue(server.takeRequest().body.readUtf8().contains("\"id\":\"$id\""))
+    }
+
     @Test
     fun unRecordatoriProposatNeixSenseAcceptarNiDescartar() = runBlocking {
         server.enqueue(MockResponse().setResponseCode(201))

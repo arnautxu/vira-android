@@ -64,9 +64,11 @@ class ParentLinkClient(
         select("parent_messages", recentFirst, ParentMessage.serializer(), accessToken)
 
     /// `parent_user_id` no s'envia: el posa el servidor amb `auth.uid()`.
-    suspend fun send(body: String, childId: UUID, accessToken: String) {
+    /// `id` el tria qui escriu i es manté entre reintents: si el servidor ja l'havia desat i la
+    /// resposta s'ha perdut, tornar-hi no en fa un de segon.
+    suspend fun send(body: String, childId: UUID, accessToken: String, id: UUID = UUID.randomUUID()) {
         val row = JsonObject(mapOf(
-            "id" to JsonPrimitive(UUID.randomUUID().toString()),
+            "id" to JsonPrimitive(id.toString()),
             "child_user_id" to JsonPrimitive(childId.toString()),
             "body" to JsonPrimitive(body),
         ))
@@ -85,9 +87,9 @@ class ParentLinkClient(
         select("parent_reminders", pending + recentFirst, ParentReminder.serializer(), accessToken)
 
     /// Neix sense `accepted_at` ni `dismissed_at`, i sense `parent_user_id`: això ho posa el servidor.
-    suspend fun propose(title: String, day: Instant?, childId: UUID, accessToken: String) {
+    suspend fun propose(title: String, day: Instant?, childId: UUID, accessToken: String, id: UUID = UUID.randomUUID()) {
         val row = JsonObject(mapOf(
-            "id" to JsonPrimitive(UUID.randomUUID().toString()),
+            "id" to JsonPrimitive(id.toString()),
             "child_user_id" to JsonPrimitive(childId.toString()),
             "title" to JsonPrimitive(title),
             "day" to (day?.let { JsonPrimitive(ViraTime.format(it)) } ?: JsonNull),

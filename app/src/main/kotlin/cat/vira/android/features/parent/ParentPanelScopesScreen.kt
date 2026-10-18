@@ -34,7 +34,6 @@ import cat.vira.android.core.design.tokens.ViraColor
 import cat.vira.android.core.design.tokens.ViraFont
 import cat.vira.android.core.design.tokens.ViraSpacing
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 /// Què veu aquesta persona, decidit pel fill o la filla (`ParentPanelScopesView` de l'iPhone).
@@ -50,7 +49,7 @@ internal fun ParentPanelScopesScreen(link: ParentLink, deps: ParentDeps, onBack:
     var confirming by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<ViraBackendError?>(null) }
     val scope = rememberCoroutineScope()
-    val saving = remember { Mutex() }
+    val saving = remember(link.id) { parentSaveLock(link.id) }
 
     // Es desa a cada canvi, sense botó: tancar un àmbit ha de tenir efecte quan es toca, no quan
     // es confirma. Un «Desa» que algú no premi deixaria la porta oberta.
@@ -93,7 +92,8 @@ internal fun ParentPanelScopesScreen(link: ParentLink, deps: ParentDeps, onBack:
                         .viraPressable {
                             confirming = false
                             isWorking = true
-                            scope.launch {
+                            // Com els àmbits: revocar no es pot cancel·lar per haver tocat Enrere.
+                            parentSaveScope.launch {
                                 val done = saving.withLock { parentAttempt({ error = it }) { deps.client.revoke(draft, deps.session.accessToken()) } }
                                 isWorking = false
                                 if (done != null) { onChange(); onBack() }

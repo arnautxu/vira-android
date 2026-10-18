@@ -55,6 +55,8 @@ internal fun ParentComposeSheet(mode: ParentComposeMode, childId: UUID, deps: Pa
     var text by remember { mutableStateOf("") }
     var day by remember { mutableStateOf<Instant?>(null) }
     var isWorking by remember { mutableStateOf(false) }
+    // El mateix identificador a cada reintent del mateix full: el servidor el reconeix i no en fa dos.
+    val itemId = remember { UUID.randomUUID() }
     var error by remember { mutableStateOf<ViraBackendError?>(null) }
     val scope = rememberCoroutineScope()
 
@@ -72,8 +74,8 @@ internal fun ParentComposeSheet(mode: ParentComposeMode, childId: UUID, deps: Pa
                     val sent = parentAttempt({ error = it }) {
                         val token = deps.session.accessToken()
                         when (mode) {
-                            ParentComposeMode.MESSAGE -> deps.client.send(text.trim(), childId, token)
-                            ParentComposeMode.REMINDER -> deps.client.propose(text.trim(), day, childId, token)
+                            ParentComposeMode.MESSAGE -> deps.client.send(text.trim(), childId, token, itemId)
+                            ParentComposeMode.REMINDER -> deps.client.propose(text.trim(), day, childId, token, itemId)
                         }
                     }
                     isWorking = false
