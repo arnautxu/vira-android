@@ -5,6 +5,16 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.runtime.Composable
+import kotlinx.coroutines.flow.mapNotNull
+import kotlinx.coroutines.flow.filterNotNull
+import cat.vira.android.features.parent.ParentRootScreen
+import cat.vira.android.features.parent.ParentPanelPlaceholder
+import cat.vira.android.features.parent.ParentLinkUrl
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
@@ -25,6 +35,7 @@ import cat.vira.android.features.focus.FocusScreen
 import cat.vira.android.features.focus.FocusStartRequest
 import cat.vira.android.features.help.HelpBreatheScreen
 import cat.vira.android.features.help.HelpScreen
+import cat.vira.android.features.settings.AccountSettingsScreen
 import cat.vira.android.features.settings.SettingsScreen
 import java.util.UUID
 
@@ -66,11 +77,24 @@ internal object ViraFeatureSlots {
     /// vinculació arriben per `LocalViraIncomingLinks.current.pending`; un cop fet servir,
     /// `consume(uri)`.
     @Composable
-    fun ParentRoot() = PendingScreen()
+    fun ParentRoot() {
+        val incoming = LocalViraIncomingLinks.current
+        // Només els enllaços de vinculació; es consumeixen en arribar al camp, mai s'envien sols.
+        val codes = remember(incoming) {
+            incoming.pending.filterNotNull().mapNotNull { uri ->
+                ParentLinkUrl.code(uri.toString())?.also { incoming.consume(uri) }
+            }
+        }
+        ParentRootScreen(account = { onClose -> AccountSettingsScreen(onClose) }, linkCodes = codes)
+    }
 
     /// Fil Panell de pares: el que veu un pare o mare a les builds sense panell (Google Play).
     @Composable
-    fun ParentReleasePlaceholder() = PendingScreen()
+    fun ParentReleasePlaceholder() {
+        var showingAccount by rememberSaveable { mutableStateOf(false) }
+        if (showingAccount) AccountSettingsScreen(onClose = { showingAccount = false })
+        else ParentPanelPlaceholder(onAccount = { showingAccount = true })
+    }
 
     /// Fil Concentra't (`features/focus`): la preparació a pantalla completa, sense la barra
     /// (`FocusScreen(onClose = onClose)`); `link` és la tasca triada, si s'hi ha arribat des d'una
