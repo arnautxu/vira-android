@@ -101,7 +101,7 @@ fun Mindfulness() = Screen {
 @PreviewTest @ViraScreenCaptures @Composable
 fun MindfulnessCategoryAnxiety() = Screen {
     Column {
-        PushedHeader(stringResource(MindfulnessCategory.ANXIETY.title)) {}
+        PushedHeader("") {}
         MindfulnessCategoryContent(MindfulnessCategory.ANXIETY, {}, Modifier.weight(1f))
     }
 }

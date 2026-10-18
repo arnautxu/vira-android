@@ -89,7 +89,8 @@ fun EmotionsScreen() {
     category?.let { current ->
         BackHandler { category = null }
         Column(Modifier.fillMaxSize()) {
-            PushedHeader(stringResource(current.title)) { category = null }
+            // El títol gran ja és a la pàgina (`ViraPageTitle`): la barra només porta l'enrere.
+            PushedHeader("") { category = null }
             MindfulnessCategoryContent(current, onExercise = { exercise = it }, modifier = Modifier.weight(1f))
         }
         return
