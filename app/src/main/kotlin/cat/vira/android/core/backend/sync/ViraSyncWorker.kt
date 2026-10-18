@@ -16,8 +16,11 @@ import java.util.concurrent.TimeUnit
 class ViraSyncWorker(context: Context, parameters: WorkerParameters) : CoroutineWorker(context, parameters) {
 
     override suspend fun doWork(): Result {
-        (applicationContext as ViraApp).backend.syncIfStale()
-        return Result.success()
+        val backend = (applicationContext as ViraApp).backend
+        backend.syncIfStale()
+        // Un error de xarxa o del servidor es torna a provar aviat; la resta, a la passada següent.
+        val failure = (backend.engine.state.value as? ViraSyncEngine.State.Failed)?.error
+        return if (failure?.isRetryable == true) Result.retry() else Result.success()
     }
 
     companion object {

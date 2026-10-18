@@ -76,17 +76,25 @@ class ViraSession(
         }
     }
 
-    suspend fun signIn(email: String, password: String) = attempt { adopt(requireAuth().signIn(email, password)) }
+    suspend fun signIn(email: String, password: String) = attempt {
+        forgetRecoveryRequest()
+        adopt(requireAuth().signIn(email, password))
+    }
 
     /// Alta amb correu. Torna `false` quan cal confirmar el correu abans d'entrar.
     suspend fun signUp(email: String, password: String, role: ViraAccountRole, consent: ViraConsentStatus): Boolean =
         attempt {
+            // La tornada de la confirmació no és una recuperació, encara que n'hi hagi una de demanada.
+            forgetRecoveryRequest()
             val session = requireAuth().signUp(email, password, ViraUserMetadata(role, consent))
             if (session != null) adopt(session)
             session != null
         } ?: false
 
-    suspend fun startOAuth(provider: ViraOAuthProvider) = attempt { requireAuth().startOAuth(provider) }
+    suspend fun startOAuth(provider: ViraOAuthProvider) = attempt {
+        forgetRecoveryRequest()
+        requireAuth().startOAuth(provider)
+    }
 
     /// Google: primer el selector de comptes del telèfon i, si no es pot, el navegador.
     suspend fun signInWithGoogle(activity: Activity) {
@@ -121,7 +129,7 @@ class ViraSession(
             if (isRecovery) _isRecoveringPassword.value = true
         }
         // Només si ha anat bé: un reintent sense xarxa sovint torna sense `type=recovery`.
-        if (adopted != null) preferences.edit().remove(PASSWORD_RECOVERY_REQUESTED_AT).apply()
+        if (adopted != null) forgetRecoveryRequest()
     }
 
     suspend fun updatePassword(password: String) {
@@ -129,7 +137,10 @@ class ViraSession(
         _isRecoveringPassword.value = false
     }
 
-    fun cancelPasswordRecovery() { _isRecoveringPassword.value = false }
+    fun cancelPasswordRecovery() {
+        _isRecoveringPassword.value = false
+        forgetRecoveryRequest()
+    }
 
     suspend fun signOut() {
         runCatching { auth?.signOut() }
@@ -178,7 +189,9 @@ class ViraSession(
     suspend fun updateConsent(consent: ViraConsentStatus) = updateMetadata(ViraUserMetadata(user?.role, consent))
 
     /// Sessió invalidada des de fora (testimoni revocat, compte esborrat en un altre telèfon).
-    fun invalidate() {
+    suspend fun invalidate() {
+        // També la desada: si no, en reobrir l'app la sessió rebutjada tornaria a semblar bona.
+        runCatching { auth?.forgetSession() }
         clearLocalSession()
         _lastError.value = ViraBackendError.SESSION_EXPIRED
     }
@@ -234,6 +247,10 @@ class ViraSession(
     } catch (error: ViraBackendException) {
         _lastError.value = error.error
         null
+    }
+
+    private fun forgetRecoveryRequest() {
+        preferences.edit().remove(PASSWORD_RECOVERY_REQUESTED_AT).apply()
     }
 
     private fun expectPasswordRecovery() {
