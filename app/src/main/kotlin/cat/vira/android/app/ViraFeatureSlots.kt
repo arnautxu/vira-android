@@ -25,6 +25,7 @@ import cat.vira.android.features.focus.FocusScreen
 import cat.vira.android.features.focus.FocusStartRequest
 import cat.vira.android.features.help.HelpBreatheScreen
 import cat.vira.android.features.help.HelpScreen
+import cat.vira.android.features.settings.SettingsScreen
 import java.util.UUID
 
 /// Quin tros del flux d'entrada demana l'arrel (`EntryFlowView(steps:)` a l'iPhone).
@@ -115,7 +116,10 @@ internal object ViraFeatureSlots {
     /// Fil Ajustos i compte (`features/settings`). Per editar un mode de Concentra't,
     /// `LocalViraNavigator.current.editFocusProfile(id)`.
     @Composable
-    fun Settings(onClose: () -> Unit) = PendingModal(onClose)
+    fun Settings(onClose: () -> Unit) {
+        val navigator = LocalViraNavigator.current
+        SettingsScreen(onClose, onEditFocusProfile = { navigator.editFocusProfile(it?.id) })
+    }
 }
 
 /// El marcador de l'esquelet amb una manera de tornar enrere a més del gest.
