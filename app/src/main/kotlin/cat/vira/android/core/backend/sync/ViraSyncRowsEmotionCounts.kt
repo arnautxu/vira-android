@@ -18,15 +18,17 @@ import java.time.Duration
 ///   perquè baixar-les no fa sortir res i el saldo s'ha de poder quadrar.
 /// - **Quan s'obre la porta**, el motor torna a pujar la taula sencera una vegada
 ///   (`ViraSyncEngine.push`). Perquè aquesta segona pujada del comptador passi `keep_last_write`
-///   (`0005`), la pujada sense recompte surt **un mil·lisegon més vella** que el model.
+///   (`0005`), la pujada sense recompte surt **un microsegon més vella** que el model. L'iPhone
+///   en resta un mil·lisegon perquè el seu JSON no va més enllà; aquí el fil viatja en
+///   microsegons, i restar-ne més faria perdre la pujada contra una fila del servidor just anterior.
 ///
 /// El servidor ho fa complir pel seu compte (`20261018120000_emotion_counts_consent.sql`).
 ///
 /// La llavor «legacy» de l'iPhone (`seedLegacyEmotionReplay`) no hi és: cap build d'Android va
 /// pujar mai aquestes files sense la porta.
 object ViraEmotionTrace {
-    /// Prou per quedar per sota al servidor (`timestamptz`) i res més.
-    val heldUploadOffset: Duration = Duration.ofMillis(1)
+    /// Prou per quedar per sota al servidor (`timestamptz`, microsegons) i res més.
+    val heldUploadOffset: Duration = Duration.ofNanos(1_000)
 
     /// Els reptes que només es compleixen registrant una emoció (`ChallengeCatalog`).
     val challengeKeys = setOf("daily_emotion", "weekly_emotion")

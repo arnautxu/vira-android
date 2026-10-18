@@ -3,7 +3,6 @@ package cat.vira.android.core.backend
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.jsonPrimitive
 import java.util.UUID
 
 /// Qui és qui, per a la interfície. Viu a `user_metadata` del compte perquè torni en canviar de
@@ -65,8 +64,10 @@ data class ViraUserMetadata(val role: ViraAccountRole? = null, val consent: Vira
 
     companion object {
         fun from(json: JsonObject?): ViraUserMetadata = ViraUserMetadata(
-            role = ViraAccountRole.from(json?.get("role")?.jsonPrimitive?.contentOrNull),
-            consent = ViraConsentStatus.from(json?.get("consent")?.jsonPrimitive?.contentOrNull),
+            // Un objecte o una llista on hi hauria d'haver un text compta com a absent: una metadada
+            // estranya no pot deixar ningú fora del compte.
+            role = ViraAccountRole.from((json?.get("role") as? JsonPrimitive)?.contentOrNull),
+            consent = ViraConsentStatus.from((json?.get("consent") as? JsonPrimitive)?.contentOrNull),
         )
     }
 }

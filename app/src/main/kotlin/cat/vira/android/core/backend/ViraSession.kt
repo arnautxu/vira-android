@@ -95,16 +95,19 @@ class ViraSession(
     }
 
     suspend fun signIn(email: String, password: String) = attempt {
+        val session = requireAuth().signIn(email, password)
+        // Només si ha entrat: provar la contrasenya vella mentre s'espera el correu no ha d'esborrar
+        // la marca que farà reconèixer l'enllaç com a recuperació.
         forgetRecoveryRequest()
-        adopt(requireAuth().signIn(email, password))
+        adopt(session)
     }
 
     /// Alta amb correu. Torna `false` quan cal confirmar el correu abans d'entrar.
     suspend fun signUp(email: String, password: String, role: ViraAccountRole, consent: ViraConsentStatus): Boolean =
         attempt {
+            val session = requireAuth().signUp(email, password, ViraUserMetadata(role, consent))
             // La tornada de la confirmació no és una recuperació, encara que n'hi hagi una de demanada.
             forgetRecoveryRequest()
-            val session = requireAuth().signUp(email, password, ViraUserMetadata(role, consent))
             if (session != null) adopt(session)
             session != null
         } ?: false

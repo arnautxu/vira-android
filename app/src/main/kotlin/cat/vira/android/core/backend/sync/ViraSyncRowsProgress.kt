@@ -93,7 +93,7 @@ class ProgressCounterSyncTable(
             focusSessionsCount = row.focusSessionsCount,
             habitsCompletedCount = row.habitsCompletedCount, daysActiveCount = row.daysActiveCount,
             // Sense recompte, el model es queda el local, que el servidor no té: ha de quedar per sobre
-            // de la fila baixada fins i tot després de restar-li el mil·lisegon de la pujada retinguda,
+            // de la fila baixada fins i tot després de restar-li el microsegon de la pujada retinguda,
             // o en obrir la porta la pujada sencera hi empataria i `keep_last_write` la descartaria.
             updatedAt = if (row.emotionCheckinsCount != null) row.updatedAt
                 else maxOf(ViraTime.now(), row.updatedAt.plus(ViraEmotionTrace.heldUploadOffset.multipliedBy(2))),
