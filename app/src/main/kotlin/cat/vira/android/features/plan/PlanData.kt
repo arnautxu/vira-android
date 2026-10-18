@@ -19,6 +19,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withLock
 import java.time.LocalDate
 import java.time.ZoneId
 
@@ -67,7 +68,9 @@ class PlanActions(
 ) {
     private fun write(block: suspend ViraStore.() -> Unit) {
         val store = store ?: return
-        scope.launch { store.block() }
+        // Una darrere l'altra i en l'ordre dels tocs: un "Desfer" no pot llegir abans que s'hagi
+        // escrit el que desfà.
+        scope.launch { PlanWrites.lock.withLock { store.block() } }
     }
 
     // Calendari
@@ -86,12 +89,16 @@ class PlanActions(
         } else {
             // La propera repetició es fa ara (com a l'iPhone) i el "Desfer" se l'emporta: si no,
             // tornar-la a marcar en faria una segona per al mateix dia.
-            val next = PlanItemCompletion.nextOccurrence(item, zone)
+            var nextId: java.util.UUID? = null
             write {
                 // La fila d'ara, no la de la pantalla: una sincronització entremig no es perd.
                 val current = db.planItems().byId(item.id) ?: return@write
+                if (current.status == PlanItemStatus.DONE) return@write
                 save(db.planItems(), current.copy(statusRaw = PlanItemStatus.DONE.raw, completedAt = ViraTime.now()))
-                next?.let { create(db.planItems(), it) }
+                PlanItemCompletion.nextOccurrence(current, zone)?.let {
+                    create(db.planItems(), it)
+                    nextId = it.id
+                }
             }
             host.present(
                 PendingCompletion(
@@ -102,7 +109,7 @@ class PlanActions(
                             db.planItems().byId(item.id)?.let {
                                 save(db.planItems(), it.copy(statusRaw = PlanItemStatus.PENDING.raw, completedAt = null))
                             }
-                            next?.let { db.planItems().byId(it.id) }?.let { delete(it) }
+                            nextId?.let { db.planItems().byId(it) }?.let { delete(it) }
                         }
                     },
                 ),
@@ -115,7 +122,12 @@ class PlanActions(
 
     fun delete(item: PlanItem) = write { delete(item) }
 
-    fun move(changed: List<PlanItem>) = write { changed.forEach { save(db.planItems(), it) } }
+    /// Només l'ordre: la resta de la fila es llegeix d'ara, perquè una sincronització entremig no es perdi.
+    fun move(changed: List<PlanItem>) = write {
+        changed.forEach { moved ->
+            db.planItems().byId(moved.id)?.let { save(db.planItems(), it.copy(sortIndex = moved.sortIndex)) }
+        }
+    }
 
     /// Desa l'edició. Canviar l'hora o el dia refà l'ordre a partir del rellotge; si només canvia
     /// el títol o la icona, l'ordre no es toca.
@@ -160,7 +172,12 @@ class PlanActions(
                 PendingCompletion(
                     id = id,
                     reason = CoinReason.HABIT,
-                    onUndo = { write { db.habitLogs().byId(log.id)?.let { delete(it) } } },
+                    onUndo = {
+                        write {
+                            db.habitLogs().byId(log.id)?.let { delete(it) }
+                            host.onScheduleChanged()
+                        }
+                    },
                     onCommit = {
                         store?.let { ViraProgress(it).countHabitCompleted() }
                     },

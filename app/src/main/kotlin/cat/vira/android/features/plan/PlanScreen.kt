@@ -21,6 +21,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,8 +51,10 @@ import cat.vira.android.core.design.tokens.ViraSpacing
 import cat.vira.android.core.design.tokens.ViraTouch
 import cat.vira.android.core.notifications.ViraNotifications
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.sync.Mutex
 
 /// Les claus dels mòduls, les mateixes de l'iPhone (`ViraPreferences.moduleHabitsEnabled`).
 object PlanModules {
@@ -75,7 +78,7 @@ fun PlanScreen() {
     val snapshot by remember(backend) { PlanSnapshot.observe(backend.db) }.collectAsState(PlanSnapshot())
 
     val chrome = remember { PlanChrome() }
-    // Fins que la captura ràpida d'Avui sigui a main, s'hi arriba amb l'editor en blanc.
+    // El "+" i "Afegir aquí" obren la captura ràpida d'Avui.
     val actions = rememberPlanActions(onCapture = { day, period -> chrome.capture = PlanCaptureRequest(day, period) })
 
     PlanContent(
@@ -86,12 +89,29 @@ fun PlanScreen() {
         onSelect = { navigator.planSection = it },
         habitsEnabled = habitsEnabled,
         medicationEnabled = medicationEnabled,
+        today = rememberPlanToday(),
     )
+}
+
+/// Avui, que **es torna a llegir en passar la mitjanit**: amb Pla obert tota la nit, l'endemà
+/// els hàbits i les preses no s'han d'apuntar al dia d'ahir.
+@Composable
+private fun rememberPlanToday(): java.time.LocalDate {
+    val today by produceState(PlanDay.today()) {
+        while (true) {
+            val zone = java.time.ZoneId.systemDefault()
+            val next = PlanDay.start(PlanDay.today(zone).plusDays(1), zone)
+            delay(maxOf(1_000L, java.time.Duration.between(java.time.Instant.now(), next).toMillis() + 1_000L))
+            value = PlanDay.today()
+        }
+    }
+    return today
 }
 
 /// On s'executen les escriptures de Pla: viu tant com el procés, com la cua del "Desfer".
 internal object PlanWrites {
-    val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default.limitedParallelism(1))
+    val lock = Mutex()
 }
 
 /// Les escriptures de Pla connectades a l'app (la cua de "Desfer", els avisos), per a qualsevol
