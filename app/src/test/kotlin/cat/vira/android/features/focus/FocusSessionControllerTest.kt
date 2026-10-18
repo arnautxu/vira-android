@@ -139,11 +139,14 @@ class FocusSessionControllerTest {
         val done = FocusSession(startedAt = now.minusSeconds(3600), plannedSeconds = 25 * 60)
         val cut = FocusSession(startedAt = now.minusSeconds(60), plannedSeconds = 25 * 60)
         db.focusSessions().upsertRaw(listOf(done, cut))
+        store.save(db.streaks(), store.streak().copy(isFrozen = true))
         FocusRecovery.closeOrphans(store, now)
         val byId = db.focusSessions().all().associateBy { it.id }
         assertTrue(byId.getValue(done.id).completed)
         assertEquals(25 * 60, byId.getValue(done.id).actualSeconds)
         assertFalse(byId.getValue(cut.id).completed)
         assertEquals(now, byId.getValue(cut.id).endedAt)
+        // La completada passa per `ViraProgress.recordFocus`: descongela Viri.
+        assertFalse(store.streak().isFrozen)
     }
 }
