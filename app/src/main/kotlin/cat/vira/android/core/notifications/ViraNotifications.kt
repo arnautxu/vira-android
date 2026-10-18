@@ -1,0 +1,177 @@
+package cat.vira.android.core.notifications
+
+import android.Manifest
+import android.app.AlarmManager
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
+import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
+import cat.vira.android.core.data.ViraDatabase
+import cat.vira.android.core.data.ViraPreferences
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import java.time.Instant
+import java.time.ZoneId
+
+/// La porta d'entrada dels avisos: el que criden les pantalles, l'arrencada i el segon pla.
+///
+/// `reschedule` és idempotent, com a l'iPhone: treu els avisos propis i torna a posar els que
+/// toquen. S'ha de cridar cada cop que canvia què cal recordar (marcar, editar un hàbit o una
+/// pauta, canviar un interruptor), en tornar a primer pla i des del treball de segon pla.
+object ViraNotifications {
+
+    /// L'extra que l'arrencada de l'app llegeix per saber quina pantalla obrir després d'un toc.
+    const val EXTRA_DESTINATION = "cat.vira.notification.destination"
+    const val DESTINATION_TODAY = "today"
+    const val DESTINATION_CHECK_IN = "checkIn"
+
+    /// El permís d'Android 13+. **Es demana en context**, quan l'usuari encén un avís, mai a
+    /// l'arrencada. Un cop denegat dues vegades, Android ja no torna a preguntar: la pantalla ho
+    /// ha d'explicar en comptes de callar.
+    const val PERMISSION = Manifest.permission.POST_NOTIFICATIONS
+
+    private val reminderPrefixes = listOf(
+        ViraNotificationPlanner.HABIT_PREFIX,
+        ViraNotificationPlanner.MEDICATION_PREFIX,
+        ViraNotificationPlanner.PLAN_PREFIX,
+        ViraNotificationPlanner.EMOTION_PREFIX,
+    )
+    private val streakPrefixes = listOf(ViraStreakNotifications.PREFIX)
+
+    /// Si ara mateix es poden publicar avisos (permís concedit i no apagats als Ajustos del
+    /// sistema). No demana res.
+    fun canPost(context: Context): Boolean {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(context, PERMISSION) != PackageManager.PERMISSION_GRANTED
+        ) return false
+        return NotificationManagerCompat.from(context).areNotificationsEnabled()
+    }
+
+    /// Refà els recordatoris i els avisos de Viri.
+    ///
+    /// Les passades van d'una en una: el treball de segon pla i un botó de l'avís poden arribar
+    /// alhora, i una passada vella que acabés l'última tornaria a posar un avís que la nova ja
+    /// havia tret (una cosa feta mentrestant).
+    suspend fun reschedule(context: Context, now: Instant = Instant.now(), zone: ZoneId = ZoneId.systemDefault()) {
+        val host = context.notificationHost ?: return
+        passes.withLock {
+            rescheduleReminders(context, host.notificationDatabase, now, zone)
+            rescheduleStreak(context, host, now, zone)
+        }
+    }
+
+    private val passes = Mutex()
+
+    /// Si l'avís encara el vol l'usuari en el moment de sonar. Un «Més tard» o una alarma
+    /// endarrerida poden sonar després d'apagar-ne la categoria: aleshores no surt.
+    fun isWanted(context: Context, notification: ViraPlannedNotification): Boolean {
+        val p = ViraPreferences.open(context)
+        if (notification.channel == ViraNotificationChannel.VIRI) return ViraNotificationPreferences.viriMessagesEnabled(p)
+        if (!ViraNotificationPreferences.remindersEnabled(p)) return false
+        return when (notification.channel) {
+            ViraNotificationChannel.MEDICATION -> ViraNotificationPreferences.medicationEnabled(p)
+            ViraNotificationChannel.HABITS -> ViraNotificationPreferences.habitsEnabled(p)
+            ViraNotificationChannel.PLAN -> ViraNotificationPreferences.planEnabled(p)
+            ViraNotificationChannel.EMOTION -> ViraNotificationPreferences.emotionEnabled(p)
+            ViraNotificationChannel.VIRI -> true
+        }
+    }
+
+    /// Si el sistema deixa posar alarmes exactes. A Android 14+ el permís neix **retirat** i
+    /// l'usuari l'ha de donar als Ajustos del sistema (`exactAlarmSettings`); sense ell, els avisos
+    /// arriben igual però poden endarrerir-se uns minuts.
+    fun canScheduleExact(context: Context): Boolean =
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+            context.getSystemService(AlarmManager::class.java)?.canScheduleExactAlarms() == true
+
+    /// La pantalla del sistema on es donen les alarmes exactes a Vira (Android 12+). La fa servir
+    /// Ajustos → Notificacions quan `canScheduleExact` és fals.
+    fun exactAlarmSettings(context: Context): Intent? =
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) null
+        else Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:${context.packageName}"))
+
+    suspend fun rescheduleReminders(context: Context, db: ViraDatabase, now: Instant, zone: ZoneId) {
+        val scheduler = ViraNotificationScheduler(context)
+        val preferences = ViraPreferences.open(context)
+        if (!canPost(context) || !ViraNotificationPreferences.remindersEnabled(preferences)) {
+            scheduler.cancelAll(reminderPrefixes)
+            return
+        }
+        val settings = ViraNotificationSettings(
+            habits = ViraNotificationPreferences.habitsEnabled(preferences),
+            medication = ViraNotificationPreferences.medicationEnabled(preferences),
+            plan = ViraNotificationPreferences.planEnabled(preferences),
+            emotion = ViraNotificationPreferences.emotionEnabled(preferences),
+            detail = ViraNotificationPreferences.detailEnabled(preferences),
+            medicationDetail = ViraNotificationPreferences.medicationDetailEnabled(preferences),
+            emotionTime = ViraNotificationPreferences.emotionTime(preferences),
+        )
+        val planned = ViraNotificationPlanner.plan(snapshot(db), settings, now, zone, text(context))
+        scheduler.replace(reminderPrefixes, planned, now)
+    }
+
+    private suspend fun rescheduleStreak(context: Context, host: ViraNotificationHost, now: Instant, zone: ZoneId) {
+        val scheduler = ViraNotificationScheduler(context)
+        val preferences = ViraPreferences.open(context)
+        val state = host.notificationEffects.streakState(now)
+        // Amagar la ratxa se n'emporta també els avisos: si no es veu a la pantalla, no pot
+        // sortir a la pantalla bloquejada.
+        if (!canPost(context) || !ViraNotificationPreferences.viriMessagesEnabled(preferences) ||
+            state == null || !state.isVisible
+        ) {
+            scheduler.cancelAll(streakPrefixes)
+            return
+        }
+        val time = ViraNotificationPreferences.viriTime(preferences)
+        val planned = ViraStreakNotifications.requests(
+            now = now,
+            event = ViraStreakNotifications.pendingEvent(preferences, time, now, zone),
+            dayIsOpen = state.dayIsOpen,
+            muted = ViraNotificationPlanner.muteWindow(host.notificationDatabase.focusSessions().all(), now),
+            time = time,
+            zone = zone,
+            text = text(context),
+        )
+        scheduler.replace(streakPrefixes, planned, now)
+    }
+
+    /// Posa la ratxa al dia des del segon pla i deixa apuntat el que hagi passat. És l'únic camí
+    /// que fa que «t'he guardat la ratxa» arribi **sense obrir l'app**; amb l'app oberta no
+    /// s'apunta res, perquè la targeta d'Inici ja ho diu.
+    suspend fun reconcileInBackground(context: Context, now: Instant = Instant.now()) {
+        val host = context.notificationHost ?: return
+        val preferences = ViraPreferences.open(context)
+        when (host.notificationEffects.reconcileStreak(now)) {
+            ViraStreakReconcile.UNCHANGED -> Unit
+            ViraStreakReconcile.PROTECTED -> ViraStreakNotifications.record(ViraStreakNotifications.Event.Protected, preferences, now)
+            ViraStreakReconcile.RESET -> ViraStreakNotifications.record(ViraStreakNotifications.Event.Reset, preferences, now)
+        }
+    }
+
+    /// Una fita, una ratxa salvada o una que torna a zero: la propera franja de Viri ho dirà.
+    /// La crida `features/progress`; després cal un `reschedule`.
+    fun record(context: Context, event: ViraStreakNotifications.Event, now: Instant = Instant.now()) =
+        ViraStreakNotifications.record(event, ViraPreferences.open(context), now)
+
+    /// Esborrat total i canvi de compte: cap avís programat del compte anterior.
+    fun cancelEverything(context: Context) {
+        ViraNotificationScheduler(context).cancelAll(reminderPrefixes + streakPrefixes)
+        ViraStreakNotifications.clearPendingEvent(ViraPreferences.open(context))
+    }
+
+    private suspend fun snapshot(db: ViraDatabase) = ViraNotificationInputs(
+        habits = db.habits().all(),
+        habitLogs = db.habitLogs().all(),
+        medications = db.medications().all(),
+        intakes = db.medicationIntakes().all(),
+        planItems = db.planItems().all(),
+        emotionEntries = db.emotionEntries().all(),
+        focusSessions = db.focusSessions().all(),
+    )
+
+    private fun text(context: Context) = ViraNotificationText { id, args -> context.getString(id, *args) }
+}
