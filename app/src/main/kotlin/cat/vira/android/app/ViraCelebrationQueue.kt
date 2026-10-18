@@ -111,10 +111,7 @@ internal class CelebrationQueue(
 
     fun defer(deferred: Boolean) {
         deferralCount = maxOf(0, deferralCount + if (deferred) 1 else -1)
-        if (!isDeferred) {
-            presentPendingStreak()
-            presentPendingLevel()
-        }
+        if (!isDeferred) presentAllPending()
     }
 
     // Ratxa
