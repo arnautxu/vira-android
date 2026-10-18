@@ -15,6 +15,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.flowWithLifecycle
+import androidx.room.withTransaction
 import cat.vira.android.core.backend.ViraBackend
 import cat.vira.android.core.data.ViraPreferences
 import cat.vira.android.core.data.ViraStore
@@ -213,7 +214,13 @@ internal class CelebrationQueue(
         val oldXP = counter?.totalXP
         counter = value
         counterLoaded = true
+        // El nivell primer i la carta després: totes dues són pantalles completes, i la carta és la
+        // que millor espera.
+        checkLevel(value, oldXP)
         presentNextCard()
+    }
+
+    private fun checkLevel(value: ProgressCounter?, oldXP: Int?) {
         if (value == null || oldXP == null || oldXP >= value.totalXP) return
         val level = ViraLevel.level(value.totalXP)
         if (!allowsLevel) {
@@ -229,7 +236,15 @@ internal class CelebrationQueue(
     private fun markLevel(counter: ProgressCounter, level: Int) {
         val marked = counter.copy(lastCelebratedLevel = level)
         this.counter = marked
-        scope.launch { store.saveDeviceOnly(backend.db.progressCounters(), marked) }
+        // Sobre la fila d'ara i no la de la foto: una concessió o una baixada entremig no es pot trepitjar.
+        scope.launch {
+            backend.db.withTransaction {
+                val latest = backend.db.progressCounters().all().firstOrNull() ?: return@withTransaction
+                if (latest.lastCelebratedLevel < level) {
+                    store.saveDeviceOnly(backend.db.progressCounters(), latest.copy(lastCelebratedLevel = level))
+                }
+            }
+        }
     }
 
     /// La ratxa guanya si totes dues volen sortir alhora; el nivell surt en tancar-la.
@@ -239,7 +254,9 @@ internal class CelebrationQueue(
             return
         }
         val pending = pendingLevel ?: return
-        if (isDeferred || streakCelebration != null || levelCelebration != null) return
+        if (isDeferred || streakCelebration != null || levelCelebration != null ||
+            badgeCelebration != null || cardCelebration != null
+        ) return
         levelCelebration = pending
         pendingLevel = null
     }
@@ -270,6 +287,7 @@ internal class CelebrationQueue(
 
     fun finishCard() {
         cardCelebration = null
+        presentPendingLevel()
         // Encadenades i no alhora: si un moment n'ha desbloquejat dues, la segona surt ara.
         presentNextCard()
     }

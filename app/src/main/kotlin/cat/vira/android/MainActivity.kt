@@ -37,6 +37,7 @@ class MainActivity : FragmentActivity() {
         // El que encara no s'havia gastat sí que torna: si el procés ha mort, `incomingLinks` és nou.
         handleCallback(intent, isRestored = savedInstanceState != null)
         savedInstanceState?.getString(PENDING_LINK)?.let { incomingLinks.deliver(Uri.parse(it)) }
+        savedInstanceState?.getString(PENDING_DESTINATION)?.let { notificationDestination.value = it }
         setContent {
             // Ajustos → Aparença. `auto` (per defecte) deixa que mani el sistema.
             val appearance by rememberPreference(backend.preferences, ViraPreferences.APPEARANCE, "auto")
@@ -69,6 +70,7 @@ class MainActivity : FragmentActivity() {
         super.onSaveInstanceState(outState)
         outState.putString(ADOPTED_CALLBACK, backend.lastAdoptedCallback)
         outState.putString(PENDING_LINK, incomingLinks.pending.value?.toString())
+        outState.putString(PENDING_DESTINATION, notificationDestination.value)
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -87,7 +89,7 @@ class MainActivity : FragmentActivity() {
         // Tocar un avís: on porta. Una activitat recreada ja l'havia fet servir.
         if (!isRestored) {
             intent?.getStringExtra(ViraNotifications.EXTRA_DESTINATION)?.let {
-                (application as ViraApp).notificationDestination.value = it
+                notificationDestination.value = it
                 intent.removeExtra(ViraNotifications.EXTRA_DESTINATION)
             }
         }
@@ -102,10 +104,12 @@ class MainActivity : FragmentActivity() {
     /// Els enllaços que obren l'app i no són de l'auth. Viuen al procés, no a l'activitat: un gir de
     /// pantalla abans que el panell el llegeixi no l'ha de perdre.
     private val incomingLinks get() = (application as ViraApp).incomingLinks
+    private val notificationDestination get() = (application as ViraApp).notificationDestination
 
     private companion object {
         const val ADOPTED_CALLBACK = "cat.vira.android.adoptedCallback"
         const val PENDING_LINK = "cat.vira.android.pendingLink"
+        const val PENDING_DESTINATION = "cat.vira.android.pendingDestination"
 
         // Els vels de la barra de navegació de tres botons, els mateixos que posa `enableEdgeToEdge()`.
         val LIGHT_SCRIM = Color.argb(0xe6, 0xFF, 0xFF, 0xFF)
