@@ -1,6 +1,7 @@
 package cat.vira.android.features.focus
 
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -98,6 +99,7 @@ fun FocusModeCarousel(modes: List<FocusMode>, selectedID: FocusModeID, side: Dp,
     BoxWithConstraints(Modifier.fillMaxWidth().height(side)) {
         val edge = ((maxWidth - pageWidth) / 2).coerceAtLeast(ViraSpacing.screenMargin)
         val mask = ViraColor.shadow
+        val inspection = LocalInspectionMode.current
         HorizontalPager(
             state = pager,
             pageSize = PageSize.Fixed(pageWidth),
@@ -105,17 +107,21 @@ fun FocusModeCarousel(modes: List<FocusMode>, selectedID: FocusModeID, side: Dp,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(side)
-                // Els veïns es fonen contra les vores en comptes de quedar tallats en sec.
-                .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-                .drawWithContent {
-                    drawContent()
-                    drawRect(
-                        Brush.horizontalGradient(
-                            0f to mask.copy(alpha = 0f), 0.06f to mask, 0.94f to mask, 1f to mask.copy(alpha = 0f),
-                        ),
-                        blendMode = BlendMode.DstIn,
-                    )
-                },
+                // Els veïns es fonen contra les vores en comptes de quedar tallats en sec. Les
+                // captures no saben compondre fora de pantalla: allà, sense fos.
+                .then(
+                    if (inspection) Modifier else Modifier
+                        .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                        .drawWithContent {
+                            drawContent()
+                            drawRect(
+                                Brush.horizontalGradient(
+                                    0f to mask.copy(alpha = 0f), 0.06f to mask, 0.94f to mask, 1f to mask.copy(alpha = 0f),
+                                ),
+                                blendMode = BlendMode.DstIn,
+                            )
+                        },
+                ),
         ) { page ->
             val mode = modes[page]
             val selected = page == pager.settledPage && mode.id == selectedID

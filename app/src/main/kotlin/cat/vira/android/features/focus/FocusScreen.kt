@@ -235,7 +235,6 @@ private fun SessionBar(controller: FocusSessionController, trailing: @Composable
         mode = controller.mode,
         title = title,
         taskTitle = if (controller.mode.showsLinkedTask) controller.linkedTitle else null,
-        modifier = Modifier.padding(horizontal = ViraSpacing.screenMargin).padding(top = ViraSpacing.xs),
         trailing = trailing,
     )
 }

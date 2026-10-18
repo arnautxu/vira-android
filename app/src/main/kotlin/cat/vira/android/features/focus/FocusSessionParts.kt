@@ -60,7 +60,10 @@ fun FocusSessionBar(
                 ViraPictogram(FocusPictogram.drawable(pictogram), size = 40.dp, scalesWithText = true)
             }
             Column(Modifier.semantics(mergeDescendants = true) {}, verticalArrangement = Arrangement.spacedBy(ViraSpacing.hairline)) {
-                Text(title, style = ViraFont.headline, color = ViraColor.textPrimary)
+                Text(
+                    title, style = ViraFont.headline, color = ViraColor.textPrimary,
+                    maxLines = if (stacked) Int.MAX_VALUE else 1, overflow = TextOverflow.Ellipsis,
+                )
                 if (taskTitle != null) {
                     Text(
                         taskTitle, style = ViraFont.footnote, color = ViraColor.textSecondary,
