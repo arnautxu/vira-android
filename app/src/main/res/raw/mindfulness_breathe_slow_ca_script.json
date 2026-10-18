@@ -1,0 +1,159 @@
+{
+ "id": "breatheSlow",
+ "language": "ca",
+ "duration": 59.7,
+ "steps": 0,
+ "segments": [
+  {
+   "start": 0.6,
+   "end": 6.02,
+   "kind": "line",
+   "step": null,
+   "stepTitle": null,
+   "text": "mindfulness.breatheSlow.line1"
+  },
+  {
+   "start": 6.02,
+   "end": 10.02,
+   "kind": "breath",
+   "step": null,
+   "stepTitle": null,
+   "phase": "inhale",
+   "text": "help.breathe.inhale"
+  },
+  {
+   "start": 10.02,
+   "end": 12.02,
+   "kind": "breath",
+   "step": null,
+   "stepTitle": null,
+   "phase": "hold",
+   "text": "help.breathe.hold"
+  },
+  {
+   "start": 12.02,
+   "end": 16.02,
+   "kind": "breath",
+   "step": null,
+   "stepTitle": null,
+   "phase": "exhale",
+   "text": "help.breathe.exhale"
+  },
+  {
+   "start": 16.02,
+   "end": 20.02,
+   "kind": "breath",
+   "step": null,
+   "stepTitle": null,
+   "phase": "inhale",
+   "text": "help.breathe.inhale"
+  },
+  {
+   "start": 20.02,
+   "end": 22.02,
+   "kind": "breath",
+   "step": null,
+   "stepTitle": null,
+   "phase": "hold",
+   "text": "help.breathe.hold"
+  },
+  {
+   "start": 22.02,
+   "end": 26.02,
+   "kind": "breath",
+   "step": null,
+   "stepTitle": null,
+   "phase": "exhale",
+   "text": "help.breathe.exhale"
+  },
+  {
+   "start": 26.02,
+   "end": 30.02,
+   "kind": "breath",
+   "step": null,
+   "stepTitle": null,
+   "phase": "inhale",
+   "text": "help.breathe.inhale"
+  },
+  {
+   "start": 30.02,
+   "end": 32.02,
+   "kind": "breath",
+   "step": null,
+   "stepTitle": null,
+   "phase": "hold",
+   "text": "help.breathe.hold"
+  },
+  {
+   "start": 32.02,
+   "end": 36.02,
+   "kind": "breath",
+   "step": null,
+   "stepTitle": null,
+   "phase": "exhale",
+   "text": "help.breathe.exhale"
+  },
+  {
+   "start": 36.02,
+   "end": 40.02,
+   "kind": "breath",
+   "step": null,
+   "stepTitle": null,
+   "phase": "inhale",
+   "text": "help.breathe.inhale"
+  },
+  {
+   "start": 40.02,
+   "end": 42.02,
+   "kind": "breath",
+   "step": null,
+   "stepTitle": null,
+   "phase": "hold",
+   "text": "help.breathe.hold"
+  },
+  {
+   "start": 42.02,
+   "end": 46.02,
+   "kind": "breath",
+   "step": null,
+   "stepTitle": null,
+   "phase": "exhale",
+   "text": "help.breathe.exhale"
+  },
+  {
+   "start": 46.02,
+   "end": 50.02,
+   "kind": "breath",
+   "step": null,
+   "stepTitle": null,
+   "phase": "inhale",
+   "text": "help.breathe.inhale"
+  },
+  {
+   "start": 50.02,
+   "end": 52.02,
+   "kind": "breath",
+   "step": null,
+   "stepTitle": null,
+   "phase": "hold",
+   "text": "help.breathe.hold"
+  },
+  {
+   "start": 52.02,
+   "end": 56.02,
+   "kind": "breath",
+   "step": null,
+   "stepTitle": null,
+   "phase": "exhale",
+   "text": "help.breathe.exhale"
+  },
+  {
+   "start": 56.02,
+   "end": 59.64,
+   "kind": "line",
+   "step": null,
+   "stepTitle": null,
+   "text": "mindfulness.breatheSlow.line2"
+  }
+ ]
+}
