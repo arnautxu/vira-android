@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import cat.vira.android.R
 import cat.vira.android.ViraApp
 import cat.vira.android.core.backend.ViraAccountRole
+import cat.vira.android.core.backend.ViraBackendError
 import cat.vira.android.core.backend.ViraSession
 import cat.vira.android.core.design.LocalViraEnvironment
 import cat.vira.android.core.design.tokens.ViraMotion
@@ -117,10 +118,13 @@ fun EntryFlow(
     val band = if (environment.isAccessibilitySize) 0.86f else 0.7f
 
     // Entrar no torna cap valor al pas: el que canvia és la sessió, i el flux continua tot sol.
-    LaunchedEffect(state, isRecovering) {
+    LaunchedEffect(state, isRecovering, nav.parentRoleAttempt) {
         if (isRecovering) nav.startRecovery()
         else if (state is ViraSession.State.SignedIn) {
-            if (nav.step == EntryStep.ACCOUNT && nav.role == ViraAccountRole.PARENT) services.adoptParentRole()
+            if (nav.step == EntryStep.ACCOUNT && nav.role == ViraAccountRole.PARENT && !services.adoptParentRole()) {
+                nav.parentRoleFailed = true
+                return@LaunchedEffect
+            }
             nav.onSignedIn(isRecoveringPassword = false)
         }
     }
@@ -203,7 +207,12 @@ private fun EntryStepContent(step: EntryStep, nav: EntryNavigator, services: Ent
         EntryStep.PRIVACY -> EntryPrivacyStep(prefs, services.canLockApp, nav::advance)
         EntryStep.FIRST_ACTION -> EntryFirstActionStep(nav.intent, services, nav::completeFirstAction)
         EntryStep.DONE -> EntryDoneStep(nav.outcome, prefs, nav::advance)
-        EntryStep.ACCOUNT -> EntryAccountStep(
+        EntryStep.ACCOUNT -> if (nav.parentRoleFailed) {
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(ViraSpacing.s)) {
+                EntryErrorText(ViraBackendError.UNAVAILABLE)
+                EntryPrimaryButton(stringResource(R.string.action_retry), nav::retryParentRole)
+            }
+        } else EntryAccountStep(
             services = services,
             role = nav.role,
             email = nav.email,

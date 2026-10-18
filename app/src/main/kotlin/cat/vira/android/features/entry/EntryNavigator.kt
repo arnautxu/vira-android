@@ -60,6 +60,16 @@ class EntryNavigator(
 
     private var stepBeforeRecovery: EntryStep? = null
 
+    /// No s'ha pogut desar el rol de pare després d'entrar: el compte es queda obert per reintentar.
+    var parentRoleFailed: Boolean by mutableStateOf(false)
+    var parentRoleAttempt: Int by mutableStateOf(0)
+        private set
+
+    fun retryParentRole() {
+        parentRoleFailed = false
+        parentRoleAttempt += 1
+    }
+
     /// L'estat que ha de sobreviure a la recreació de l'activitat (tema, mida de lletra, el procés
     /// mort mentre Google o el correu tenen l'app al fons): sense, el flux tornaria a començar,
     /// perdria el rol triat i deixaria repetir la primera acció.
@@ -186,7 +196,12 @@ class EntryNavigator(
         cameFromSignIn = !isSigningUp
         // Privacitat abans que correu: qui ha entrat per "Ja tinc compte" i ara es registra encara
         // no l'ha vista. Hi passa abans de poder escriure el correu.
-        if (isSigningUp && EntryStep.PRIVACY in steps && EntryStep.PRIVACY !in history) go(EntryStep.PRIVACY)
+        // Enrere des d'allà no torna al compte en mode registre (sense haver acceptat la privacitat):
+        // el compte surt de l'historial i Enrere porta a l'inici.
+        if (isSigningUp && EntryStep.PRIVACY in steps && EntryStep.PRIVACY !in history) {
+            go(EntryStep.PRIVACY)
+            history = history.dropLast(1)
+        }
     }
 
     fun chose() { reaction += 1 }

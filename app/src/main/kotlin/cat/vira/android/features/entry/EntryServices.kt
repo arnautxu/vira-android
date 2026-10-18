@@ -44,7 +44,8 @@ interface EntryServices {
     suspend fun signInWithGoogle(activity: Activity)
     /// Un compte nou de Google (o del navegador) no porta cap rol a les metadades i neix jove: qui
     /// ha triat "Sóc pare o mare" el posa aquí. Mai treu el rol de pare a ningú.
-    suspend fun adoptParentRole()
+    /// `false` si no s'ha pogut desar: el flux es queda al compte amb un "Torna-ho a provar".
+    suspend fun adoptParentRole(): Boolean
     suspend fun sendPasswordReset(email: String)
     /// Llança `ViraBackendException` si no es pot.
     suspend fun updatePassword(password: String)
@@ -88,14 +89,15 @@ private class LiveEntryServices(context: Context, private val backend: ViraBacke
     override suspend fun signUp(email: String, password: String, role: ViraAccountRole) =
         session.signUp(email, password, role, ViraConsentStatus.MISSING)
     override suspend fun signInWithGoogle(activity: Activity) { session.signInWithGoogle(activity) }
-    override suspend fun adoptParentRole() {
-        if (session.user?.role == ViraAccountRole.PARENT) return
-        try {
+    override suspend fun adoptParentRole(): Boolean {
+        if (session.user?.role == ViraAccountRole.PARENT) return true
+        return try {
             session.updateRole(ViraAccountRole.PARENT)
+            true
         } catch (error: CancellationException) {
             throw error
         } catch (_: Exception) {
-            // Es queda jove; la porta del compte no se salta per això.
+            false
         }
     }
     override suspend fun sendPasswordReset(email: String) { session.sendPasswordReset(email) }
@@ -149,7 +151,7 @@ private class PreviewEntryServices(
     override suspend fun signIn(email: String, password: String) = Unit
     override suspend fun signUp(email: String, password: String, role: ViraAccountRole) = false
     override suspend fun signInWithGoogle(activity: Activity) = Unit
-    override suspend fun adoptParentRole() = Unit
+    override suspend fun adoptParentRole() = true
     override suspend fun sendPasswordReset(email: String) = Unit
     override suspend fun updatePassword(password: String) = Unit
     override suspend fun declareConsent(status: ViraConsentStatus, guardianEmail: String?) = Unit

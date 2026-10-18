@@ -112,9 +112,8 @@ class EntryNavigatorTest {
         nav.toggleSigningUp()
         assertTrue(nav.isSigningUp)
         assertTrue(nav.applies(EntryStep.NICKNAME))
-        // Registrar-se passa abans per la privacitat; enrere torna al compte i, després, a l'inici.
+        // Registrar-se passa abans per la privacitat; enrere torna a l'inici, no al registre.
         assertEquals(EntryStep.PRIVACY, nav.step)
-        nav.goBack(); assertEquals(EntryStep.ACCOUNT, nav.step)
         nav.goBack(); assertEquals(EntryStep.WELCOME, nav.step)
     }
 
