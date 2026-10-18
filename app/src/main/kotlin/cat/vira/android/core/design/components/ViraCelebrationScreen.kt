@@ -42,9 +42,44 @@ import cat.vira.android.core.design.tokens.ViraGradient
 import cat.vira.android.core.design.tokens.ViraMotion
 import cat.vira.android.core.design.tokens.ViraSpacing
 import cat.vira.android.core.design.tokens.ViraTouch
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.composed
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.compose.ui.unit.IntOffset
+import cat.vira.android.core.design.tokens.ViraRadius
+import cat.vira.android.core.resources.ViraVideo
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
+
+/// El vídeo de fons d'una celebració (`ViraCelebrationBackdrop` de l'iPhone), amb el que la
+/// pantalla necessita saber-ne per col·locar-hi el text a sobre.
+///
+/// - `tone`: si la imatge és clara o fosca. **No és estètica**: decideix el color de tot el text.
+/// - `rise`: quant puja el vídeo, en fracció de l'alçada, per obrir espai sota els peus de Viri
+///   sense fer-lo més gran. La vora de baix s'esvaeix cap al degradat de tokens.
+/// - `sound`: si el vídeo sona (l'hàbit, les fites de 7 i 30 dies). Qui mostra la pantalla no
+///   hi ha de fer sonar res més.
+/// - `textPlacement`: on hi cap el text, a part del to: `Split` (xifra a dalt, la resta a baix,
+///   el vídeo respira al mig) o `Top` (tot a dalt, quan la meitat de baix no admet text).
+/// - `protectsText`: base opaca sota els blocs de text quan el contrast canvia entre fotogrames.
+data class ViraCelebrationBackdrop(
+    val video: ViraVideo,
+    val tone: Tone = Tone.Light,
+    val rise: Float = 0f,
+    val sound: Boolean = false,
+    val textPlacement: TextPlacement = TextPlacement.Split,
+    val protectsText: Boolean = false,
+) {
+    enum class Tone { Light, Dark }
+    enum class TextPlacement { Split, Top }
+}
 
 /// El moment a pantalla completa d'una fita (`ViraCelebrationScreen`): ratxa, hàbit i botiga
 /// (nivell, repte, premi i carta van amb `ViraCelebrationMoment`, `DESIGN_RULES.md` §5).
@@ -54,11 +89,13 @@ import kotlin.math.roundToInt
 /// context, xifra gegant que compta amunt (decorativa: el peu ja la diu en paraules), missatge i
 /// «Continua» ple del color del text. Confeti si `celebrationsEnabled`.
 ///
+/// Amb `backdrop`, el vídeo va a sang i substitueix **el fons i l'heroi alhora** (el protagonista
+/// ja és dins del vídeo): xifra a dalt, Viri al mig, la resta a baix. Amb un vídeo fosc el text
+/// passa a `onDarkArtwork` i l'etiqueta del botó a `onBrandArtwork`. Amb Reduir moviment, i a les
+/// captures, es torna al fons de tokens i a l'heroi: cap camí es queda sense imatge.
+///
 /// Amb Reduir moviment, tot apareix al seu lloc amb un fos i la xifra hi és directament.
 /// `onShown` és on qui la mostra fa sonar el so i la vibració de la fita.
-///
-/// Encara sense el vídeo de fons de l'iPhone (`ViraCelebrationBackdrop`): arriba amb el
-/// component de vídeo amb alfa.
 @Composable
 fun ViraCelebrationScreen(
     caption: String,
@@ -69,12 +106,16 @@ fun ViraCelebrationScreen(
     count: Int? = null,
     message: String? = null,
     celebrationsEnabled: Boolean = true,
+    backdrop: ViraCelebrationBackdrop? = null,
     onShown: () -> Unit = {},
     extra: @Composable () -> Unit = {},
     hero: @Composable () -> Unit,
 ) {
     val reduceMotion = LocalViraEnvironment.current.reduceMotion
-    val ink = ViraColor.onCard(area)
+    val playing = backdrop?.takeIf { !reduceMotion && !LocalInspectionMode.current }
+    val isDark = playing?.tone == ViraCelebrationBackdrop.Tone.Dark
+    val ink = if (isDark) ViraColor.onDarkArtwork else ViraColor.onCard(area)
+    val buttonLabel = if (isDark) ViraColor.onBrandArtwork else ViraColor.cardFill(area)
     val appear = remember { Animatable(if (reduceMotion) 1f else 0f) }
     val shownCount = remember { Animatable(if (reduceMotion) (count ?: 0).toFloat() else 0f) }
     val announcement = listOfNotNull(eyebrow, caption, message).joinToString(". ")
@@ -100,7 +141,59 @@ fun ViraCelebrationScreen(
 
     fun Modifier.reveal(after: Float) = alpha(((appear.value - after) / (1f - after)).coerceIn(0f, 1f))
 
+    @Composable
+    fun Eyebrow(text: String) = Text(
+        text,
+        style = ViraFont.callout,
+        color = ink,
+        textAlign = TextAlign.Center,
+        // Només contorn: un farciment translúcid menjaria contrast al text.
+        modifier = Modifier.reveal(0.16f).border(1.5.dp, ink, CircleShape)
+            .padding(horizontal = ViraSpacing.s, vertical = ViraSpacing.xxs),
+    )
+
+    @Composable
+    fun CountBlock() = Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.reveal(0.28f)) {
+        if (count != null) {
+            Text(
+                "${shownCount.value.roundToInt()}",
+                style = ViraFont.timer,
+                color = ink,
+                maxLines = 1,
+                modifier = Modifier.clearAndSetSemantics { },
+            )
+        }
+        Text(
+            caption,
+            style = if (count == null) ViraFont.title else ViraFont.headline,
+            color = ink,
+            textAlign = TextAlign.Center,
+        )
+    }
+
+    @Composable
+    fun Message(text: String, modifier: Modifier = Modifier) =
+        Text(text, style = ViraFont.headline, color = ink, textAlign = TextAlign.Center, modifier = modifier.reveal(0.44f))
+
+    // Ple amb el color del text i l'etiqueta amb el del fons: la mateixa parella, invertida.
+    @Composable
+    fun ContinueButton() = Text(
+        stringResource(R.string.streak_milestone_continue),
+        style = ViraFont.headline,
+        color = buttonLabel,
+        textAlign = TextAlign.Center,
+        modifier = Modifier
+            .padding(top = ViraSpacing.l)
+            .fillMaxWidth()
+            .defaultMinSize(minHeight = ViraTouch.comfortable)
+            .background(ink, CircleShape)
+            .viraPressable(onClick = onContinue)
+            .padding(vertical = ViraSpacing.m),
+    )
+
     Box(modifier.fillMaxSize().background(ViraGradient.card(area))) {
+        // El degradat a sota i no negre: el vídeo triga uns fotogrames a donar la primera imatge.
+        if (playing != null) BackdropVideo(playing)
         // Llisca quan no hi cap (lletra al 200 % en un mòbil baix): el botó mai queda fora de la
         // pantalla. Quan hi cap, el contingut queda centrat entre dalt i el botó, com a l'iPhone.
         BoxWithConstraints(Modifier.fillMaxSize().safeDrawingPadding()) {
@@ -113,71 +206,105 @@ fun ViraCelebrationScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.SpaceBetween,
             ) {
-                Spacer(Modifier)
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(ViraSpacing.m),
-                    modifier = Modifier.padding(horizontal = ViraSpacing.m),
-                ) {
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier.graphicsLayer {
-                            val s = if (reduceMotion) 1f else 0.6f + 0.4f * appear.value
-                            scaleX = s; scaleY = s; alpha = appear.value.coerceIn(0f, 1f)
-                        },
+                if (playing != null) {
+                    val protects = Modifier.protectText(playing.protectsText, area)
+                    val onTop = playing.textPlacement == ViraCelebrationBackdrop.TextPlacement.Top
+                    // Tres franges: la xifra a dalt, Viri al mig (és el vídeo) i la resta a baix.
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(ViraSpacing.xxs),
+                        modifier = protects.padding(top = ViraSpacing.s).padding(horizontal = ViraSpacing.m),
                     ) {
-                        ViraCelebrationBurst(area = area)
-                        hero()
+                        if (eyebrow != null) Box(Modifier.padding(bottom = ViraSpacing.xxs)) { Eyebrow(eyebrow) }
+                        CountBlock()
+                        if (onTop && message != null) Message(message, Modifier.padding(top = ViraSpacing.xs))
                     }
-                    if (eyebrow != null) {
-                        Text(
-                            eyebrow,
-                            style = ViraFont.callout,
-                            color = ink,
-                            textAlign = TextAlign.Center,
-                            // Només contorn: un farciment translúcid menjaria contrast al text.
-                            modifier = Modifier.reveal(0.16f).border(1.5.dp, ink, CircleShape)
-                                .padding(horizontal = ViraSpacing.s, vertical = ViraSpacing.xxs),
-                        )
-                    }
-                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.reveal(0.28f)) {
-                        if (count != null) {
-                            Text(
-                                "${shownCount.value.roundToInt()}",
-                                style = ViraFont.timer,
-                                color = ink,
-                                maxLines = 1,
-                                modifier = Modifier.clearAndSetSemantics { },
-                            )
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        if (!onTop) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(ViraSpacing.m),
+                                modifier = protects.padding(horizontal = ViraSpacing.m),
+                            ) {
+                                if (message != null) Message(message)
+                                extra()
+                            }
                         }
-                        Text(
-                            caption,
-                            style = if (count == null) ViraFont.title else ViraFont.headline,
-                            color = ink,
-                            textAlign = TextAlign.Center,
-                        )
+                        ContinueButton()
                     }
-                    if (message != null) {
-                        Text(message, style = ViraFont.headline, color = ink, textAlign = TextAlign.Center, modifier = Modifier.reveal(0.44f))
+                } else {
+                    Spacer(Modifier)
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(ViraSpacing.m),
+                        modifier = Modifier.padding(horizontal = ViraSpacing.m),
+                    ) {
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier.graphicsLayer {
+                                val s = if (reduceMotion) 1f else 0.6f + 0.4f * appear.value
+                                scaleX = s; scaleY = s; alpha = appear.value.coerceIn(0f, 1f)
+                            },
+                        ) {
+                            ViraCelebrationBurst(area = area)
+                            hero()
+                        }
+                        if (eyebrow != null) Eyebrow(eyebrow)
+                        CountBlock()
+                        if (message != null) Message(message)
+                        Box(Modifier.padding(top = ViraSpacing.s)) { extra() }
                     }
-                    Box(Modifier.padding(top = ViraSpacing.s)) { extra() }
+                    ContinueButton()
                 }
-                // Ple amb el color del text i l'etiqueta amb el del fons: la mateixa parella, invertida.
-                Text(
-                    stringResource(R.string.streak_milestone_continue),
-                    style = ViraFont.headline,
-                    color = ViraColor.cardFill(area),
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier
-                        .padding(top = ViraSpacing.l)
-                        .fillMaxWidth()
-                        .defaultMinSize(minHeight = ViraTouch.comfortable)
-                        .background(ink, CircleShape)
-                        .viraPressable(onClick = onContinue)
-                        .padding(vertical = ViraSpacing.m),
-                )
             }
         }
         if (celebrationsEnabled) ViraConfettiBurst(Modifier.align(Alignment.Center), over = area)
     }
+}
+
+/// On acaba la part opaca del vídeo pujat, abans de l'esvaïment.
+private const val VIDEO_FADE_START = 0.74f
+
+/// El vídeo a sang, pujat i —si puja— amb la vora de baix esvaïda: el groc del vídeo no és
+/// exactament el del degradat, i tallar-lo en sec hi marcaria una línia. L'esvaïment va amb la
+/// imatge, per això es pinta abans del desplaçament.
+@Composable
+private fun BackdropVideo(backdrop: ViraCelebrationBackdrop) {
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val lift = maxHeight * backdrop.rise
+        ViraAlphaVideo(
+            backdrop.video,
+            fill = true,
+            isMuted = !backdrop.sound,
+            modifier = Modifier
+                .fillMaxSize()
+                .offset { IntOffset(0, -lift.roundToPx()) }
+                .then(
+                    if (backdrop.rise > 0f) {
+                        Modifier
+                            .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                            .drawWithContent {
+                                drawContent()
+                                drawRect(
+                                    Brush.verticalGradient(
+                                        0f to Color.Black,
+                                        VIDEO_FADE_START to Color.Black,
+                                        1f to Color.Transparent,
+                                    ),
+                                    blendMode = BlendMode.DstIn,
+                                )
+                            }
+                    } else {
+                        Modifier
+                    },
+                ),
+        )
+    }
+}
+
+/// Manté la parella de colors validada encara que el vídeo canviï de llum (`CelebrationTextProtection`).
+private fun Modifier.protectText(enabled: Boolean, area: ViraArea): Modifier = if (!enabled) this else composed {
+    this.fillMaxWidth()
+        .background(ViraColor.cardFill(area), RoundedCornerShape(ViraRadius.l))
+        .padding(vertical = ViraSpacing.s)
 }
