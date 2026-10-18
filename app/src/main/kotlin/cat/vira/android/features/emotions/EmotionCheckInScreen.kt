@@ -62,7 +62,6 @@ import kotlinx.coroutines.launch
 @Composable
 fun EmotionCheckInScreen(
     modifier: Modifier = Modifier,
-    onHelpNow: () -> Unit = {},
     onRecorded: (() -> Unit)? = null,
 ) {
     val preferences = LocalViraBackend.current.preferences
@@ -96,7 +95,6 @@ fun EmotionCheckInScreen(
         EmotionDetailSheet(
             initial = current,
             onDismiss = { draft = null },
-            onHelpNow = onHelpNow,
             onConfirm = { value, finished ->
                 scope.launch {
                     val saved = runCatching {

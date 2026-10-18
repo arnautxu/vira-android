@@ -8,8 +8,8 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -33,6 +33,8 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import cat.vira.android.R
 import cat.vira.android.core.data.model.Emotion
 import cat.vira.android.core.design.LocalViraEnvironment
@@ -46,6 +48,7 @@ import cat.vira.android.core.design.tokens.ViraFont
 import cat.vira.android.core.design.tokens.ViraRadius
 import cat.vira.android.core.design.tokens.ViraSpacing
 import cat.vira.android.core.design.tokens.ViraTouch
+import cat.vira.android.features.help.HelpScreen
 
 /// El full que s'obre en tocar una cara (`EmotionDetailSheet`). Només «Confirma» crea el
 /// registre; cancel·lar o tancar-lo descarta el que s'hi hagi posat.
@@ -56,10 +59,12 @@ import cat.vira.android.core.design.tokens.ViraTouch
 internal fun EmotionDetailSheet(
     initial: EmotionCheckInDraft,
     onDismiss: () -> Unit,
-    onHelpNow: () -> Unit,
     onConfirm: (EmotionCheckInDraft, (Boolean) -> Unit) -> Unit,
 ) {
     var draft by remember(initial.id) { mutableStateOf(initial) }
+    // Ajuda ara s'obre a sobre del full, com a l'iPhone (`.sheet(isPresented: $isShowingHelp)`): el
+    // full és una finestra pròpia, i una pantalla de l'arrel quedaria amagada a sota.
+    var showsHelp by remember { mutableStateOf(false) }
     var isSaving by remember { mutableStateOf(false) }
     var saveFailed by remember { mutableStateOf(false) }
     EmotionSheet(onDismiss) {
@@ -69,7 +74,7 @@ internal fun EmotionDetailSheet(
             saveFailed = saveFailed,
             isSaving = isSaving,
             onCancel = onDismiss,
-            onHelpNow = onHelpNow,
+            onHelpNow = { showsHelp = true },
             onConfirm = {
                 if (!isSaving) {
                     isSaving = true
@@ -80,6 +85,14 @@ internal fun EmotionDetailSheet(
                 }
             },
         )
+    }
+    if (showsHelp) {
+        Dialog(
+            onDismissRequest = { showsHelp = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
+        ) {
+            HelpScreen(onClose = { showsHelp = false })
+        }
     }
 }
 

@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -40,8 +41,8 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import cat.vira.android.R
-import cat.vira.android.core.design.viraLocale
 import cat.vira.android.core.data.model.EmotionEntry
 import cat.vira.android.core.design.LocalViraEnvironment
 import cat.vira.android.core.design.ViraTheme
@@ -56,8 +57,11 @@ import cat.vira.android.core.design.tokens.ViraFont
 import cat.vira.android.core.design.tokens.ViraRadius
 import cat.vira.android.core.design.tokens.ViraSpacing
 import cat.vira.android.core.design.tokens.ViraTouch
+import cat.vira.android.core.design.viraLocale
 import cat.vira.android.core.resources.viraPluralString
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
 
@@ -79,6 +83,19 @@ fun EmotionHistoryScreen(modifier: Modifier = Modifier) {
     val flow = remember(store) { store.db.emotionEntries().observeAll() }
     val entries by flow.collectAsState(initial = null)
     var range by rememberSaveable { mutableStateOf(EmotionHistoryRange.WEEK) }
+    // «Avui» es torna a mirar en tornar a l'app i a mitjanit: si no, una pantalla que ha passat la
+    // nit oberta seguiria acabant en el dia d'ahir.
+    var now by remember { mutableStateOf(Instant.now()) }
+    LifecycleResumeEffect(Unit) {
+        now = Instant.now()
+        onPauseOrDispose {}
+    }
+    LaunchedEffect(now) {
+        val zone = ZoneId.systemDefault()
+        val midnight = now.atZone(zone).toLocalDate().plusDays(1).atStartOfDay(zone).toInstant()
+        delay(Duration.between(Instant.now(), midnight).toMillis().coerceAtLeast(0) + 1_000)
+        now = Instant.now()
+    }
     entries?.let { all ->
         EmotionHistoryContent(
             entries = all,
@@ -86,6 +103,7 @@ fun EmotionHistoryScreen(modifier: Modifier = Modifier) {
             onRange = { range = it },
             onDelete = { entry -> scope.launch { store.delete(entry) } },
             modifier = modifier,
+            now = now,
         )
     } ?: Box(modifier.fillMaxSize().viraSectionBackground(ViraArea.Emotions))
 }

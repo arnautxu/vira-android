@@ -28,6 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
@@ -107,7 +108,7 @@ fun EmotionsScreen() {
 
     EmotionsTab(available, resolved, onSelect = { navigator.emotionsSection = it }) { current ->
         when (current) {
-            EmotionsSection.CheckIn -> EmotionCheckInScreen(onHelpNow = navigator::openHelp)
+            EmotionsSection.CheckIn -> EmotionCheckInScreen()
             EmotionsSection.History -> EmotionHistoryScreen()
             EmotionsSection.Mindfulness -> MindfulnessContent(
                 onBreathe = navigator::openBreathe,
@@ -181,6 +182,7 @@ internal fun PushedHeader(title: String, trailing: Pair<String, () -> Unit>? = n
                 .align(Alignment.CenterStart)
                 .heightIn(min = ViraTouch.minimum)
                 .viraPressable(onClickLabel = back, onClick = onBack)
+                .semantics { contentDescription = back }
                 .padding(horizontal = ViraSpacing.xs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
