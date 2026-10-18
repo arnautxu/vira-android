@@ -5,6 +5,7 @@ package cat.vira.android.core.backend.sync
 import cat.vira.android.core.backend.InstantSerializer
 import cat.vira.android.core.backend.UuidSerializer
 import cat.vira.android.core.data.ViraDatabase
+import cat.vira.android.core.data.ViraRewards
 import cat.vira.android.core.data.ViraStore
 import cat.vira.android.core.data.ViraTime
 import cat.vira.android.core.data.model.ProgressCounter
@@ -100,7 +101,7 @@ class ProgressCounterSyncTable(
         )))
         // El comptador del servidor pot ser més vell que el llibre major que ja hi ha al telèfon (una
         // passada anterior el va reparar i ara la baixada del llibre no porta res de nou).
-        CoinTransactionSyncTable.reconcileBalanceWithLedger(db, store(db))
+        ViraRewards(store(db)).reconcileBalanceWithLedger()
         afterApply(db)
     }
 }
