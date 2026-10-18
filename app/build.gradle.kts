@@ -96,3 +96,7 @@ dependencies {
     screenshotTestImplementation(libs.screenshot.validation.api)
     screenshotTestImplementation(libs.androidx.compose.ui.tooling)
 }
+
+// Les proves de captura (layoutlib) es queden sense memòria passades unes 70 captures amb el
+// valor per defecte (512 MB).
+tasks.withType<Test>().configureEach { maxHeapSize = "3g" }
