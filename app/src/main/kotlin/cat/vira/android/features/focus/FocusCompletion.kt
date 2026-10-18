@@ -103,11 +103,11 @@ private fun CompletedCard(completion: FocusSessionController.Completion) {
     val reduceMotion = LocalViraEnvironment.current.reduceMotion
     val stacked = LocalViraEnvironment.current.isAccessibilitySize
     // L'entrada: un «pop» amb `emphasis`, reservat a fites. Amb Reduir moviment, un fos.
-    val appear = remember { Animatable(if (LocalInspectionMode.current) 1f else 0f) }
+    val inspection = LocalInspectionMode.current
+    val appear = remember { Animatable(if (inspection) 1f else 0f) }
     LaunchedEffect(Unit) { appear.animateTo(1f, ViraMotion.emphasis()) }
     // Les monedes compten cap amunt un cop Viri ja ha entrat.
     var shownCoins by remember { mutableIntStateOf(if (reduceMotion) completion.coinsEarned else 0) }
-    val inspection = LocalInspectionMode.current
     LaunchedEffect(completion.coinsEarned) {
         if (reduceMotion || inspection) { shownCoins = completion.coinsEarned; return@LaunchedEffect }
         delay(340)

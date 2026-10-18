@@ -44,7 +44,7 @@ fun FocusProfileEditorScreen(profile: FocusProfile?, onClose: (FocusProfile?) ->
 }
 
 /// En desar, el mode nou queda triat: qui acaba de crear-lo el vol fer servir ara.
-private fun saveProfile(
+internal fun saveProfile(
     store: ViraStore?,
     profile: FocusProfile,
     isNew: Boolean,
