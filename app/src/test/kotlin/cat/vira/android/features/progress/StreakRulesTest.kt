@@ -62,6 +62,20 @@ class StreakRulesTest {
         assertEquals(s.lastActiveDay, back.streak.lastActiveDay)
     }
 
+    @Test fun tornarAUnMesAnteriorNoRegalaDiesGuardats() {
+        val s = fresh(freezes = 0)
+        val back = StreakRules.refreshMonthlyGrant(s, day(-40), days)
+        assertEquals(0, back.freezesAvailable)
+        assertEquals(0, StreakRules.refreshMonthlyGrant(back, day(0), days).freezesAvailable)
+    }
+
+    @Test fun unaRatxaReiniciadaNoGastaDiesGuardats() {
+        val reset = fresh().copy(currentDays = 0, lastActiveDay = day(0))
+        val after = StreakRules.countDay(reset, day(3), days).streak
+        assertEquals(reset.freezesAvailable, after.freezesAvailable)
+        assertEquals(1, after.currentDays)
+    }
+
     @Test fun unDiaPerdutGastaUnDiaGuardatILaRatxaEsManté() {
         val s = fresh().count(0).count(1)
         val after = s.count(3)

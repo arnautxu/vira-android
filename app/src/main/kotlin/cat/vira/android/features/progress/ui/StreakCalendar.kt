@@ -215,9 +215,10 @@ private fun DayBadge(day: LocalDate, state: DayState, side: Dp, delayMillis: Lon
     val reduceMotion = LocalViraEnvironment.current.reduceMotion
     val reveal = remember { Animatable(if (reduceMotion) 1f else 0f) }
     val flame = remember { Animatable(if (reduceMotion) 1f else 0f) }
-    LaunchedEffect(Unit) {
+    // Amb l'estat de clau: el dia d'avui que passa a fet encén la flama sense sortir de la pantalla.
+    LaunchedEffect(state) {
         if (reduceMotion) return@LaunchedEffect
-        delay(delayMillis)
+        if (reveal.value < 1f) delay(delayMillis)
         reveal.animateTo(1f, ViraMotion.emphasis())
         if (state == DayState.DONE) {
             delay(120)

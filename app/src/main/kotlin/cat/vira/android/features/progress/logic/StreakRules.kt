@@ -48,7 +48,8 @@ object StreakRules {
     /// vint dies guardats farien la ratxa impossible de perdre i deixaria de voler dir res.
     fun refreshMonthlyGrant(streak: Streak, now: Instant, days: ViraDays): Streak {
         val key = ViraStore.monthKey(now, days.zone)
-        if (streak.lastGrantMonth == key) return streak
+        // Només en **avançar** de mes: un rellotge endarrerit no pot regalar dies guardats.
+        if (key <= streak.lastGrantMonth) return streak
         return streak.copy(
             lastGrantMonth = key,
             freezesUsedThisMonth = 0,
@@ -88,7 +89,8 @@ object StreakRules {
         if (today <= last) return Counted(s.copy(isFrozen = false), isNewDay = false)
 
         val missed = maxOf(0L, days.daysBetween(last, today) - 1).toInt()
-        if (missed > 0) s = spend(s, missed, today, days).first
+        // Una ratxa ja reiniciada (0) no té res a protegir: no es gasta cap dia guardat.
+        if (missed > 0 && s.currentDays > 0) s = spend(s, missed, today, days).first
 
         val current = if (s.currentDays == 0) 1 else s.currentDays + 1
         val milestone = current.takeIf { s.isVisible && it in milestoneDays }
