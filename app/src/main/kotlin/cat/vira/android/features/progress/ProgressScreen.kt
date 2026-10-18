@@ -122,7 +122,10 @@ private fun ProfileRoute(backend: ViraBackend, onOpen: (ProgressDestination) -> 
     val challengesEnabled by rememberPreference(backend.preferences, ViraPreferences.CHALLENGES_ENABLED, true)
     var customizing by rememberSaveable { mutableStateOf(false) }
 
-    val now = rememberNow()
+    // `rememberNow()` fa recompondre a mitjanit; el límit superior es llegeix a cada recomposició
+    // perquè una fila nova del llibre (sincronitzada o d'una altra pantalla) compti a l'instant.
+    rememberNow()
+    val now = Instant.now()
     val days = ViraDays(ZoneId.systemDefault(), WeekFields.of(viraLocale()).firstDayOfWeek)
     val featured = ViraChallenges.featuredDaily(ledger, claims, now, days)?.let { item ->
         FeaturedChallenge(item, ViraChallenges.progress(item, ledger, now, days), ViraChallenges.isClaimed(item, claims, now, days))
@@ -210,7 +213,10 @@ private fun ChallengesRoute(backend: ViraBackend, progress: ViraProgress, onBack
     var celebratingKey by rememberSaveable { mutableStateOf<String?>(null) }
     val period = ChallengePeriod.valueOf(periodName)
 
-    val now = rememberNow()
+    // `rememberNow()` fa recompondre a mitjanit; el límit superior es llegeix a cada recomposició
+    // perquè una fila nova del llibre (sincronitzada o d'una altra pantalla) compti a l'instant.
+    rememberNow()
+    val now = Instant.now()
     val days = ViraDays(ZoneId.systemDefault(), WeekFields.of(viraLocale()).firstDayOfWeek)
     val rows = ChallengeItem.catalog.filter { it.period == period }.map {
         ChallengeRowState(it, ViraChallenges.progress(it, ledger, now, days), ViraChallenges.isClaimed(it, claims, now, days))
