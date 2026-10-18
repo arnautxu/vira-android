@@ -23,7 +23,10 @@ enum class ViraSyncLayer {
 /// Per a `EMOTIONS` i `MEDICATION` calen **tres** coses alhora (`PRIVACY_AND_SAFETY.md` §4.5b):
 /// 1. sessió iniciada,
 /// 2. l'interruptor d'Ajustos encès (de fàbrica ho està),
-/// 3. el permís del tutor **concedit** (o no necessari). `PENDING` no compta.
+/// 3. el permís del tutor **concedit** (o no necessari) **tal com l'ha dit el servidor**
+///    (`ViraSession.verifiedConsent`, `guardian_consents`), mai la metadada que escriu el client.
+///    `PENDING` no compta. Des del 2026-10-18 la RLS de les tres taules sensibles ho torna a
+///    comprovar: aquesta regla evita enviar el que el servidor rebutjaria.
 ///
 /// Si en falta una, la capa no s'envia. No hi ha excepcions ni «només aquesta vegada».
 data class ViraSyncScope(
@@ -53,7 +56,7 @@ data class ViraSyncScope(
             syncMedication = preferences.getBoolean(
                 ViraPreferences.SYNC_MEDICATION_ENABLED, ViraPreferences.SYNC_MEDICATION_DEFAULT,
             ),
-            consent = session.user?.consent ?: ViraConsentStatus.MISSING,
+            consent = session.verifiedConsent ?: ViraConsentStatus.MISSING,
         )
     }
 }

@@ -145,6 +145,10 @@ class ViraSyncEngine(
         // pesar en aquesta mateixa passada, no quan caduqui el testimoni.
         val token = session.accessToken(refresh = true)
         requireCurrentAccount()
+        // El permís del tutor es pregunta al servidor a cada passada: un «sí» del tutor arriba sense
+        // reiniciar l'app, i sense resposta les capes sensibles no s'obren.
+        session.refreshConsent()
+        requireCurrentAccount()
         val scope = ViraSyncScope.current(session, preferences)
 
         var firstFailure: Exception? = null

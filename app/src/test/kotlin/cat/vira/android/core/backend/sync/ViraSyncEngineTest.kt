@@ -52,6 +52,9 @@ class ViraSyncEngineTest {
     private val requests: MutableList<RecordedRequest> = Collections.synchronizedList(mutableListOf())
     /// Les files que el servidor torna per taula, en la primera pàgina.
     private val serverRows = mutableMapOf<String, String>()
+    /// La fila de `guardian_consents` que torna el servidor (la de debò: la metadada no compta).
+    private var serverConsent = "[]"
+    private lateinit var session: ViraSession
 
     private lateinit var db: ViraDatabase
     private lateinit var preferences: SharedPreferences
@@ -63,8 +66,9 @@ class ViraSyncEngineTest {
             override fun dispatch(request: RecordedRequest): MockResponse {
                 requests += request
                 val table = request.requestUrl!!.pathSegments.last()
-                return when (request.method) {
-                    "GET" -> MockResponse().setBody(serverRows.remove(table) ?: "[]")
+                return when {
+                    request.method == "GET" && table == "guardian_consents" -> MockResponse().setBody(serverConsent)
+                    request.method == "GET" -> MockResponse().setBody(serverRows.remove(table) ?: "[]")
                     else -> MockResponse().setResponseCode(201)
                 }
             }
@@ -82,10 +86,18 @@ class ViraSyncEngineTest {
         server.shutdown()
     }
 
-    private suspend fun engine(consent: ViraConsentStatus): ViraSyncEngine {
+    private suspend fun engine(
+        consent: ViraConsentStatus,
+        serverSays: ViraConsentStatus = consent,
+    ): ViraSyncEngine {
+        serverConsent = when (serverSays) {
+            ViraConsentStatus.GRANTED -> """[{"status":"granted"}]"""
+            ViraConsentStatus.PENDING -> """[{"status":"pending"}]"""
+            ViraConsentStatus.MISSING -> "[]"
+        }
         val config = ViraBackendConfig.Values(server.url("/").toString().trimEnd('/'), "anon")
         val rest = ViraRestClient(config, OkHttpClient())
-        val session = ViraSession(FakeAuth(ViraUser(userId, "a@b.c", consent = consent)), db, preferences, rest)
+        session = ViraSession(FakeAuth(ViraUser(userId, "a@b.c", consent = consent)), db, preferences, rest)
         session.restore()
         return ViraSyncEngine(session, db, preferences, rest, store)
     }
@@ -115,6 +127,17 @@ class ViraSyncEngineTest {
         store.create(db.emotionEntries(), EmotionEntry(emotionRaw = "calm"))
         engine(ViraConsentStatus.GRANTED).sync()
         assertEquals(1, bodies("emotion_entries").size)
+    }
+
+    @Test
+    fun laMetadadaSolaNoObreLesEmocions() = runBlocking {
+        store.create(db.emotionEntries(), EmotionEntry(emotionRaw = "calm"))
+        // Un client que s'hagi escrit `consent=granted` a la metadada, amb el servidor dient que no.
+        val engine = engine(ViraConsentStatus.GRANTED, serverSays = ViraConsentStatus.PENDING)
+        engine.sync()
+        assertTrue(requests.none { it.requestUrl!!.pathSegments.last() == "emotion_entries" })
+        assertEquals(ViraConsentStatus.PENDING, session.verifiedConsent)
+        assertEquals(ViraConsentStatus.PENDING, session.user?.consent)
     }
 
     @Test
@@ -247,7 +270,8 @@ class ViraSyncEngineTest {
         val engine = engine(ViraConsentStatus.GRANTED)
         engine.sync()
         assertEquals(ViraSyncEngine.State.Failed(cat.vira.android.core.backend.ViraBackendError.SESSION_EXPIRED), engine.state.value)
-        assertEquals(1, requests.size)
+        // La consulta del permís no compta: si falla, no obre res i la passada segueix fins al 401.
+        assertEquals(1, requests.count { it.requestUrl!!.pathSegments.last() != "guardian_consents" })
     }
 
     @Test

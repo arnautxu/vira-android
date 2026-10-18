@@ -56,6 +56,16 @@ class ViraSession(
 
     private var stored: ViraStoredSession? = null
 
+    private val guardianConsent = ViraGuardianConsent(rest)
+
+    /// El permís del tutor **tal com l'ha dit el servidor** en aquesta execució
+    /// (`guardian_consents`). `null` mentre no s'hagi preguntat: llavors no s'obre res.
+    ///
+    /// És l'únic que mira `ViraSyncScope`. `user.consent` surt de les metadades, que el client pot
+    /// escriure, i només serveix perquè la interfície decideixi sense xarxa si cal el pas del permís.
+    @Volatile var verifiedConsent: ViraConsentStatus? = null
+        private set
+
     val user: ViraUser? get() = (state.value as? State.SignedIn)?.user
     val isSignedIn: Boolean get() = user != null
     val requiresAccount: Boolean get() = auth != null
@@ -170,10 +180,11 @@ class ViraSession(
         try {
             val renewed = if (refresh) auth.refreshedSession() else auth.session()
             if (generation != dataGeneration) throw CancellationException("Ha canviat el compte")
-            stored = renewed
-            // El refresc porta les metadades d'ara: un permís del tutor concedit o retirat en un
-            // altre lloc ha d'arribar a `ViraSyncScope` sense tornar a entrar.
-            if (user != renewed.user) _state.value = State.SignedIn(renewed.user)
+            // El refresc porta les metadades d'ara (el rol, per exemple). El permís del tutor, en
+            // canvi, el diu el servidor (`verifiedConsent`): la metadada no el pot tornar a canviar.
+            val renewedUser = verifiedConsent?.let { renewed.user.copy(consent = it) } ?: renewed.user
+            stored = renewed.copy(user = renewedUser)
+            if (user != renewedUser) _state.value = State.SignedIn(renewedUser)
             return renewed.accessToken
         } catch (error: CancellationException) {
             throw error
@@ -189,7 +200,42 @@ class ViraSession(
 
     suspend fun updateRole(role: ViraAccountRole) = updateMetadata(ViraUserMetadata(role, user?.consent))
 
-    suspend fun updateConsent(consent: ViraConsentStatus) = updateMetadata(ViraUserMetadata(user?.role, consent))
+    /// Pista per a la interfície, no permís: vegeu `verifiedConsent`.
+    suspend fun updateConsentHint(consent: ViraConsentStatus) = updateMetadata(ViraUserMetadata(user?.role, consent))
+
+    /// Pregunta al servidor l'estat del permís. Es crida abans de cada passada de sincronització.
+    ///
+    /// Si falla, no toca res: `verifiedConsent` segueix com estava (`null` el primer cop) i les capes
+    /// sensibles no s'obren per una resposta que no ha arribat.
+    suspend fun refreshConsent() {
+        val generation = dataGeneration
+        if (!isSignedIn) return
+        val status = try {
+            guardianConsent.fetch(accessToken())
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Exception) {
+            return
+        }
+        if (generation == dataGeneration) applyVerifiedConsent(status)
+    }
+
+    /// Declara el permís al servidor i en desa el resultat, que pot no ser el demanat. La metadada
+    /// es reescriu només com a pista; si aquesta segona escriptura falla, el que compta ja és al
+    /// servidor.
+    suspend fun declareConsent(requested: ViraConsentStatus, guardianEmail: String? = null) {
+        val generation = dataGeneration
+        val status = guardianConsent.declare(requested, guardianEmail, accessToken())
+        if (generation != dataGeneration) throw CancellationException("Ha canviat el compte")
+        applyVerifiedConsent(status)
+        try {
+            updateConsentHint(status)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Exception) {
+        }
+        applyVerifiedConsent(status)
+    }
 
     /// Sessió invalidada des de fora (testimoni revocat, compte esborrat en un altre telèfon).
     suspend fun invalidate() {
@@ -201,6 +247,16 @@ class ViraSession(
 
     // Privat
 
+    /// L'única porta per escriure `verifiedConsent`.
+    private fun applyVerifiedConsent(status: ViraConsentStatus) {
+        verifiedConsent = status
+        val current = stored ?: return
+        if (current.user.consent == status) return
+        val updated = current.user.copy(consent = status)
+        stored = current.copy(user = updated)
+        _state.value = State.SignedIn(updated)
+    }
+
     private suspend fun updateMetadata(metadata: ViraUserMetadata) {
         val updated = requireAuth().updateMetadata(metadata)
         stored = stored?.copy(user = updated)
@@ -210,6 +266,7 @@ class ViraSession(
     private suspend fun adopt(session: ViraStoredSession) {
         stored = session
         _lastError.value = null
+        verifiedConsent = null
         // Primer es decideix de qui són les dades del telèfon, i només després es diu a la interfície
         // que hi ha sessió. Al revés, hi hauria un instant amb les dades de qui hi havia abans.
         claimLocalData(session.user, isNewSignIn = true)
@@ -236,6 +293,7 @@ class ViraSession(
     private fun clearLocalSession() {
         dataGeneration = UUID.randomUUID()
         stored = null
+        verifiedConsent = null
         _isRecoveringPassword.value = false
         _state.value = if (auth != null) State.SignedOut else State.Unconfigured
     }

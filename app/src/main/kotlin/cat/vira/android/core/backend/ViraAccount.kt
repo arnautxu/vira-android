@@ -33,6 +33,14 @@ enum class ViraConsentStatus(val raw: String) {
 
     companion object {
         fun from(raw: String?) = entries.firstOrNull { it.raw == raw }
+
+        /// Traducció des de `guardian_consents.status`. Un valor que no es reconeix és `MISSING`:
+        /// davant del dubte, la resposta és no.
+        fun fromServer(status: String?) = when (status) {
+            "granted", "not_required" -> GRANTED
+            "pending" -> PENDING
+            else -> MISSING
+        }
     }
 }
 
