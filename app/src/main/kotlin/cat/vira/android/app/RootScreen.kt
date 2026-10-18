@@ -13,7 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
@@ -47,8 +47,11 @@ import cat.vira.android.features.today.TodayScreen
 fun RootScreen() {
     val navController = rememberNavController()
     val navigator = rememberViraNavigator()
-    SideEffect {
+    // Un `DisposableEffect` i no un `SideEffect`: aquests s'executen després de tots els efectes, i
+    // la represa del focus d'aquí sota ja pot navegar a la primera composició, si l'activitat neix represa.
+    DisposableEffect(navController) {
         navigator.presentModal = { modal -> navController.navigate(modal.route) { launchSingleTop = true } }
+        onDispose { }
     }
     val close: () -> Unit = { navController.popBackStack() }
     // Una sessió en marxa torna a la vista quan l'app torna a primer pla (des de l'avís fix).
