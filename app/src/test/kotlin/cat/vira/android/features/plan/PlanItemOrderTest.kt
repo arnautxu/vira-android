@@ -119,4 +119,17 @@ class PlanItemOrderTest {
         assertEquals((8 * 60 + 30 + 1) * 100, PlanItemOrder.defaultRank(item("x", 8, 30).time, zone))
         assertEquals(13 * 60 * 100 - 1, PlanItemOrder.defaultRank(null, zone))
     }
+
+    @Test fun `l'ultim minut d'una franja no salta a la seguent`() {
+        assertEquals(DayPeriod.Morning, PlanItemOrder.period(item("Esmorzar tard", 12, 59), zone))
+        assertEquals(DayPeriod.Midday, PlanItemOrder.period(item("Dinar", 13, 0), zone))
+        assertEquals(DayPeriod.Midday, PlanItemOrder.period(item("Berenar", 19, 59), zone))
+    }
+
+    @Test fun `un item creat en un altre fus surt al dia on hi ha el punt`() {
+        val tokyo = ZoneId.of("Asia/Tokyo")
+        val snapshot = PlanSnapshot(items = listOf(PlanItem(title = "Maleta", day = PlanDay.start(day, tokyo))))
+        val dotted = snapshot.countsByDay(zone).keys.single()
+        assertEquals(listOf("Maleta"), snapshot.items(dotted, zone).map { it.title })
+    }
 }

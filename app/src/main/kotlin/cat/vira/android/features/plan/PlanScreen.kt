@@ -21,7 +21,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,6 +49,9 @@ import cat.vira.android.core.design.tokens.ViraMotion
 import cat.vira.android.core.design.tokens.ViraSpacing
 import cat.vira.android.core.design.tokens.ViraTouch
 import cat.vira.android.core.notifications.ViraNotifications
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 
 /// Les claus dels mòduls, les mateixes de l'iPhone (`ViraPreferences.moduleHabitsEnabled`).
 object PlanModules {
@@ -87,19 +89,24 @@ fun PlanScreen() {
     )
 }
 
+/// On s'executen les escriptures de Pla: viu tant com el procés, com la cua del "Desfer".
+internal object PlanWrites {
+    val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+}
+
 /// Les escriptures de Pla connectades a l'app (la cua de "Desfer", els avisos), per a qualsevol
 /// pantalla que marqui una tasca, un hàbit o una presa: Avui fa el mateix que Pla.
 @Composable
 fun rememberPlanActions(onCapture: (java.time.LocalDate, DayPeriod?) -> Unit = { _, _ -> }): PlanActions {
     val backend = LocalViraBackend.current
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     val present = LocalPresentCompletion.current
     val undo = LocalUndoCompletion.current
     return remember(backend, present, undo) {
         PlanActions(
             store = ViraStore(backend.db),
-            scope = scope,
+            // La cua del "Desfer" és del procés: les seves escriptures no poden morir amb la pantalla.
+            scope = PlanWrites.scope,
             host = PlanHost(
                 present = present,
                 undo = undo,

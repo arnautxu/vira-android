@@ -36,7 +36,8 @@ object PlanItemOrder {
     /// Franja on cau un ítem. **Es deriva de la posició, no de l'hora**: un cop arrossegat,
     /// l'ítem s'ha de quedar on l'han deixat també quan això vol dir canviar de franja.
     fun period(item: PlanItem, zone: ZoneId = ZoneId.systemDefault()): DayPeriod =
-        DayPeriod.containing(rank(item, zone) / 100 / 60)
+        // `- 1` desfà el `+1` de `defaultRank`: sense, les 12:59 cauen al Migdia.
+        DayPeriod.containing((rank(item, zone) - 1).coerceAtLeast(0) / 100 / 60)
 
     /// Ordena els ítems d'un dia. Els empats els desfà l'ordre de creació.
     fun sorted(items: List<PlanItem>, zone: ZoneId = ZoneId.systemDefault()): List<PlanItem> =

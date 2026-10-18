@@ -11,6 +11,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,6 +47,13 @@ fun MedicationEditor(medication: Medication?, actions: PlanActions, onDismiss: (
     var confirmingEnd by remember { mutableStateOf(false) }
     var isDenied by remember { mutableStateOf(false) }
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted -> isDenied = !granted }
+    // Una pauta nova neix amb l'avís encès: sense permís, es demana ara i no en tocar l'interruptor,
+    // o es desaria un avís que no sonaria mai.
+    LaunchedEffect(Unit) {
+        if (medication == null && hasReminder && !ViraNotifications.canPost(context)) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) permission.launch(ViraNotifications.PERMISSION) else isDenied = true
+        }
+    }
     val canSave = name.isNotBlank() && times.isNotEmpty()
 
     fun save() {

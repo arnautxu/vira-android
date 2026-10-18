@@ -111,7 +111,7 @@ fun CalendarSection(
                 onEdit = { editing = it },
                 zone = zone,
             )
-            CalendarMode.Week -> WeekContent(week, snapshot, actions, onEdit = { editing = it }, zone)
+            CalendarMode.Week -> WeekContent(week, snapshot, chrome.reordering, actions, onEdit = { editing = it }, zone)
         }
     }
 
@@ -229,7 +229,7 @@ private fun PeriodSection(
 
 /// El dia sencer en una sola targeta: mantenir premuda una fila i arrossegar-la la deixa on sigui.
 @Composable
-private fun ReorderList(items: List<PlanItem>, actions: PlanActions, zone: ZoneId) {
+private fun ReorderList(items: List<PlanItem>, actions: PlanActions, zone: ZoneId, showHint: Boolean = true) {
     var order by remember(items) { mutableStateOf(items) }
     var dragging by remember { mutableStateOf<java.util.UUID?>(null) }
     var dragOffset by remember { mutableFloatStateOf(0f) }
@@ -246,12 +246,7 @@ private fun ReorderList(items: List<PlanItem>, actions: PlanActions, zone: ZoneI
     }
 
     Column {
-        Text(
-            stringResource(R.string.plan_reorder_hint),
-            style = ViraFont.footnote,
-            color = ViraColor.textSecondary,
-            modifier = Modifier.padding(start = ViraSpacing.m, bottom = ViraSpacing.xs),
-        )
+        if (showHint) ReorderHint()
         Column(Modifier.fillMaxWidth().background(ViraColor.cardFill(ViraArea.Plan), shape)) {
             order.forEachIndexed { index, item ->
                 if (index > 0) HorizontalDivider(Modifier.padding(start = ViraSpacing.m), color = ViraColor.onCard(ViraArea.Plan).copy(alpha = 0.25f))
@@ -308,18 +303,38 @@ private fun ReorderList(items: List<PlanItem>, actions: PlanActions, zone: ZoneI
     }
 }
 
+@Composable
+private fun ReorderHint() {
+    Text(
+        stringResource(R.string.plan_reorder_hint),
+        style = ViraFont.footnote,
+        color = ViraColor.textSecondary,
+        modifier = Modifier.padding(start = ViraSpacing.m, bottom = ViraSpacing.xs),
+    )
+}
+
 /// Setmanal com a llista agrupada per dia, no com a graella: la graella era hostil a TalkBack i
 /// no tenia model per a més d'un ítem per franja.
 @Composable
-private fun WeekContent(week: CalendarWeek, snapshot: PlanSnapshot, actions: PlanActions, onEdit: (PlanItem) -> Unit, zone: ZoneId) {
+private fun WeekContent(
+    week: CalendarWeek,
+    snapshot: PlanSnapshot,
+    reordering: Boolean,
+    actions: PlanActions,
+    onEdit: (PlanItem) -> Unit,
+    zone: ZoneId,
+) {
     PlanScrollColumn {
+        if (reordering) ReorderHint()
         week.days.forEach { day ->
             key(day) {
                 val items = snapshot.items(day, zone)
                 Column {
                     PlanGroupHeader(weekdayDay(day), uppercase = false)
                     val shape = RoundedCornerShape(ViraRadius.s)
-                    Column(
+                    // Reendreçar la setmana és reendreçar cada dia per separat, com a l'iPhone.
+                    if (reordering && items.size > 1) ReorderList(items, actions, zone, showHint = false)
+                    else Column(
                         Modifier.fillMaxWidth().background(ViraColor.surfaceElevated, shape)
                             .padding(horizontal = ViraSpacing.m, vertical = ViraSpacing.xxs),
                     ) {

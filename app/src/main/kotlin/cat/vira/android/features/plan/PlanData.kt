@@ -35,8 +35,9 @@ data class PlanSnapshot(
     val activeMedications: List<Medication> get() = medications.filter { it.isActive }.sortedBy { it.createdAt }
 
     fun items(day: LocalDate, zone: ZoneId = ZoneId.systemDefault()): List<PlanItem> {
-        val start = PlanDay.start(day, zone)
-        return PlanItemOrder.sorted(items.filter { it.day == start }, zone)
+        // Per data local i no per l'instant: un ítem creat en un altre fus horari té la mitjanit
+        // d'aquell fus, i `countsByDay` ja el posa en aquest dia.
+        return PlanItemOrder.sorted(items.filter { PlanDay.date(it.day, zone) == day }, zone)
     }
 
     fun countsByDay(zone: ZoneId = ZoneId.systemDefault()): Map<LocalDate, Int> =
@@ -77,12 +78,20 @@ class PlanActions(
     fun toggle(item: PlanItem) {
         val id = PlanCompletionIds.item(item)
         if (item.status == PlanItemStatus.DONE) {
-            write { save(db.planItems(), item.copy(statusRaw = PlanItemStatus.PENDING.raw, completedAt = null)) }
+            write {
+                val current = db.planItems().byId(item.id) ?: return@write
+                save(db.planItems(), current.copy(statusRaw = PlanItemStatus.PENDING.raw, completedAt = null))
+            }
             host.undo(id)
         } else {
+            // La propera repetició es fa ara (com a l'iPhone) i el "Desfer" se l'emporta: si no,
+            // tornar-la a marcar en faria una segona per al mateix dia.
+            val next = PlanItemCompletion.nextOccurrence(item, zone)
             write {
-                save(db.planItems(), item.copy(statusRaw = PlanItemStatus.DONE.raw, completedAt = ViraTime.now()))
-                PlanItemCompletion.nextOccurrence(item, zone)?.let { create(db.planItems(), it) }
+                // La fila d'ara, no la de la pantalla: una sincronització entremig no es perd.
+                val current = db.planItems().byId(item.id) ?: return@write
+                save(db.planItems(), current.copy(statusRaw = PlanItemStatus.DONE.raw, completedAt = ViraTime.now()))
+                next?.let { create(db.planItems(), it) }
             }
             host.present(
                 PendingCompletion(
@@ -93,6 +102,7 @@ class PlanActions(
                             db.planItems().byId(item.id)?.let {
                                 save(db.planItems(), it.copy(statusRaw = PlanItemStatus.PENDING.raw, completedAt = null))
                             }
+                            next?.let { db.planItems().byId(it.id) }?.let { delete(it) }
                         }
                     },
                 ),
