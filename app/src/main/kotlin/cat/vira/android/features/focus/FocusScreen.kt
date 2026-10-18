@@ -88,6 +88,8 @@ fun FocusScreen(request: FocusStartRequest = FocusStartRequest(), onClose: () ->
     val tasks = pending.filter { it.day.atZone(ZoneId.systemDefault()).toLocalDate() == today || it.id == controller.linkedItemID }
 
     LaunchedEffect(Unit) {
+        // Una sessió que el sistema va deixar oberta en matar l'app es tanca abans de començar-ne cap.
+        store?.let { FocusRecovery.closeOrphans(it, cat.vira.android.core.data.ViraTime.now()) }
         controller.applyRequestedProfile(request.profileID)
         if (request.autostart && controller.phase == FocusSessionController.Phase.SETUP) controller.start()
     }

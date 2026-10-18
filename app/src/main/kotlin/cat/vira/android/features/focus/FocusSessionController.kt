@@ -64,6 +64,10 @@ class FocusSessionController(
         private set
 
     private var session: FocusSession? = null
+    private var starting = false
+
+    /// La sessió oberta ara mateix, perquè la recuperació no la tanqui per sota.
+    internal val openSessionID get() = session?.takeIf { it.endedAt == null }?.id
 
     /// Completa la sessió tota sola quan el temps s'esgota amb l'app viva. Amb el telèfon adormit,
     /// el rellotge d'aquest `delay` s'atura: per això hi ha també l'alarma de `FocusEffects`, i
@@ -99,7 +103,17 @@ class FocusSessionController(
     // Transicions
 
     suspend fun start() {
-        if (store == null || phase == Phase.RUNNING) return
+        if (store == null || phase == Phase.RUNNING || starting) return
+        // Dos tocs seguits a «Comença» abans que la fila es desi crearien dues sessions.
+        starting = true
+        try {
+            begin(store)
+        } finally {
+            starting = false
+        }
+    }
+
+    private suspend fun begin(store: ViraStore) {
         val isProfile = mode.profileID != null
         val now = clock()
         val created = store.create(

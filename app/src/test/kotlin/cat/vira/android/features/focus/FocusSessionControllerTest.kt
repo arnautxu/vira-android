@@ -125,4 +125,24 @@ class FocusSessionControllerTest {
         assertEquals(5 * 60, controller.state.plannedSeconds)
         assertEquals(2, db.focusSessions().all().size)
     }
+
+    @Test fun duesCridesSeguidesNoCreenDuesSessions() = runBlocking {
+        val controller = controller()
+        val a = kotlinx.coroutines.async(Dispatchers.Unconfined) { controller.start() }
+        controller.start()
+        a.await()
+        assertEquals(1, db.focusSessions().all().size)
+    }
+
+    @Test fun laRecuperacioTancaLesSessionsOrfes() = runBlocking {
+        val done = FocusSession(startedAt = now.minusSeconds(3600), plannedSeconds = 25 * 60)
+        val cut = FocusSession(startedAt = now.minusSeconds(60), plannedSeconds = 25 * 60)
+        db.focusSessions().upsertRaw(listOf(done, cut))
+        FocusRecovery.closeOrphans(store, now)
+        val byId = db.focusSessions().all().associateBy { it.id }
+        assertTrue(byId.getValue(done.id).completed)
+        assertEquals(25 * 60, byId.getValue(done.id).actualSeconds)
+        assertFalse(byId.getValue(cut.id).completed)
+        assertEquals(now, byId.getValue(cut.id).endedAt)
+    }
 }

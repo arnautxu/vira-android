@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -98,7 +99,7 @@ fun FocusProfileEditor(
         )
     }
 
-    Column(modifier.fillMaxSize().viraSectionBackground(ViraArea.Focus).statusBarsPadding()) {
+    Column(modifier.fillMaxSize().viraSectionBackground(ViraArea.Focus).statusBarsPadding().navigationBarsPadding()) {
         Row(Modifier.padding(horizontal = ViraSpacing.xs), verticalAlignment = Alignment.CenterVertically) {
             FocusIconButton(FocusGlyphKind.Back, stringResource(R.string.action_back), ViraColor.accent(ViraArea.Focus), onBack)
         }

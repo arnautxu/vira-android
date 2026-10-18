@@ -103,13 +103,19 @@ object FocusNotifications {
         val builder = NotificationCompat.Builder(context, SESSION_CHANNEL)
             .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle(title)
-            .setContentText(context.getString(R.string.focus_progress, done, planned))
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setSilent(true)
             .setShowWhen(false)
             .setCategory(NotificationCompat.CATEGORY_STOPWATCH)
-            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            // El nom d'un mode és text de l'usuari: a la pantalla bloquejada només hi surt «Concentra't».
+            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+            .setPublicVersion(
+                NotificationCompat.Builder(context, SESSION_CHANNEL)
+                    .setSmallIcon(R.mipmap.ic_launcher)
+                    .setContentTitle(context.getString(R.string.focus_title))
+                    .build(),
+            )
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .setContentIntent(openApp(context))
         val end = state.endDate
@@ -118,6 +124,9 @@ object FocusNotifications {
             builder.setUsesChronometer(true).setChronometerCountDown(true).setWhen(end.toEpochMilli()).setShowWhen(true)
         }
         if (paused) {
+            // Quiet, el temps fet en text; en marxa, el compte enrere del sistema ja ho diu i un text
+            // que no s'actualitza el contradiria.
+            builder.setContentText(context.getString(R.string.focus_progress, done, planned))
             builder.addAction(0, context.getString(R.string.focus_resume), action(context, FocusService.ACTION_RESUME, 1))
         } else {
             builder.addAction(0, context.getString(R.string.focus_pause), action(context, FocusService.ACTION_PAUSE, 2))
@@ -146,7 +155,13 @@ object FocusNotifications {
     }
 
     /// Es pot avisar? Sense el permís, el compte enrere segueix, però la pantalla ho diu.
-    fun areEnabled(context: Context): Boolean = NotificationManagerCompat.from(context).areNotificationsEnabled()
+    fun areEnabled(context: Context): Boolean {
+        val manager = NotificationManagerCompat.from(context)
+        if (!manager.areNotificationsEnabled()) return false
+        // Es pot apagar només el canal del final i deixar la resta: aleshores tampoc avisarà.
+        val ended = manager.getNotificationChannelCompat(ENDED_CHANNEL) ?: return true
+        return ended.importance != NotificationManagerCompat.IMPORTANCE_NONE
+    }
 
     private fun ensureChannels(context: Context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return

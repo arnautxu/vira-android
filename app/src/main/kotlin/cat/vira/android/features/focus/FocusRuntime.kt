@@ -86,14 +86,18 @@ object FocusAlarm {
 class FocusAlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val controller = FocusRuntime.current.value
-        if (controller == null || controller.phase != FocusSessionController.Phase.RUNNING) {
-            FocusNotifications.postEnded(context)
-            return
-        }
         val pending = goAsync()
         FocusRuntime.scope.launch {
             try {
-                controller.reconcile()
+                if (controller != null && controller.phase == FocusSessionController.Phase.RUNNING) {
+                    controller.reconcile()
+                } else {
+                    // El procés ja no hi era: la sessió desada es tanca des de la base de dades.
+                    val app = context.applicationContext as? cat.vira.android.ViraApp
+                    val store = app?.let { cat.vira.android.core.data.ViraStore(it.backend.db) }
+                    if (store != null) FocusRecovery.closeOrphans(store, cat.vira.android.core.data.ViraTime.now())
+                    FocusNotifications.postEnded(context)
+                }
             } finally {
                 pending.finish()
             }
