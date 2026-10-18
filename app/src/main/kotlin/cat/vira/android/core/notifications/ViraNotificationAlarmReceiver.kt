@@ -9,11 +9,16 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
+import android.os.Bundle
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.RemoteInput
 import androidx.core.content.ContextCompat
 import cat.vira.android.R
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 
 /// L'alarma ha sonat: publica l'avís amb els seus botons.
@@ -28,22 +33,36 @@ class ViraNotificationAlarmReceiver : BroadcastReceiver() {
         val notification = runCatching {
             Json.decodeFromString(ViraPlannedNotification.serializer(), raw)
         }.getOrNull() ?: return
-        ViraNotificationScheduler(context).forget(notification.id)
-        post(context, notification)
+        val pending = goAsync()
+        scope.launch {
+            try {
+                ViraNotifications.deliver(context.applicationContext, notification)
+            } finally {
+                pending.finish()
+            }
+        }
     }
 
     companion object {
+        private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
         const val EXTRA_PAYLOAD = "cat.vira.notification.payload"
 
         /// Publica l'avís. Sense permís (Android 13+) no es publica res i no passa res més: el
         /// permís es demana en context, quan l'usuari encén un avís, mai aquí.
-        fun post(context: Context, notification: ViraPlannedNotification) {
-            if (!ViraNotifications.canPost(context) || !ViraNotifications.isWanted(context, notification)) return
+        /// Retorna si s'ha publicat.
+        fun post(context: Context, notification: ViraPlannedNotification): Boolean {
+            if (!ViraNotifications.canPost(context) || !ViraNotifications.isWanted(context, notification)) return false
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
                 ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
                 PackageManager.PERMISSION_GRANTED
-            ) return
-            NotificationManagerCompat.from(context).notify(notification.id, 0, build(context, notification))
+            ) return false
+            // Un canal apagat als Ajustos del sistema no ensenya res: no compta com a dit.
+            val channel = NotificationManagerCompat.from(context).getNotificationChannelCompat(notification.channel.id)
+            if (channel != null && channel.importance == NotificationManagerCompat.IMPORTANCE_NONE) return false
+            val shown = ViraNotifications.presented(context, notification)
+            NotificationManagerCompat.from(context).notify(shown.id, 0, build(context, shown))
+            return true
         }
 
         fun build(context: Context, notification: ViraPlannedNotification): Notification {
@@ -59,7 +78,11 @@ class ViraNotificationAlarmReceiver : BroadcastReceiver() {
                 .setWhen(notification.fireAtMillis)
                 .setShowWhen(true)
                 .setAutoCancel(true)
+                // Si es torna a publicar per treure'n el detall, que no torni a sonar.
+                .setOnlyAlertOnce(true)
                 .setContentIntent(openApp(context, notification))
+                // Per poder retirar-lo de la pantalla si mentrestant es marca a l'app.
+                .addExtras(Bundle().apply { putString(EXTRA_PAYLOAD, Json.encodeToString(ViraPlannedNotification.serializer(), notification)) })
             actions(context, notification).forEach { builder.addAction(it) }
             return builder.build()
         }
@@ -75,7 +98,9 @@ class ViraNotificationAlarmReceiver : BroadcastReceiver() {
                 if (notification.actions == ViraActionSet.VIRI) ViraNotifications.DESTINATION_CHECK_IN
                 else ViraNotifications.DESTINATION_TODAY,
             )
-            launch.data = Uri.parse("vira-notification://open/${Uri.encode(notification.id)}")
+            // Un identificador i no una adreça (`data`): l'arrencada repartiria l'adreça com un enllaç
+            // entrant, i el panell de pares la podria llegir com un codi de vinculació.
+            launch.identifier = notification.id
             return PendingIntent.getActivity(
                 context, notification.id.hashCode(), launch,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,

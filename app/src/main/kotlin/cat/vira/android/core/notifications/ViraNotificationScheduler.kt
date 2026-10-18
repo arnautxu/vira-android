@@ -29,7 +29,8 @@ class ViraNotificationScheduler(private val context: Context) {
     /// Les que hi ha programades ara mateix.
     fun armed(): List<ViraPlannedNotification> = synchronized(LOCK) { read() }
 
-    /// Treu les programades d'aquests prefixos i posa les noves. Dues excepcions:
+    /// Treu les programades d'aquests prefixos i posa les noves. Dues excepcions, sempre que
+    /// `stillPending` digui que el que recorden encara està per fer:
     /// - **Els «Més tard» no es toquen**: són una petició de l'usuari, no part de la finestra, i la
     ///   propera passada no els ha de desfer. (A l'iPhone la passada que segueix a l'acció sí que
     ///   l'esborra, perquè el seu filtre és només pel prefix: és un error de l'iPhone, i aquí no es
@@ -41,16 +42,21 @@ class ViraNotificationScheduler(private val context: Context) {
         prefixes: List<String>,
         planned: List<ViraPlannedNotification>,
         now: Instant = Instant.now(),
+        stillPending: (ViraPlannedNotification) -> Boolean = { true },
     ) = synchronized(LOCK) {
         val graceStart = now.minus(OVERDUE_GRACE)
         val (stale, kept) = read().partition { n ->
-            prefixes.any { n.id.startsWith(it) } && !n.isSnooze &&
-                !(n.fireAt <= now && n.fireAt > graceStart)
+            val exempt = n.isSnooze || (n.fireAt <= now && n.fireAt > graceStart)
+            prefixes.any { n.id.startsWith(it) } && !(exempt && stillPending(n))
         }
         stale.forEach { cancelAlarm(it.id) }
         val fresh = planned.distinctBy { it.id }
-        fresh.forEach(::arm)
-        write(kept.filter { k -> fresh.none { it.id == k.id } } + fresh)
+        val rest = kept.filter { k -> fresh.none { it.id == k.id } }
+        // També les que es conserven: si Android ha retirat l'accés a les alarmes exactes, ha
+        // esborrat totes les que hi havia, i la llista diria que encara hi són. Tornar a posar una
+        // alarma que ja hi és només la substitueix.
+        (rest + fresh).forEach(::arm)
+        write(rest + fresh)
     }
 
     /// Treu-ho **tot**, «Més tard» inclosos (permís retirat, interruptor apagat, esborrat total,
@@ -72,9 +78,11 @@ class ViraNotificationScheduler(private val context: Context) {
         write(read().filter { it.id != id })
     }
 
-    /// Després d'arrencar el telèfon: torna a posar les que encara han de sonar i oblida la resta.
+    /// Després d'arrencar el telèfon: torna a posar les que encara han de sonar, i les que ho havien
+    /// de fer mentre era apagat fa poc (dins de la mateixa tolerància que `replace`; sonen de
+    /// seguida). La resta s'obliden.
     fun rearm(now: Instant) = synchronized(LOCK) {
-        val future = read().filter { it.fireAt.isAfter(now) }
+        val future = read().filter { it.fireAt.isAfter(now.minus(OVERDUE_GRACE)) }
         future.forEach(::arm)
         write(future)
     }
@@ -119,8 +127,11 @@ class ViraNotificationScheduler(private val context: Context) {
         const val FILE = "vira.notifications"
         private const val KEY = "armed"
         const val SNOOZE_SUFFIX = "-snooze"
-        /// Quant d'endarreriment es tolera a una alarma inexacta abans de donar-la per perduda.
-        private val OVERDUE_GRACE: java.time.Duration = java.time.Duration.ofMinutes(30)
+        /// Quant d'endarreriment es tolera a una alarma inexacta abans de donar-la per perduda. Dues
+        /// hores: Android en garanteix una sense restriccions i en dona més amb estalvi de bateria.
+        /// Tolerar-ne més és segur perquè l'alarma torna a mirar, abans de publicar, que allò encara
+        /// estigui per fer (`ViraNotifications.isStillPending`).
+        internal val OVERDUE_GRACE: java.time.Duration = java.time.Duration.ofHours(2)
         private val LOCK = Any()
         private val json = Json { ignoreUnknownKeys = true }
         private val LIST = kotlinx.serialization.builtins.ListSerializer(ViraPlannedNotification.serializer())

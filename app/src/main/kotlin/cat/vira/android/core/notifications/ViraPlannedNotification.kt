@@ -72,8 +72,12 @@ enum class ViraNotificationChannel(
         fun register(context: Context) {
             val manager = context.getSystemService(NotificationManager::class.java) ?: return
             // El so de Vira, un de sol per a tots, que no diu de què és l'avís (`ViraSound.notificationSound`).
+            // Pel nom i no pel número: el canal desa l'adreça per sempre, i el número pot canviar
+            // d'una versió de l'app a la següent.
+            val res = context.resources
             val sound = Uri.parse(
-                "${ContentResolver.SCHEME_ANDROID_RESOURCE}://${context.packageName}/${R.raw.sound_avis_vira}",
+                "${ContentResolver.SCHEME_ANDROID_RESOURCE}://${context.packageName}/" +
+                    "${res.getResourceTypeName(R.raw.sound_avis_vira)}/${res.getResourceEntryName(R.raw.sound_avis_vira)}",
             )
             val attributes = AudioAttributes.Builder()
                 .setUsage(AudioAttributes.USAGE_NOTIFICATION)

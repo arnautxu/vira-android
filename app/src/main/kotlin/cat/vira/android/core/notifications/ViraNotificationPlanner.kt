@@ -5,6 +5,7 @@ import cat.vira.android.core.data.model.FocusSession
 import cat.vira.android.core.data.model.Habit
 import cat.vira.android.core.data.model.IntakeStatus
 import cat.vira.android.core.data.model.Medication
+import cat.vira.android.core.data.model.PlanItem
 import cat.vira.android.core.data.model.PlanItemStatus
 import cat.vira.android.core.data.model.iosWeekday
 import cat.vira.android.core.data.model.status
@@ -75,12 +76,14 @@ object ViraNotificationPlanner {
     ///
     /// *Imperfecció acceptada (com a l'iPhone):* si la sessió es pausa, la finestra queda curta.
     fun muteWindow(sessions: List<FocusSession>, now: Instant): ClosedOpenRange? {
-        val session = sessions
+        // Totes les que encara duren, no només l'última: dues de telèfons diferents es poden
+        // trepitjar, i la més llarga mana fins que s'acaba.
+        val live = sessions
             .filter { it.endedAt == null && it.mutesNotifications }
-            .maxByOrNull { it.startedAt } ?: return null
-        val end = session.startedAt.plusSeconds(session.plannedSeconds.toLong())
-        if (!end.isAfter(now)) return null
-        return ClosedOpenRange(session.startedAt, end)
+            .map { it.startedAt to it.startedAt.plusSeconds(it.plannedSeconds.toLong()) }
+            .filter { (_, end) -> end.isAfter(now) }
+        if (live.isEmpty()) return null
+        return ClosedOpenRange(live.minOf { it.first }, live.maxOf { it.second })
     }
 
     fun habits(
@@ -125,6 +128,7 @@ object ViraNotificationPlanner {
                 actions = ViraActionSet.HABIT,
                 habitId = habit.id.toString(),
                 dayMillis = day.atStartOfDay(zone).toInstant().toEpochMilli(),
+                scheduledAtMillis = fire.toEpochMilli(),
             )
         }
     }
@@ -148,9 +152,11 @@ object ViraNotificationPlanner {
                 if (!medication.hasReminder) continue
                 for (scheduledAt in medicationTimes(medication, day, zone)) {
                     if (!scheduledAt.isAfter(now)) continue
-                    val intake = intakesByMedication[medication.id].orEmpty().firstOrNull { sameMinute(it.scheduledAt, scheduledAt) }
-                    // `pending` vol dir que l'usuari no hi ha dit res.
-                    if ((intake?.status ?: IntakeStatus.PENDING) != IntakeStatus.PENDING) continue
+                    // `pending` vol dir que l'usuari no hi ha dit res. Si la sincronització en deixa
+                    // dues per a la mateixa hora, n'hi ha prou que una estigui resolta.
+                    val resolved = intakesByMedication[medication.id].orEmpty()
+                        .any { sameMinute(it.scheduledAt, scheduledAt) && it.status != IntakeStatus.PENDING }
+                    if (resolved) continue
                     if (muted?.contains(scheduledAt) == true) continue
                     slots += scheduledAt to medication
                 }
@@ -190,9 +196,7 @@ object ViraNotificationPlanner {
             if (item.status != PlanItemStatus.PENDING) return@mapNotNull null
             val day = LocalDate.ofInstant(item.day, zone)
             if (day < today || day >= end) return@mapNotNull null
-            val time = item.time ?: return@mapNotNull null
-            // L'hora viu a part del dia: es recompon sobre el dia de l'ítem.
-            val fire = at(day, time, zone).minusSeconds((item.reminderOffsetMinutes ?: 0) * 60L)
+            val fire = planFire(item, zone) ?: return@mapNotNull null
             if (!fire.isAfter(now) || muted?.contains(fire) == true) return@mapNotNull null
             fire to item
         }
@@ -207,6 +211,8 @@ object ViraNotificationPlanner {
                 channel = ViraNotificationChannel.PLAN,
                 actions = ViraActionSet.PLAN,
                 planItemId = item.id.toString(),
+                // L'hora per la qual es va programar: un «Més tard» deixa de tocar si la tasca es mou.
+                scheduledAtMillis = fire.toEpochMilli(),
             )
         }
     }
@@ -248,13 +254,74 @@ object ViraNotificationPlanner {
     fun medicationTimes(medication: Medication, day: LocalDate, zone: ZoneId): List<Instant> {
         if (!medication.isActive) return emptyList()
         if (medication.weekdays.isNotEmpty() && day.dayOfWeek.iosWeekday() !in medication.weekdays) return emptyList()
-        val start = day.atStartOfDay(zone)
-        return medication.timesInMinutes.sorted().map { start.plusMinutes(it.toLong()).toInstant() }
+        // Hora de rellotge sobre el dia, no minuts des de mitjanit: el dia que canvia l'hora,
+        // «les 9» han de seguir sent les 9. (L'iPhone suma minuts i es desplaça una hora aquells
+        // dos dies.)
+        return medication.timesInMinutes.sorted().map { day.atTime(it / 60, it % 60).atZone(zone).toInstant() }
     }
+
+    /// Si allò que recorda un avís ja programat encara està per fer. Un «Més tard» o una alarma
+    /// endarrerida sobreviuen a la passada, però no si mentrestant s'ha marcat a l'app: seria
+    /// recordar una cosa ja feta, i els botons de medicació actuarien sobre una presa resolta.
+    fun isStillPending(
+        notification: ViraPlannedNotification,
+        inputs: ViraNotificationInputs,
+        zone: ZoneId,
+        now: Instant = Instant.now(),
+    ): Boolean =
+        when (notification.actions) {
+            ViraActionSet.HABIT -> {
+                val habitId = notification.habitId?.toUuidOrNull()
+                val day = notification.dayMillis?.let { LocalDate.ofInstant(Instant.ofEpochMilli(it), zone) }
+                // Amb l'hora del recordatori canviada, un «Més tard» de l'hora d'abans ja no toca.
+                val slot = notification.scheduledAtMillis
+                habitId != null && day != null &&
+                    inputs.habits.any { h ->
+                        val time = h.reminderTime
+                        h.id == habitId && !h.isArchived && time != null && h.isScheduled(day) &&
+                            (slot == null || at(day, time, zone).toEpochMilli() == slot)
+                    } &&
+                    inputs.habitLogs.none { it.habitId == habitId && LocalDate.ofInstant(it.day, zone) == day }
+            }
+            ViraActionSet.MEDICATION -> {
+                val medicationId = notification.medicationId?.toUuidOrNull()
+                val at = notification.scheduledAtMillis?.let(Instant::ofEpochMilli)
+                medicationId != null && at != null &&
+                    inputs.medications.any { m ->
+                        m.id == medicationId && m.hasReminder &&
+                            medicationTimes(m, LocalDate.ofInstant(at, zone), zone).any { sameMinute(it, at) }
+                    } &&
+                    inputs.intakes.none {
+                        it.medicationId == medicationId && sameMinute(it.scheduledAt, at) && it.status != IntakeStatus.PENDING
+                    }
+            }
+            ViraActionSet.PLAN -> {
+                val itemId = notification.planItemId?.toUuidOrNull()
+                inputs.planItems.any { item ->
+                    item.id == itemId && item.status == PlanItemStatus.PENDING &&
+                        notification.scheduledAtMillis.let { at -> at == null || planFire(item, zone)?.toEpochMilli() == at }
+                }
+            }
+            ViraActionSet.VIRI -> {
+                val day = LocalDate.ofInstant(notification.fireAt, zone)
+                // El d'un dia passat ja no toca: el botó registraria l'emoció a avui, no a aquell dia.
+                !day.isBefore(LocalDate.ofInstant(now, zone)) &&
+                    inputs.emotionEntries.none { LocalDate.ofInstant(it.createdAt, zone) == day }
+            }
+        }
+
+    private fun String.toUuidOrNull() = runCatching { java.util.UUID.fromString(this) }.getOrNull()
 
     /// L'aparellament d'una presa amb la seva hora és **al minut**, com a l'iPhone.
     fun sameMinute(a: Instant, b: Instant) =
         a.truncatedTo(ChronoUnit.MINUTES) == b.truncatedTo(ChronoUnit.MINUTES)
+
+    /// L'hora de l'avís d'una tasca: l'hora viu a part del dia i es recompon sobre el dia de
+    /// l'ítem, menys l'antelació. Sense hora, cap.
+    private fun planFire(item: PlanItem, zone: ZoneId): Instant? {
+        val time = item.time ?: return null
+        return at(LocalDate.ofInstant(item.day, zone), time, zone).minusSeconds((item.reminderOffsetMinutes ?: 0) * 60L)
+    }
 
     private fun Habit.isScheduled(day: LocalDate) =
         weekdays.isEmpty() || day.dayOfWeek.iosWeekday() in weekdays

@@ -78,7 +78,9 @@ object ViraNotificationActions {
             request.action == MEDICATION_TAKEN || request.action == MEDICATION_SKIPPED -> {
                 val id = request.medicationId ?: return
                 val status = if (request.action == MEDICATION_TAKEN) IntakeStatus.TAKEN else IntakeStatus.SKIPPED
-                effects.recordIntake(id, request.scheduledAt ?: return, status)
+                val at = request.scheduledAt ?: return
+                // Ja respost: el botó no el canvia, i l'avís desapareix amb la passada.
+                if (!ViraNotifications.intakeResolved(context, id, at)) effects.recordIntake(id, at, status)
             }
             request.action == SNOOZE -> snooze(context, request.notification, now)
             request.action == CAPTURE -> {

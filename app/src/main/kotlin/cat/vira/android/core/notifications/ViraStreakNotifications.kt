@@ -26,10 +26,16 @@ import java.time.ZoneId
 object ViraStreakNotifications {
 
     const val PREFIX = "streak-"
+    /// Marca la franja que porta una notícia (fita, ratxa salvada o a zero): una notícia endarrerida
+    /// encara s'ha de dir encara que el dia ja compti; un recordatori, no.
+    const val NEWS_SUFFIX = "-news"
 
     /// Cinc, dins del repartiment de 64 (26 + 14 + 8 + 3 + 5 = 56).
     const val BUDGET = 5
     const val WINDOW_DAYS = 7
+
+    /// El mateix marge que les alarmes endarrerides.
+    private val NEWS_GRACE: java.time.Duration get() = ViraNotificationScheduler.OVERDUE_GRACE
 
     // MARK: Esdeveniments pendents d'explicar
 
@@ -46,10 +52,12 @@ object ViraStreakNotifications {
     private const val EVENT_KEY = "streak.pendingEvent"
     private const val EVENT_DAYS_KEY = "streak.pendingEventDays"
     private const val EVENT_DATE_KEY = "streak.pendingEventAt"
+    private const val EVENT_MUTED_KEY = "streak.pendingEventMutedUntil"
+    private val EVENT_LOCK = Any()
 
     /// Deixa constància que la propera franja ha de dir això. L'últim guanya: si el mateix dia es
     /// salva la ratxa i després arriba una fita, es diu la fita — és la notícia.
-    fun record(event: Event, preferences: SharedPreferences, now: Instant) {
+    fun record(event: Event, preferences: SharedPreferences, now: Instant): Unit = synchronized(EVENT_LOCK) {
         preferences.edit {
             putString(
                 EVENT_KEY,
@@ -60,19 +68,63 @@ object ViraStreakNotifications {
                 },
             )
             putLong(EVENT_DATE_KEY, now.toEpochMilli())
+            remove(EVENT_MUTED_KEY)
             if (event is Event.Milestone) putInt(EVENT_DAYS_KEY, event.days)
         }
     }
 
     /// L'esdeveniment pendent, si la franja que l'havia de portar encara no ha passat. Un de
     /// caducat s'esborra: no ha d'aparèixer una setmana més tard fora de context.
-    fun pendingEvent(preferences: SharedPreferences, time: ViraClock, now: Instant, zone: ZoneId): Event? {
+    ///
+    /// La franja que el porta és la primera **que no silencia una concentració**: si la de l'endemà
+    /// cau a mig mode silenciós, la notícia passa a la següent. Es desa fins on arriba el silenci,
+    /// perquè quan la concentració s'acabi ja no se sap que aquella franja era muda i la notícia es
+    /// donaria per caducada sense haver sonat. La data de l'esdeveniment no es toca: si la
+    /// concentració s'acaba abans de la franja, la franja torna a ser bona.
+    fun pendingEvent(
+        preferences: SharedPreferences,
+        time: ViraClock,
+        now: Instant,
+        zone: ZoneId,
+        muted: ClosedOpenRange? = null,
+        isArmed: (stamp: Long) -> Boolean = { true },
+    ): Event? {
         val raw = preferences.getString(EVENT_KEY, null) ?: return null
         val recorded = Instant.ofEpochMilli(preferences.getLong(EVENT_DATE_KEY, 0))
-        val slot = slots(recorded, time, zone).firstOrNull()
-        if (slot == null || !slot.isAfter(now)) {
-            clearPendingEvent(preferences)
+        var silencedUntil = preferences.getLong(EVENT_MUTED_KEY, Long.MIN_VALUE)
+        val slot = slots(recorded, time, zone).firstOrNull { candidate ->
+            when {
+                muted?.contains(candidate) == true -> {
+                    silencedUntil = maxOf(silencedUntil, candidate.toEpochMilli())
+                    false
+                }
+                // Ja ha passat i en planificar-la era muda: no ha sonat.
+                !candidate.isAfter(now) && candidate.toEpochMilli() <= silencedUntil -> false
+                else -> true
+            }
+        }
+        if (silencedUntil != Long.MIN_VALUE) preferences.edit { putLong(EVENT_MUTED_KEY, silencedUntil) }
+        if (slot == null) {
+            clearPendingEvent(preferences, onlyIfStamp = recorded.toEpochMilli())
             return null
+        }
+        if (!slot.isAfter(now)) {
+            if (!now.isBefore(slot.plus(NEWS_GRACE))) {
+                clearPendingEvent(preferences, onlyIfStamp = recorded.toEpochMilli())
+                return null
+            }
+            // Acabada de passar, l'alarma endarrerida d'aquesta notícia encara pot sonar: es
+            // conserva (sense tornar-la a planificar) fins que sona o passa el marge.
+            if (isArmed(recorded.toEpochMilli())) return null
+            // Cap alarma la portava (s'ha apuntat just abans de la franja i la passada ha arribat
+            // tard): passa a la franja següent. La data nova és també la marca nova de la notícia.
+            // Només si encara és la que s'ha llegit: una de més nova apuntada entremig es queda.
+            synchronized(EVENT_LOCK) {
+                if (pendingEventStamp(preferences) == recorded.toEpochMilli()) {
+                    preferences.edit { putLong(EVENT_DATE_KEY, slot.toEpochMilli()) }
+                }
+            }
+            return pendingEvent(preferences, time, now, zone, muted, isArmed)
         }
         return when (raw) {
             "protected" -> Event.Protected
@@ -82,10 +134,36 @@ object ViraStreakNotifications {
         }
     }
 
-    fun clearPendingEvent(preferences: SharedPreferences) = preferences.edit {
-        remove(EVENT_KEY)
-        remove(EVENT_DAYS_KEY)
-        remove(EVENT_DATE_KEY)
+    /// La notícia i la seva marca d'un sol cop: un `record` entremig ajuntaria el text de l'una
+    /// amb la marca de l'altra.
+    fun pendingNews(
+        preferences: SharedPreferences,
+        time: ViraClock,
+        now: Instant,
+        zone: ZoneId,
+        muted: ClosedOpenRange? = null,
+        isArmed: (stamp: Long) -> Boolean = { true },
+    ): Pair<Event?, Long?> = synchronized(EVENT_LOCK) {
+        pendingEvent(preferences, time, now, zone, muted, isArmed) to pendingEventStamp(preferences)
+    }
+
+    /// Quina notícia és: la data en què es va apuntar. Viatja amb l'avís perquè una notícia
+    /// endarrerida que una de més nova ha substituït no surti ni esborri la nova.
+    fun pendingEventStamp(preferences: SharedPreferences): Long? =
+        preferences.getLong(EVENT_DATE_KEY, Long.MIN_VALUE).takeIf { preferences.contains(EVENT_KEY) && it != Long.MIN_VALUE }
+
+    /// Amb `onlyIfStamp`, només si la notícia pendent és encara aquesta.
+    /// Comparar i esborrar van junts amb `record`: una notícia apuntada entremig no s'esborra.
+    fun clearPendingEvent(preferences: SharedPreferences, onlyIfStamp: Long? = null) {
+        synchronized(EVENT_LOCK) {
+            if (onlyIfStamp != null && pendingEventStamp(preferences) != onlyIfStamp) return
+            preferences.edit {
+                remove(EVENT_KEY)
+                remove(EVENT_DAYS_KEY)
+                remove(EVENT_DATE_KEY)
+                remove(EVENT_MUTED_KEY)
+            }
+        }
     }
 
     // MARK: Càlcul de la finestra
@@ -107,28 +185,31 @@ object ViraStreakNotifications {
         time: ViraClock,
         zone: ZoneId,
         text: ViraNotificationText,
+        eventStamp: Long? = null,
     ): List<ViraPlannedNotification> {
         val today = LocalDate.ofInstant(now, zone)
         val planned = mutableListOf<ViraPlannedNotification>()
-        for ((index, fire) in slots(now, time, zone).withIndex()) {
+        var news = event
+        for (fire in slots(now, time, zone)) {
             // Un mode de concentració que silencia Vira: dins de la seva finestra, res.
             if (muted?.contains(fire) == true) continue
             val day = LocalDate.ofInstant(fire, zone)
             val kind = when {
-                // La notícia va a la primera franja, tant si el dia ja compta com si no.
-                index == 0 && event != null -> event.kind
+                // La notícia va a la primera franja que sona, tant si el dia ja compta com si no.
+                news != null -> news.kind.also { news = null }
                 // El dia d'avui ja compta i no hi ha res a explicar: no es diu res.
                 day == today && !dayIsOpen -> continue
                 else -> Kind.Nudge
             }
             planned += ViraPlannedNotification(
-                id = "$PREFIX${day.year}-${day.monthValue}-${day.dayOfMonth}",
+                id = "$PREFIX${day.year}-${day.monthValue}-${day.dayOfMonth}" + if (kind is Kind.Nudge) "" else NEWS_SUFFIX,
                 fireAtMillis = fire.toEpochMilli(),
                 title = StreakNotificationCatalog.title(text),
                 body = StreakNotificationCatalog.body(kind, day, text),
                 channel = ViraNotificationChannel.VIRI,
                 // És la franja del vespre: on estalviar-se obrir l'app val més.
                 actions = ViraActionSet.VIRI,
+                scheduledAtMillis = if (kind is Kind.Nudge) null else eventStamp,
             )
         }
         return planned.take(BUDGET)
