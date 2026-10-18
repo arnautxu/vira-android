@@ -29,6 +29,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import cat.vira.android.R
 import cat.vira.android.app.EmotionsSection
@@ -37,6 +39,8 @@ import cat.vira.android.app.LocalViraNavigator
 import cat.vira.android.app.rememberPreference
 import cat.vira.android.core.data.ViraStore
 import cat.vira.android.core.design.LocalViraEnvironment
+import cat.vira.android.core.design.components.ViraActionButton
+import cat.vira.android.core.design.components.ViraActionHierarchy
 import cat.vira.android.core.design.components.ViraSectionItem
 import cat.vira.android.core.design.components.ViraSectionSwitcher
 import cat.vira.android.core.design.components.viraPressable
@@ -58,16 +62,32 @@ fun EmotionsScreen() {
     val preferences = LocalViraBackend.current.preferences
     val mindfulnessEnabled by rememberPreference(preferences, MODULE_MINDFULNESS_ENABLED, true)
     val section = navigator.emotionsSection
-    var pending by rememberSaveable { mutableStateOf<MindfulnessCategory?>(null) }
+    var category by rememberSaveable { mutableStateOf<MindfulnessCategory?>(null) }
+    var exercise by rememberSaveable { mutableStateOf<MindfulnessExercise?>(null) }
 
-    val available = EmotionsSection.entries.filter { it != EmotionsSection.Mindfulness || mindfulnessEnabled }
-    val resolved = if (section in available) section else EmotionsSection.CheckIn
-
-    pending?.let { category ->
-        BackHandler { pending = null }
+    // Mindfulness empeny dins de la pestanya: categoria i, a sobre, la sessió.
+    exercise?.let { current ->
+        BackHandler { exercise = null }
+        MindfulnessSession(
+            current,
+            onClose = { exercise = null },
+            onCheckIn = {
+                exercise = null
+                category = null
+                navigator.emotionsSection = EmotionsSection.CheckIn
+            },
+            onFocus = {
+                exercise = null
+                navigator.startFocus()
+            },
+        )
+        return
+    }
+    category?.let { current ->
+        BackHandler { category = null }
         Column(Modifier.fillMaxSize()) {
-            PushedHeader(stringResource(category.title)) { pending = null }
-            MindfulnessPendingContent()
+            PushedHeader(stringResource(current.title)) { category = null }
+            MindfulnessCategoryContent(current, onExercise = { exercise = it }, modifier = Modifier.weight(1f))
         }
         return
     }
@@ -78,7 +98,7 @@ fun EmotionsScreen() {
             EmotionsSection.History -> EmotionHistoryScreen()
             EmotionsSection.Mindfulness -> MindfulnessContent(
                 onBreathe = navigator::openBreathe,
-                onCategory = { pending = it },
+                onCategory = { category = it },
             )
         }
     }
@@ -135,7 +155,7 @@ private fun EmotionsSection.item(): ViraSectionItem = when (this) {
 /// La barra d'una pantalla empesa dins de la pestanya (`navigationTitle` en línia amb el botó
 /// d'enrere). El gest d'enrere del sistema fa el mateix.
 @Composable
-private fun PushedHeader(title: String, onBack: () -> Unit) {
+internal fun PushedHeader(title: String, trailing: Pair<String, () -> Unit>? = null, onBack: () -> Unit) {
     val back = stringResource(R.string.action_back)
     Box(
         Modifier
@@ -160,8 +180,18 @@ private fun PushedHeader(title: String, onBack: () -> Unit) {
             title,
             style = ViraFont.headline,
             color = ViraColor.textPrimary,
-            modifier = Modifier.align(Alignment.Center).semantics { heading() },
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.align(Alignment.Center).fillMaxWidth(0.55f).semantics { heading() },
+            textAlign = TextAlign.Center,
         )
+        if (trailing != null) {
+            ViraActionButton(
+                trailing.first, trailing.second,
+                modifier = Modifier.align(Alignment.CenterEnd),
+                hierarchy = ViraActionHierarchy.Textual, area = ViraArea.Emotions,
+            )
+        }
     }
 }
 

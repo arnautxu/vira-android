@@ -20,7 +20,7 @@ import androidx.compose.ui.unit.Dp
 /// `slider.horizontal.3`, `chevron.right`, `hourglass`, `wind`, `checkmark.circle.fill`,
 /// `circle`), dibuixats amb traç perquè l'app no porta cap joc d'icones. Sempre decoratius: el
 /// text del costat és qui diu què fa el botó.
-enum class EmotionGlyph { Ellipsis, Sliders, Chevron, Hourglass, Wind, Checked, Unchecked }
+enum class EmotionGlyph { Ellipsis, Sliders, Chevron, Hourglass, Wind, Checked, Unchecked, Checkmark }
 
 @Composable
 fun EmotionGlyphIcon(glyph: EmotionGlyph, color: Color, size: Dp, modifier: Modifier = Modifier) {
@@ -74,6 +74,10 @@ fun EmotionGlyphIcon(glyph: EmotionGlyph, color: Color, size: Dp, modifier: Modi
                     blendMode = BlendMode.Clear,
                 )
             }
+            EmotionGlyph.Checkmark -> drawPath(
+                Path().apply { moveTo(w * 0.14f, w * 0.52f); lineTo(w * 0.4f, w * 0.78f); lineTo(w * 0.86f, w * 0.24f) },
+                color, style = Stroke(width = w * 0.14f, cap = StrokeCap.Round, join = StrokeJoin.Round),
+            )
             EmotionGlyph.Unchecked -> drawCircle(
                 color, radius = w / 2 - w * 0.04f, style = Stroke(w * 0.08f),
             )

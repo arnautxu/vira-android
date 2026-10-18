@@ -5,7 +5,6 @@ import androidx.annotation.StringRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,7 +14,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
@@ -31,12 +29,10 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import cat.vira.android.R
 import cat.vira.android.core.design.LocalViraEnvironment
 import cat.vira.android.core.design.components.ViraActionButton
-import cat.vira.android.core.design.components.ViraEmptyState
 import cat.vira.android.core.design.components.viraIdleBreath
 import cat.vira.android.core.design.components.viraPressable
 import cat.vira.android.core.design.components.viraSectionBackground
@@ -51,9 +47,8 @@ import cat.vira.android.core.design.tokens.ViraTouch
 
 /// Mindfulness: Viri et convida a respirar i, a sota, les tres categories (`MindfulnessView`).
 ///
-/// El reproductor i l'àudio segueixen bloquejats (`CONTRADICTIONS_AND_GAPS.md` G-01). La pantalla
-/// fa una cosa real —la respiració guiada d'Ajuda ara, que no fa cap afirmació clínica— i cada
-/// categoria diu «Aviat» abans de tocar-la. Tocar-la porta a l'estat pendent honest.
+/// Cada categoria té tres exercicis guiats amb veu (`MindfulnessCategoryContent`). «Respira 1 min»
+/// és la respiració d'Ajuda ara, sense veu: la drecera curta; la versió guiada és a Ansietat.
 @Composable
 internal fun MindfulnessContent(
     onBreathe: () -> Unit,
@@ -79,14 +74,7 @@ internal fun MindfulnessContent(
             )
             MindfulnessCategory.entries.forEach { category -> CategoryCard(category) { onCategory(category) } }
         }
-        // "Sempre amb disclaimer llegible" (`CONTENT_STRATEGY.md`): cos normal, mai `caption`.
-        Text(
-            stringResource(R.string.emotions_mindfulness_disclaimer),
-            style = ViraFont.footnote,
-            color = ViraColor.textSecondary,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth(),
-        )
+        MindfulnessDisclaimer()
     }
 }
 
@@ -110,18 +98,7 @@ private fun MindfulnessHero(onBreathe: () -> Unit) {
             modifier = Modifier.fillMaxWidth().height(artHeight).viraIdleBreath(),
         )
         Column(Modifier.padding(ViraSpacing.m), verticalArrangement = Arrangement.spacedBy(ViraSpacing.s)) {
-            // Trepitja la vora de l'escena: es llegeix com que surt de Viri.
-            val bubbleShape = RoundedCornerShape(ViraRadius.l)
-            Text(
-                stringResource(R.string.emotions_mindfulness_hero_bubble),
-                style = ViraFont.headline,
-                color = ViraColor.textPrimary,
-                modifier = Modifier
-                    .pullUp(ViraSpacing.xxl)
-                    .shadow(8.dp, bubbleShape, ambientColor = ViraColor.textPrimary.copy(alpha = 0.12f), spotColor = ViraColor.textPrimary.copy(alpha = 0.12f))
-                    .background(ViraColor.surfaceElevated, bubbleShape)
-                    .padding(horizontal = ViraSpacing.m, vertical = ViraSpacing.s),
-            )
+            MindfulnessBubble(stringResource(R.string.emotions_mindfulness_hero_bubble))
             Column(verticalArrangement = Arrangement.spacedBy(ViraSpacing.textRelated)) {
                 Text(
                     stringResource(R.string.emotions_mindfulness_hero_title),
@@ -136,7 +113,8 @@ private fun MindfulnessHero(onBreathe: () -> Unit) {
     }
 }
 
-/// Fitxa d'una categoria: escena, nom, per a quan és i «Aviat» en una píndola amb text. Amb lletra
+/// Fitxa d'una categoria: escena, nom, per a quan és i, en píndoles, quants exercicis té i quant
+/// duren. Amb lletra
 /// d'accessibilitat l'escena passa a sobre perquè el nom no quedi en una columna estreta.
 @Composable
 private fun CategoryCard(category: MindfulnessCategory, onClick: () -> Unit) {
@@ -155,17 +133,9 @@ private fun CategoryCard(category: MindfulnessCategory, onClick: () -> Unit) {
         Column(mod, verticalArrangement = Arrangement.spacedBy(ViraSpacing.textRelated)) {
             Text(stringResource(category.title), style = ViraFont.headline, color = ViraColor.textPrimary)
             Text(stringResource(category.subtitle), style = ViraFont.footnote, color = ViraColor.textSecondary)
-            Row(
-                Modifier
-                    .padding(top = ViraSpacing.xxs)
-                    .background(ViraColor.surface(ViraArea.Emotions), CircleShape)
-                    .padding(horizontal = ViraSpacing.s, vertical = ViraSpacing.xxs),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(ViraSpacing.xxs),
-            ) {
-                val ink = ViraColor.onSurface(ViraArea.Emotions)
-                EmotionGlyphIcon(EmotionGlyph.Hourglass, ink, 14.dp * LocalDensity.current.fontScale)
-                Text(stringResource(R.string.emotions_mindfulness_soon), style = ViraFont.footnoteEmphasis, color = ink)
+            Row(Modifier.padding(top = ViraSpacing.xxs), horizontalArrangement = Arrangement.spacedBy(ViraSpacing.xxs)) {
+                MindfulnessPill(stringResource(R.string.mindfulness_exercises_count, category.exercises.size))
+                MindfulnessPill(category.minutesRange())
             }
         }
     }
@@ -184,19 +154,6 @@ private fun CategoryCard(category: MindfulnessCategory, onClick: () -> Unit) {
             text(Modifier.weight(1f))
             EmotionGlyphIcon(EmotionGlyph.Chevron, ViraColor.textSecondary, 16.dp * LocalDensity.current.fontScale)
         }
-    }
-}
-
-/// Estat pendent honest: no hi ha reproductor ni àudio. Diu «encara no hi és», mai «no funciona».
-@Composable
-internal fun MindfulnessPendingContent(modifier: Modifier = Modifier) {
-    Box(modifier.fillMaxSize().viraSectionBackground(ViraArea.Emotions).verticalScroll(rememberScrollState())) {
-        ViraEmptyState(
-            title = stringResource(R.string.help_pending_title),
-            message = stringResource(R.string.emotions_mindfulness_pending_message),
-            modifier = Modifier.padding(top = ViraSpacing.xxl, bottom = viraTabBarClearance()),
-            icon = { EmotionGlyphIcon(EmotionGlyph.Hourglass, ViraColor.textSecondary, 44.dp) },
-        )
     }
 }
 

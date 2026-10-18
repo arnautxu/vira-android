@@ -1,6 +1,10 @@
 package cat.vira.android.features.emotions
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import cat.vira.android.R
 import cat.vira.android.app.EmotionsSection
 import cat.vira.android.core.data.model.Emotion
 import cat.vira.android.core.data.model.EmotionEntry
@@ -94,4 +98,39 @@ fun Mindfulness() = Screen {
 }
 
 @PreviewTest @ViraScreenCaptures @Composable
-fun MindfulnessPending() = Screen { MindfulnessPendingContent() }
+fun MindfulnessCategoryAnxiety() = Screen {
+    Column {
+        PushedHeader(stringResource(MindfulnessCategory.ANXIETY.title)) {}
+        MindfulnessCategoryContent(MindfulnessCategory.ANXIETY, {}, Modifier.weight(1f))
+    }
+}
+
+/// Un guió curt amb el format dels de l'iPhone: dos passos amb nom i una respiració a mig fer.
+private val script = MindfulnessScript(
+    id = "senses", language = "ca", duration = 168.0, steps = 2,
+    segments = listOf(
+        MindfulnessScript.Segment(0.0, 8.0, MindfulnessScript.Kind.LINE, text = "mindfulness.senses.line1"),
+        MindfulnessScript.Segment(8.0, 30.0, MindfulnessScript.Kind.LINE, step = 0, stepTitle = "mindfulness.senses.step1", text = "mindfulness.senses.line2"),
+        MindfulnessScript.Segment(30.0, 34.0, MindfulnessScript.Kind.BREATH, step = 1, stepTitle = "mindfulness.senses.step2", text = "help.breathe.inhale", phase = MindfulnessScript.Phase.INHALE),
+        MindfulnessScript.Segment(34.0, 168.0, MindfulnessScript.Kind.LINE, step = 1, stepTitle = "mindfulness.senses.step2", text = "mindfulness.senses.line3"),
+    ),
+)
+
+@PreviewTest @ViraScreenCaptures @Composable
+fun MindfulnessRunning() = Screen {
+    Column {
+        PushedHeader(mindfulnessString(MindfulnessExercise.SENSES.titleKey), trailing = stringResource(R.string.mindfulness_stop) to {}) {}
+        MindfulnessSessionContent(
+            MindfulnessExercise.SENSES, script, currentTime = 20.0, isPlaying = true, isFinished = false, failed = false,
+            onToggle = {}, onAnother = {}, onCheckIn = {}, onFocus = {}, modifier = Modifier.weight(1f),
+        )
+    }
+}
+
+@PreviewTest @ViraScreenCaptures @Composable
+fun MindfulnessDone() = Screen {
+    MindfulnessSessionContent(
+        MindfulnessExercise.SENSES, script, currentTime = 168.0, isPlaying = false, isFinished = true, failed = false,
+        onToggle = {}, onAnother = {}, onCheckIn = {}, onFocus = {},
+    )
+}

@@ -2,7 +2,12 @@ package cat.vira.android.features.emotions
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -251,5 +256,29 @@ private fun FaceButton(name: String, hint: String, onClick: () -> Unit, face: @C
         // El to fosc d'Emocions, no el rosa clar: el nom és el que desambigua cares que
         // s'assemblen, i s'ha de poder llegir.
         Text(name, style = ViraFont.headline, color = ViraColor.onCard(ViraArea.Emotions), textAlign = TextAlign.Center)
+    }
+}
+
+/// El check-in sencer com a primera acció del flux d'entrada (`EntryFirstSessionSteps` de
+/// l'iPhone): la mateixa pantalla, amb «Tanca» a dalt a la dreta. `onRecorded` arriba un cop
+/// confirmat el registre; `onClose`, si es tanca sense registrar res.
+@Composable
+fun EmotionEntryCheckIn(onRecorded: () -> Unit, onClose: () -> Unit) {
+    BackHandler(onBack = onClose)
+    Box(Modifier.fillMaxSize().viraSectionBackground(ViraArea.Emotions)) {
+        EmotionCheckInScreen(Modifier.statusBarsPadding(), onRecorded = onRecorded)
+        Text(
+            stringResource(R.string.action_close),
+            style = ViraFont.callout.copy(fontWeight = FontWeight.SemiBold),
+            color = ViraColor.onCard(ViraArea.Emotions),
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .statusBarsPadding()
+                .padding(end = ViraSpacing.xs)
+                .heightIn(min = ViraTouch.minimum)
+                .viraPressable(onClick = onClose)
+                .padding(horizontal = ViraSpacing.m)
+                .wrapContentHeight(),
+        )
     }
 }
