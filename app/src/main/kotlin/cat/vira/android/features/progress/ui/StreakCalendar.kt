@@ -36,6 +36,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import cat.vira.android.R
+import cat.vira.android.core.design.viraLocale
 import cat.vira.android.core.design.LocalViraEnvironment
 import cat.vira.android.core.design.components.ViraPictogram
 import cat.vira.android.core.design.tokens.ViraArea
@@ -52,10 +53,6 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
-
-/// L'idioma de la pantalla, per als noms de dies i mesos (el de les captures inclòs).
-@Composable
-internal fun currentLocale(): Locale = LocalConfiguration.current.locales[0]
 
 /// L'estat d'un dia en text: el que diu TalkBack i la llegenda.
 private enum class DayState(val text: Int) {
@@ -75,7 +72,7 @@ private fun StreakChainSource.state(day: LocalDate, today: LocalDate): DayState 
 /// Les lletres dels dies en l'ordre de la setmana del telèfon, no sempre dilluns.
 @Composable
 private fun WeekdayHeader(first: DayOfWeek, celebration: Boolean = false) {
-    val locale = currentLocale()
+    val locale = viraLocale()
     Row(Modifier.fillMaxWidth().clearAndSetSemantics {}) {
         (0L until 7L).forEach { offset ->
             Text(
@@ -108,7 +105,7 @@ private fun ChainCapsule(run: IntRange, cell: Dp) {
 /// flama, l'escut o l'exclamació d'avui.
 @Composable
 private fun DayCell(day: LocalDate, state: DayState, isToday: Boolean, side: Dp) {
-    val locale = currentLocale()
+    val locale = viraLocale()
     val label = day.format(DateTimeFormatter.ofPattern("d MMMM", locale))
     val stateText = stringResource(state.text)
     val pending = state == DayState.PENDING
@@ -228,7 +225,7 @@ private fun DayBadge(day: LocalDate, state: DayState, side: Dp, delayMillis: Lon
         }
     }
     val ink = ViraColor.onCard(ViraArea.Rewards)
-    val locale = currentLocale()
+    val locale = viraLocale()
     val label = day.dayOfWeek.getDisplayName(TextStyle.FULL_STANDALONE, locale)
     val stateText = stringResource(state.text)
     val diameter = side * 0.82f

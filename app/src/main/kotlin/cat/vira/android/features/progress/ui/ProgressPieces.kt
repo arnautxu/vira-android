@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.Image
 import androidx.compose.ui.layout.ContentScale
 import cat.vira.android.R
+import cat.vira.android.core.design.viraLocale
 import cat.vira.android.core.design.components.viraPressable
 import cat.vira.android.core.design.components.viraTouchTarget
 import cat.vira.android.core.design.tokens.ViraArea
@@ -60,7 +61,8 @@ internal val ViraLevel.LevelFrame.pictogram: Int
     }
 
 /// Xifra amb el separador de milers de l'idioma (`Int.formatted()`).
-internal fun Int.formatted(): String = NumberFormat.getIntegerInstance().format(this)
+@Composable
+internal fun Int.formatted(): String = NumberFormat.getIntegerInstance(viraLocale()).format(this)
 
 /// Puja la peça `amount` per sobre de la vora d'adalt **i** li treu aquest espai a la columna, com
 /// el `padding(.top, -x)` de l'iPhone: la bombolla trepitja l'escena i el que ve després no queda

@@ -1,0 +1,48 @@
+{
+ "id": "countTen",
+ "language": "ca",
+ "duration": 123.6,
+ "steps": 0,
+ "segments": [
+  {
+   "start": 0.6,
+   "end": 7.18,
+   "kind": "line",
+   "step": null,
+   "stepTitle": null,
+   "text": "mindfulness.countTen.line1"
+  },
+  {
+   "start": 7.18,
+   "end": 45.18,
+   "kind": "line",
+   "step": null,
+   "stepTitle": null,
+   "text": "mindfulness.countTen.line2"
+  },
+  {
+   "start": 45.18,
+   "end": 83.61,
+   "kind": "line",
+   "step": null,
+   "stepTitle": null,
+   "text": "mindfulness.countTen.line3"
+  },
+  {
+   "start": 83.61,
+   "end": 118.62,
+   "kind": "line",
+   "step": null,
+   "stepTitle": null,
+   "text": "mindfulness.countTen.line4"
+  },
+  {
+   "start": 118.62,
+   "end": 123.53,
+   "kind": "line",
+   "step": null,
+   "stepTitle": null,
+   "text": "mindfulness.countTen.line5"
+  }
+ ]
+}

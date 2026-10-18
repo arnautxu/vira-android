@@ -9,6 +9,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import cat.vira.android.core.data.model.ProgressCounter
 import cat.vira.android.core.data.model.Streak
+import cat.vira.android.core.design.ViraCapture
 import cat.vira.android.core.design.ViraTheme
 import cat.vira.android.features.progress.logic.ChallengeItem
 import cat.vira.android.features.progress.logic.ChallengePeriod
@@ -47,7 +48,7 @@ private val TODAY: LocalDate = LocalDate.of(2026, 10, 15)
 
 @Composable
 private fun Capture(content: @Composable () -> Unit) {
-    ViraTheme(reduceMotion = true) { Box(Modifier.fillMaxSize()) { content() } }
+    ViraCapture { ViraTheme(reduceMotion = true) { Box(Modifier.fillMaxSize()) { content() } } }
 }
 
 private val counter = ProgressCounter(

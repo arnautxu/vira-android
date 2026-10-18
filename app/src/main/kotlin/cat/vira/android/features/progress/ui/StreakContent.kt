@@ -37,6 +37,7 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import cat.vira.android.R
+import cat.vira.android.core.design.viraLocale
 import cat.vira.android.core.data.model.Streak
 import cat.vira.android.core.design.LocalViraEnvironment
 import cat.vira.android.core.design.components.ViraActionButton
@@ -190,7 +191,7 @@ private fun Requirements(missing: Set<DayRequirement>, modifier: Modifier = Modi
     Column(modifier, verticalArrangement = Arrangement.spacedBy(ViraSpacing.xs)) {
         Row(Modifier.padding(horizontal = ViraSpacing.xxs), verticalAlignment = Alignment.CenterVertically) {
             Text(
-                stringResource(if (missing.isEmpty()) R.string.streak_requirements_done else R.string.streak_requirements_title).uppercase(currentLocale()),
+                stringResource(if (missing.isEmpty()) R.string.streak_requirements_done else R.string.streak_requirements_title).uppercase(viraLocale()),
                 style = ViraFont.footnoteEmphasis,
                 color = ViraColor.onSurface(ViraArea.Rewards),
                 modifier = Modifier.weight(1f).semantics { heading() },
@@ -292,7 +293,7 @@ private fun SavedDaysCard(streak: Streak?, balance: Int, onBuy: () -> Unit) {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun MonthSection(ui: StreakUi, onShift: (Long) -> Unit) {
-    val locale = currentLocale()
+    val locale = viraLocale()
     Column(
         Modifier
             .padding(top = ViraSpacing.xs)

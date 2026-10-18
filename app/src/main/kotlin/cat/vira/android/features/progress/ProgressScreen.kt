@@ -25,6 +25,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cat.vira.android.R
+import cat.vira.android.core.design.viraLocale
 import cat.vira.android.app.LocalViraBackend
 import cat.vira.android.app.LocalViraNavigator
 import cat.vira.android.app.ProgressDestination
@@ -58,6 +59,7 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
+import java.time.temporal.WeekFields
 
 /// La pestanya Viri (`ProgressTabView`): el Perfil i les pantalles que se n'obren —ratxa, reptes,
 /// botiga, premis, cartes, amics—, amb el camí a `LocalViraNavigator.current.progressPath` perquè
@@ -118,7 +120,7 @@ private fun ProfileRoute(backend: ViraBackend, onOpen: (ProgressDestination) -> 
     var customizing by rememberSaveable { mutableStateOf(false) }
 
     val now = Instant.now()
-    val days = ViraDays(ZoneId.systemDefault())
+    val days = ViraDays(ZoneId.systemDefault(), WeekFields.of(viraLocale()).firstDayOfWeek)
     val featured = ViraChallenges.featuredDaily(ledger, claims, now, days)?.let { item ->
         FeaturedChallenge(item, ViraChallenges.progress(item, ledger, now, days), ViraChallenges.isClaimed(item, claims, now, days))
     }
@@ -171,7 +173,7 @@ private fun StreakRoute(backend: ViraBackend, progress: ViraProgress, onBack: ()
     var monthText by rememberSaveable { mutableStateOf(YearMonth.now().toString()) }
     val month = YearMonth.parse(monthText)
 
-    val days = ViraDays(ZoneId.systemDefault())
+    val days = ViraDays(ZoneId.systemDefault(), WeekFields.of(viraLocale()).firstDayOfWeek)
     val today = LocalDate.now()
     StreakContent(
         ui = StreakUi(
@@ -205,7 +207,7 @@ private fun ChallengesRoute(backend: ViraBackend, progress: ViraProgress, onBack
     val period = ChallengePeriod.valueOf(periodName)
 
     val now = Instant.now()
-    val days = ViraDays(ZoneId.systemDefault())
+    val days = ViraDays(ZoneId.systemDefault(), WeekFields.of(viraLocale()).firstDayOfWeek)
     val rows = ChallengeItem.catalog.filter { it.period == period }.map {
         ChallengeRowState(it, ViraChallenges.progress(it, ledger, now, days), ViraChallenges.isClaimed(it, claims, now, days))
     }
