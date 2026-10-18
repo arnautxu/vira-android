@@ -20,10 +20,9 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
-import java.io.File
 
 /// L'exportació en PDF (`PRIVACY_AND_SAFETY.md` §5), calcada de `ViraDataExportPDFTests`: es prova
-/// el **document** —què hi surt i què no— i, al final, una escriptura real.
+/// el **document**: què hi surt i què no.
 @RunWith(RobolectricTestRunner::class)
 @Config(application = Application::class)
 class ViraDataExportPdfTest {
@@ -83,18 +82,6 @@ class ViraDataExportPdfTest {
         assertTrue(first.detail.orEmpty().contains("examen"))
     }
 
-    @Test
-    fun elFitxerSEscriuDeDeboITeContingut() = runBlocking {
-        ViraStore(db).create(db.planItems(), PlanItem(title = "Una cosa"))
-        val directory = File(context.cacheDir, "exports-test")
-
-        val file = ViraDataExportPdf.writeSnapshotFile(context, db, directory, "1.0 (1)")
-
-        assertEquals("pdf", file.extension)
-        val bytes = file.readBytes()
-        assertTrue(bytes.size > 1000)
-        assertTrue(String(bytes.copyOfRange(0, 4)) == "%PDF")
-        directory.deleteRecursively()
-        Unit
-    }
+    // L'escriptura real del fitxer (`ViraPdfRenderer`) no es prova aquí: Robolectric no implementa
+    // `PdfDocument`. Es comprova exportant al mòbil o a l'emulador.
 }
