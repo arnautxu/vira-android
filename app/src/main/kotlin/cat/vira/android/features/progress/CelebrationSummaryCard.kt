@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -35,7 +36,13 @@ import cat.vira.android.core.design.tokens.ViraRadius
 import cat.vira.android.core.design.tokens.ViraSpacing
 
 /// Una píndola de la targeta de resum. Plena per al context («Nivell nou»), de contorn per al detall.
-data class CelebrationPill(val text: String, val isFilled: Boolean = false)
+/// `icon` es dibuixa davant del text amb el seu color (`LocalContentColor`): la raresa d'una carta
+/// porta símbol i nom, mai només color.
+data class CelebrationPill(
+    val text: String,
+    val isFilled: Boolean = false,
+    val icon: (@Composable () -> Unit)? = null,
+)
 
 /// La targeta de resum sota la bombolla de `ViraCelebrationMoment` (`CelebrationSummaryCard`):
 /// píndoles, una fila amb el pictograma i el que s'ha guanyat i, si cal, el progrés amb text.
@@ -63,15 +70,18 @@ fun CelebrationSummaryCard(
         if (pills.isNotEmpty()) {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(ViraSpacing.xs), verticalArrangement = Arrangement.spacedBy(ViraSpacing.xs)) {
                 pills.forEach { pill ->
-                    Text(
-                        pill.text,
-                        style = ViraFont.footnoteEmphasis,
-                        // Plena: la parella validada `onCard`/`cardFill`, invertida.
-                        color = if (pill.isFilled) fill else ink,
+                    // Plena: la parella validada `onCard`/`cardFill`, invertida.
+                    val color = if (pill.isFilled) fill else ink
+                    Row(
                         modifier = Modifier
                             .then(if (pill.isFilled) Modifier.background(ink, CircleShape) else Modifier.border(1.5.dp, ink, CircleShape))
                             .padding(horizontal = ViraSpacing.s, vertical = ViraSpacing.xxs),
-                    )
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(ViraSpacing.xxs),
+                    ) {
+                        pill.icon?.let { icon -> CompositionLocalProvider(LocalContentColor provides color) { icon() } }
+                        Text(pill.text, style = ViraFont.footnoteEmphasis, color = color)
+                    }
                 }
             }
         }
