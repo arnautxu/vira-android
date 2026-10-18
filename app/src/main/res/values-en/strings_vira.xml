@@ -1671,6 +1671,7 @@
     <string name="settings_notifications_detail_medication_hint">The alert shows on your Lock Screen.</string>
     <string name="settings_notifications_details">Reminder details</string>
     <string name="settings_notifications_emotion_time">Check-in time</string>
+    <string name="settings_notifications_exact_off">Reminders may arrive a few minutes late: exact alarms are off in your phone\'s settings.</string>
     <string name="settings_notifications_reminders">Habit reminders</string>
     <string name="settings_notifications_section">Notifications</string>
     <string name="settings_notifications_suggestions">Viri\'s suggestions</string>

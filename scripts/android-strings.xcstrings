@@ -208,6 +208,29 @@
           }
         }
       }
+    },
+    "settings.notifications.exact_off": {
+      "comment": "Android: nota sota una icona d'avís quan falta el permís d'alarmes exactes.",
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Els avisos poden arribar uns minuts tard: falten les alarmes exactes als ajustos del telèfon."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los avisos pueden llegar unos minutos tarde: faltan las alarmas exactas en los ajustes del teléfono."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reminders may arrive a few minutes late: exact alarms are off in your phone's settings."
+          }
+        }
+      }
     }
   }
 }
