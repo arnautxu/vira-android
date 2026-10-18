@@ -54,7 +54,9 @@ import cat.vira.android.features.progress.ui.ProfileUi
 import cat.vira.android.features.progress.ui.ProgressBackButton
 import cat.vira.android.features.progress.ui.StreakContent
 import cat.vira.android.features.progress.ui.StreakUi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
@@ -119,7 +121,7 @@ private fun ProfileRoute(backend: ViraBackend, onOpen: (ProgressDestination) -> 
     val challengesEnabled by rememberPreference(backend.preferences, ViraPreferences.CHALLENGES_ENABLED, true)
     var customizing by rememberSaveable { mutableStateOf(false) }
 
-    val now = Instant.now()
+    val now = rememberNow()
     val days = ViraDays(ZoneId.systemDefault(), WeekFields.of(viraLocale()).firstDayOfWeek)
     val featured = ViraChallenges.featuredDaily(ledger, claims, now, days)?.let { item ->
         FeaturedChallenge(item, ViraChallenges.progress(item, ledger, now, days), ViraChallenges.isClaimed(item, claims, now, days))
@@ -174,7 +176,7 @@ private fun StreakRoute(backend: ViraBackend, progress: ViraProgress, onBack: ()
     val month = YearMonth.parse(monthText)
 
     val days = ViraDays(ZoneId.systemDefault(), WeekFields.of(viraLocale()).firstDayOfWeek)
-    val today = LocalDate.now()
+    val today = rememberNow().atZone(ZoneId.systemDefault()).toLocalDate()
     StreakContent(
         ui = StreakUi(
             streak = streak,
@@ -206,7 +208,7 @@ private fun ChallengesRoute(backend: ViraBackend, progress: ViraProgress, onBack
     var celebratingKey by rememberSaveable { mutableStateOf<String?>(null) }
     val period = ChallengePeriod.valueOf(periodName)
 
-    val now = Instant.now()
+    val now = rememberNow()
     val days = ViraDays(ZoneId.systemDefault(), WeekFields.of(viraLocale()).firstDayOfWeek)
     val rows = ChallengeItem.catalog.filter { it.period == period }.map {
         ChallengeRowState(it, ViraChallenges.progress(it, ledger, now, days), ViraChallenges.isClaimed(it, claims, now, days))
@@ -259,3 +261,18 @@ private fun Gated(title: Int) {
 /// d'Ajustos; aquí només es llegeixen.
 private const val PROGRESS_VISIBLE = "settings.progressVisible"
 private const val SHOP_VISIBLE = "settings.shopVisible"
+
+/// L'instant d'ara, que **es torna a llegir en passar la mitjanit**: amb la pantalla oberta, el
+/// dia, la setmana i els reptes canvien de cicle sense haver de sortir-ne.
+@Composable
+private fun rememberNow(): Instant {
+    val now by produceState(Instant.now()) {
+        while (true) {
+            val zone = ZoneId.systemDefault()
+            val next = LocalDate.now(zone).plusDays(1).atStartOfDay(zone).toInstant()
+            delay(maxOf(1_000L, Duration.between(Instant.now(), next).toMillis() + 1_000L))
+            value = Instant.now()
+        }
+    }
+    return now
+}

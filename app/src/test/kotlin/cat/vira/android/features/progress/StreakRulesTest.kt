@@ -53,6 +53,15 @@ class StreakRulesTest {
         assertEquals(5, s.currentDays)
     }
 
+    @Test fun unDiaAnteriorAlDarrerNoInflaLaRatxa() {
+        // Rellotge endarrerit o canvi de fus: tornar a una data anterior no compta un dia nou.
+        val s = fresh().count(0).count(1)
+        val back = StreakRules.countDay(s, day(0), days)
+        assertFalse(back.isNewDay)
+        assertEquals(2, back.streak.currentDays)
+        assertEquals(s.lastActiveDay, back.streak.lastActiveDay)
+    }
+
     @Test fun unDiaPerdutGastaUnDiaGuardatILaRatxaEsManté() {
         val s = fresh().count(0).count(1)
         val after = s.count(3)

@@ -82,8 +82,10 @@ object StreakRules {
             )
         }
         val last = days.startOfDay(lastActive)
-        // Ja comptat avui. Tocar l'app descongela Viri: recuperació d'un sol toc.
-        if (today == last) return Counted(s.copy(isFrozen = false), isNewDay = false)
+        // Ja comptat avui. Tocar l'app descongela Viri: recuperació d'un sol toc. Un dia
+        // **anterior** a l'últim (rellotge endarrerit, canvi de fus) també compta com a ja comptat:
+        // si no, cada canvi de data inflaria la ratxa.
+        if (today <= last) return Counted(s.copy(isFrozen = false), isNewDay = false)
 
         val missed = maxOf(0L, days.daysBetween(last, today) - 1).toInt()
         if (missed > 0) s = spend(s, missed, today, days).first
