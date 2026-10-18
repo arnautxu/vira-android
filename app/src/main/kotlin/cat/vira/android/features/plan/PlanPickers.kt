@@ -134,8 +134,11 @@ object PlanFormat {
 
     @Composable
     @ReadOnlyComposable
-    fun minutes(minutes: Int, locale: Locale = planLocale()): String =
-        time(LocalTime.of(minutes / 60 % 24, minutes % 60), locale)
+    fun minutes(minutes: Int, locale: Locale = planLocale()): String = minutesIn(minutes, locale)
+
+    /// La mateixa hora fora d'un `@Composable` (dins d'un `joinToString`, per exemple).
+    fun minutesIn(minutes: Int, locale: Locale): String =
+        LocalTime.of(minutes / 60 % 24, minutes % 60).format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(locale))
 }
 
 /// Fila amb una hora que obre el rellotge del sistema.

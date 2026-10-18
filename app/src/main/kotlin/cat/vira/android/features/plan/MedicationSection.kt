@@ -323,7 +323,8 @@ private fun IntakeCheck(status: IntakeStatus, onClick: () -> Unit) {
 /// Una pauta (`MedicationScheduleRow`): forma, nom, dosi, quins dies i les hores. Tocar-la l'edita.
 @Composable
 private fun MedicationScheduleRow(medication: Medication, onClick: () -> Unit) {
-    val times = medication.timesInMinutes.sorted().joinToString(" · ") { PlanFormat.minutes(it) }
+    val locale = planLocale()
+    val times = medication.timesInMinutes.sorted().joinToString(" · ") { PlanFormat.minutesIn(it, locale) }
     Row(
         Modifier.fillMaxWidth().background(ViraColor.surfaceElevated, RoundedCornerShape(ViraRadius.m))
             .viraPressable(onClick = onClick)
