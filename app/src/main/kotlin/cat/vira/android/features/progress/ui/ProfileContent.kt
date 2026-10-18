@@ -48,6 +48,7 @@ import cat.vira.android.core.design.components.viraSectionBackground
 import cat.vira.android.core.design.components.viraTabBarClearance
 import cat.vira.android.core.design.tokens.ViraArea
 import cat.vira.android.core.design.tokens.ViraColor
+import cat.vira.android.features.progress.ProfileArt
 import cat.vira.android.core.design.tokens.ViraFont
 import cat.vira.android.core.design.tokens.ViraGradient
 import cat.vira.android.core.design.tokens.ViraRadius
@@ -88,6 +89,7 @@ internal fun ProfileContent(
     onNavigate: (ViraDestination) -> Unit,
     onCustomize: () -> Unit,
     modifier: Modifier = Modifier,
+    art: ProfileArt = ProfileArt.Placeholder,
 ) {
     val focusManager = LocalFocusManager.current
     Column(
@@ -109,6 +111,7 @@ internal fun ProfileContent(
                 progressVisible = ui.progressVisible,
                 onNicknameCommit = onNicknameCommit,
                 onCustomize = onCustomize,
+                art = art,
             )
             WhatYouHaveDone(ui.counter, ui.streak, onOpenStreak = { onOpen(ProgressDestination.Streak) }, onNavigate = onNavigate)
             if (ui.challengesEnabled && ui.featured != null) {

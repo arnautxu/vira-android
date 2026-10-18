@@ -25,6 +25,10 @@ import cat.vira.android.features.progress.ui.ProfileContent
 import cat.vira.android.features.progress.ui.ProfileUi
 import cat.vira.android.features.progress.ui.StreakContent
 import cat.vira.android.features.progress.ui.StreakUi
+import cat.vira.android.features.shop.BadgeItem
+import cat.vira.android.features.shop.PinnedBadgesShelfContent
+import cat.vira.android.features.shop.SkinItem
+import cat.vira.android.features.shop.SkinPortrait
 import com.android.tools.screenshot.PreviewTest
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -74,6 +78,29 @@ fun ProfileWithProgress() = Capture {
             friendsAvailable = true,
         ),
         onNicknameCommit = {}, onOpen = {}, onNavigate = {}, onCustomize = {},
+    )
+}
+
+/// Amb skin posada i dos badges penjats: les peces de Botiga dins de la capçalera.
+@PreviewTest @PageCaptures @Composable
+fun ProfileWithSkin() = Capture {
+    val art = ProfileArt(
+        portrait = { modifier -> SkinPortrait(SkinItem.item("explorer"), modifier) },
+        shelf = { onCustomize, ink, modifier ->
+            PinnedBadgesShelfContent(BadgeItem.catalog.take(2).map { it.key }, onCustomize, modifier, ink)
+        },
+    )
+    ProfileContent(
+        ui = ProfileUi(
+            nickname = "Nil",
+            counter = counter,
+            streak = streak,
+            featured = FeaturedChallenge(ChallengeItem.catalog[1], progress = 1, claimed = false),
+            cardsAvailable = true,
+            friendsAvailable = true,
+        ),
+        onNicknameCommit = {}, onOpen = {}, onNavigate = {}, onCustomize = {},
+        art = art,
     )
 }
 

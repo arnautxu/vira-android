@@ -152,12 +152,9 @@ private fun ProfileRoute(backend: ViraBackend, onOpen: (ProgressDestination) -> 
         onOpen = onOpen,
         onNavigate = navigator::navigate,
         onCustomize = { customizing = true },
+        art = ProfileArt.Equipped,
     )
-    if (customizing) {
-        Dialog(onDismissRequest = { customizing = false }) {
-            ProgressSlots.Customize(onDismiss = { customizing = false })
-        }
-    }
+    if (customizing) ProgressSlots.Customize(onDismiss = { customizing = false })
 }
 
 // Ratxa

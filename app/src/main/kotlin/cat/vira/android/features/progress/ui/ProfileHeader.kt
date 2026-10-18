@@ -51,7 +51,7 @@ import cat.vira.android.core.design.tokens.ViraGradient
 import cat.vira.android.core.design.tokens.ViraRadius
 import cat.vira.android.core.design.tokens.ViraSpacing
 import cat.vira.android.core.design.tokens.ViraTouch
-import cat.vira.android.features.progress.ProgressSlots
+import cat.vira.android.features.progress.ProfileArt
 import cat.vira.android.features.progress.RewardsProgressBar
 import cat.vira.android.features.progress.ViriBubble
 import cat.vira.android.features.progress.logic.ViraLevel
@@ -71,6 +71,7 @@ internal fun ProfileHeader(
     progressVisible: Boolean,
     onNicknameCommit: (String) -> Unit,
     onCustomize: () -> Unit,
+    art: ProfileArt,
     modifier: Modifier = Modifier,
 ) {
     val shape = RoundedCornerShape(ViraRadius.l)
@@ -84,7 +85,7 @@ internal fun ProfileHeader(
     ) {
         // 4:3: el retall és de dalt i de baix, que és on les skins tenen decorat.
         Box(Modifier.fillMaxWidth().aspectRatio(4f / 3f)) {
-            ProgressSlots.Portrait(Modifier.fillMaxSize())
+            art.portrait(Modifier.fillMaxSize())
         }
         Column(
             Modifier.padding(start = ViraSpacing.m, end = ViraSpacing.m, bottom = ViraSpacing.m),
@@ -98,7 +99,7 @@ internal fun ProfileHeader(
             )
             NicknameRow(nickname, level.level, progressVisible, onNicknameCommit)
             if (progressVisible) LevelProgress(level)
-            ProgressSlots.Shelf(onCustomize, ViraColor.onCard(ViraArea.Rewards), Modifier)
+            art.shelf(onCustomize, ViraColor.onCard(ViraArea.Rewards), Modifier)
         }
     }
 }
