@@ -108,6 +108,11 @@ internal fun ParentPanelInboxScreen(deps: ParentDeps, onBack: () -> Unit) {
                             deps.store.create(deps.store.db.planItems(), PlanItem(id = reminder.id, title = reminder.title, day = day))
                         }
                         val resolved = parentAttempt({ error = it }) { deps.client.resolve(reminder, accepted, deps.session.accessToken()) }
+                        // Un «Accepta» que no va arribar al servidor i després un «Descarta»: la tasca
+                        // d'aquell primer intent se'n va, perquè el recordatori ha quedat descartat.
+                        if (resolved != null && !accepted) {
+                            deps.store.db.planItems().byId(reminder.id)?.let { deps.store.delete(it) }
+                        }
                         // Si ha fallat, l'error es queda a la vista: tornar a carregar l'esborraria.
                         if (resolved != null) load()
                         resolving = null
