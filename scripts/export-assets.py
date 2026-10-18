@@ -13,6 +13,11 @@ s'escriu aquí no es toca a mà: es torna a generar.
   amb transparència i ocupa menys); els JPG es queden com són.
 - **Fonts**: les tres Satoshi a `font/` (`satoshi_regular`, `satoshi_medium`, `satoshi_bold`).
 - **Sons**: els `.caf` a OGG Vorbis a `raw/`, amb el mateix nom (`sound-desat` → `sound_desat`).
+- **Mindfulness**: la veu (`Mindfulness/*.m4a`, AAC, que Android reprodueix tal qual) i el guió amb
+  temps (`*.json`) es copien a `raw/` sense tocar-los: `mindfulness-breatheSlow-ca.m4a` →
+  `mindfulness_breathe_slow_ca.m4a` i el guió → `mindfulness_breathe_slow_ca_script.json`. El
+  guió porta `_script` perquè Android fa el nom del recurs sense l'extensió, i dos fitxers amb el
+  mateix nom no compilen.
 
 Els noms de recurs canvien els guions per guions baixos: `viri-hero` → `viri_hero`. Els vídeos
 no són aquí: els `.mov` de Viri porten canal alfa en HEVC, que Android no reprodueix (vegeu el fil
@@ -101,6 +106,19 @@ def export_sounds(resources: Path, res: Path) -> list[Path]:
     return written
 
 
+def export_mindfulness(resources: Path, res: Path) -> list[Path]:
+    folder = res / "raw"
+    written = []
+    for source in sorted(resources.glob("Mindfulness/mindfulness-*")):
+        suffix = {".m4a": "", ".json": "_script"}.get(source.suffix)
+        if suffix is None:
+            continue
+        target = folder / f"{resource_name(source.stem)}{suffix}{source.suffix}"
+        shutil.copyfile(source, target)
+        written.append(target)
+    return written
+
+
 def clean_previous(res: Path) -> None:
     """Esborra el que va escriure l'export anterior, i només això, perquè no quedin restes."""
     manifest = res / GENERATED_MARK
@@ -120,11 +138,12 @@ def main() -> int:
     images = export_images(resources / "Assets.xcassets", args.res)
     fonts = export_fonts(resources / "Fonts", args.res)
     sounds = export_sounds(resources, args.res)
+    mindfulness = export_mindfulness(resources, args.res)
 
-    written = images + fonts + sounds
+    written = images + fonts + sounds + mindfulness
     manifest = sorted(str(path.relative_to(args.res)) for path in written)
     (args.res / GENERATED_MARK).write_text("\n".join(manifest) + "\n")
-    print(f"Exportats: {len(images)} imatges, {len(fonts)} fonts, {len(sounds)} sons")
+    print(f"Exportats: {len(images)} imatges, {len(fonts)} fonts, {len(sounds)} sons, {len(mindfulness)} fitxers de mindfulness")
     return 0
 
 

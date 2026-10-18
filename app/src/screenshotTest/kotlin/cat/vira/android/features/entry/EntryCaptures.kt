@@ -23,6 +23,7 @@ import androidx.lifecycle.LifecycleRegistry
 import cat.vira.android.core.backend.ViraAccountRole
 import cat.vira.android.core.backend.ViraConsentStatus
 import cat.vira.android.core.backend.ViraUser
+import cat.vira.android.core.design.ViraCapture
 import cat.vira.android.core.design.ViraScreenCaptures
 import cat.vira.android.core.design.ViraTheme
 import cat.vira.android.core.design.tokens.ViraColor
@@ -58,14 +59,14 @@ private fun Capture(
 }
 
 @Composable
-private fun Owners(content: @Composable () -> Unit) = ViraTheme(reduceMotion = true) {
+private fun Owners(content: @Composable () -> Unit) = ViraCapture { ViraTheme(reduceMotion = true) {
     CompositionLocalProvider(
         LocalLifecycleOwner provides StillOwner,
         LocalActivityResultRegistryOwner provides StillOwner,
         LocalOnBackPressedDispatcherOwner provides StillOwner,
         content = content,
     )
-}
+} }
 
 @PreviewTest @ViraScreenCaptures @Composable
 fun EntryWelcome() = Capture(EntryStep.WELCOME, values = emptyMap())
