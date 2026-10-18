@@ -57,7 +57,15 @@ fun RootScreen() {
         ) {
             composable(MAIN_ROUTE) { MainTabs(navigator) }
             composable(ViraModal.Focus.route) { ViraFeatureSlots.Focus(onClose = close) }
-            composable(ViraModal.Help.route) { ViraFeatureSlots.Help(onClose = close) }
+            composable(ViraModal.Help.route) {
+                ViraFeatureSlots.Help(
+                    onClose = close,
+                    onOpenCheckIn = {
+                        close()
+                        navigator.navigate(ViraDestination.Emotions(EmotionsSection.CheckIn))
+                    },
+                )
+            }
             composable(ViraModal.Breathe.route) { ViraFeatureSlots.Breathe(onClose = close) }
             composable(ViraModal.Settings.route) { ViraFeatureSlots.Settings(onClose = close) }
         }

@@ -54,11 +54,13 @@ internal object ViraFeatureSlots {
     @Composable
     fun Focus(onClose: () -> Unit) = PendingModal(onClose)
 
-    /// Fil Ajuda ara (`features/help`).
+    /// Fil Ajuda ara (`features/help`): `HelpScreen(onClose, onOpenCheckIn)`. `onOpenCheckIn`
+    /// tanca Ajuda ara i obre el check-in d'Emocions.
     @Composable
-    fun Help(onClose: () -> Unit) = PendingModal(onClose)
+    fun Help(onClose: () -> Unit, onOpenCheckIn: () -> Unit) = PendingModal(onClose)
 
-    /// Fil Ajuda ara: la respiració directa (`HelpBreatheView`).
+    /// Fil Ajuda ara: la respiració directa (`HelpBreatheScreen(onClose)`), des dels widgets, el
+    /// panell ràpid i Mindfulness.
     @Composable
     fun Breathe(onClose: () -> Unit) = PendingModal(onClose)
 
