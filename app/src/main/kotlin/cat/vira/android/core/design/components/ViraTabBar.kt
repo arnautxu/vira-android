@@ -7,12 +7,14 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -116,7 +118,11 @@ fun ViraTabBar(
                 verticalAlignment = Alignment.CenterVertically,
             ) { content() }
         } else {
-            TabRow(Modifier.fillMaxWidth().then(capsule), content)
+            // Si els noms no hi caben (un mòbil estret amb la lletra una mica gran), la fila llisca
+            // dins de la càpsula en lloc de deixar destins fora de la pantalla.
+            BoxWithConstraints(Modifier.fillMaxWidth().then(capsule)) {
+                TabRow(Modifier.horizontalScroll(rememberScrollState()).widthIn(min = maxWidth), content)
+            }
         }
     }
 }
@@ -162,11 +168,12 @@ private fun TabItem(
 
 /// Reparteix l'ample com l'`HStack` de l'iPhone amb `.frame(maxWidth: .infinity)` i noms
 /// `fixedSize`: cap nom es talla, i l'espai que sobra es reparteix a parts iguals entre els que en
-/// necessiten menys.
+/// necessiten menys. Si no hi caben ni així, cadascun es queda el seu ample i la fila llisca.
 @Composable
 private fun TabRow(modifier: Modifier, content: @Composable () -> Unit) {
     Layout(content = content, modifier = modifier) { measurables, constraints ->
-        val total = constraints.maxWidth
+        // Dins d'una fila que llisca, l'ample visible arriba com a mínim.
+        val total = constraints.minWidth
         val widths = measurables.map { it.maxIntrinsicWidth(constraints.maxHeight) }.toIntArray()
         // Els que ja ocupen més que una part igual es queden amb el seu ample; la resta es reparteix.
         val fixed = BooleanArray(widths.size)

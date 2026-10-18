@@ -2,7 +2,10 @@ package cat.vira.android.core.design
 
 import android.app.UiModeManager
 import android.content.Context
+import android.database.ContentObserver
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.LocalTextStyle
@@ -11,11 +14,17 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalInspectionMode
 import cat.vira.android.core.design.tokens.ViraArea
 import cat.vira.android.core.design.tokens.ViraColor
 import cat.vira.android.core.design.tokens.ViraFont
@@ -57,8 +66,8 @@ fun ViraTheme(
     val context = LocalContext.current
     val environment = ViraEnvironment(
         isDark = darkTheme,
-        reduceMotion = reduceMotion ?: systemReducesMotion(context),
-        increasedContrast = increasedContrast ?: systemIncreasesContrast(context),
+        reduceMotion = reduceMotion ?: rememberSystemReducesMotion(context),
+        increasedContrast = increasedContrast ?: rememberSystemIncreasesContrast(context),
         isAccessibilitySize = LocalDensity.current.fontScale >= VIRA_ACCESSIBILITY_FONT_SCALE,
     )
     CompositionLocalProvider(LocalViraEnvironment provides environment) {
@@ -95,6 +104,43 @@ private fun materialScheme(isDark: Boolean) = with(ViraPalette) {
             outline = c(controlBorder), outlineVariant = c(separator), error = c(error),
         )
     }
+}
+
+/// Els dos ajustos es poden canviar amb l'app oberta: s'escolten perquè l'entorn canviï a l'instant,
+/// com a l'iPhone, i no només quan l'activitat es torna a crear.
+@Composable
+private fun rememberSystemReducesMotion(context: Context): Boolean {
+    var value by remember(context) { mutableStateOf(systemReducesMotion(context)) }
+    if (!LocalInspectionMode.current) {
+        DisposableEffect(context) {
+            val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {
+                override fun onChange(selfChange: Boolean) {
+                    value = systemReducesMotion(context)
+                }
+            }
+            val registered = runCatching {
+                context.contentResolver.registerContentObserver(
+                    Settings.Global.getUriFor(Settings.Global.ANIMATOR_DURATION_SCALE), false, observer,
+                )
+            }.isSuccess
+            onDispose { if (registered) context.contentResolver.unregisterContentObserver(observer) }
+        }
+    }
+    return value
+}
+
+@Composable
+private fun rememberSystemIncreasesContrast(context: Context): Boolean {
+    var value by remember(context) { mutableStateOf(systemIncreasesContrast(context)) }
+    if (!LocalInspectionMode.current && Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+        DisposableEffect(context) {
+            val uiMode = context.getSystemService(UiModeManager::class.java)
+            val listener = UiModeManager.ContrastChangeListener { contrast -> value = contrast >= 0.5f }
+            uiMode?.addContrastChangeListener(context.mainExecutor, listener)
+            onDispose { uiMode?.removeContrastChangeListener(listener) }
+        }
+    }
+    return value
 }
 
 private fun systemReducesMotion(context: Context): Boolean = runCatching {

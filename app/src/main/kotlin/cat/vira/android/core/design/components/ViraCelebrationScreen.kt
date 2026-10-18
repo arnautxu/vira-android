@@ -8,6 +8,10 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
@@ -97,74 +101,82 @@ fun ViraCelebrationScreen(
     fun Modifier.reveal(after: Float) = alpha(((appear.value - after) / (1f - after)).coerceIn(0f, 1f))
 
     Box(modifier.fillMaxSize().background(ViraGradient.card(area))) {
-        Column(
-            modifier = Modifier.fillMaxSize().safeDrawingPadding().padding(ViraSpacing.screenMargin),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(ViraSpacing.l),
-        ) {
-            Spacer(Modifier.weight(1f))
+        // Llisca quan no hi cap (lletra al 200 % en un mòbil baix): el botó mai queda fora de la
+        // pantalla. Quan hi cap, el contingut queda centrat entre dalt i el botó, com a l'iPhone.
+        BoxWithConstraints(Modifier.fillMaxSize().safeDrawingPadding()) {
             Column(
+                modifier = Modifier
+                    .verticalScroll(rememberScrollState())
+                    .fillMaxWidth()
+                    .heightIn(min = maxHeight)
+                    .padding(ViraSpacing.screenMargin),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(ViraSpacing.m),
-                modifier = Modifier.padding(horizontal = ViraSpacing.m),
+                verticalArrangement = Arrangement.SpaceBetween,
             ) {
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier.graphicsLayer {
-                        val s = if (reduceMotion) 1f else 0.6f + 0.4f * appear.value
-                        scaleX = s; scaleY = s; alpha = appear.value.coerceIn(0f, 1f)
-                    },
+                Spacer(Modifier)
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(ViraSpacing.m),
+                    modifier = Modifier.padding(horizontal = ViraSpacing.m),
                 ) {
-                    ViraCelebrationBurst(area = area)
-                    hero()
-                }
-                if (eyebrow != null) {
-                    Text(
-                        eyebrow,
-                        style = ViraFont.callout,
-                        color = ink,
-                        textAlign = TextAlign.Center,
-                        // Només contorn: un farciment translúcid menjaria contrast al text.
-                        modifier = Modifier.reveal(0.16f).border(1.5.dp, ink, CircleShape)
-                            .padding(horizontal = ViraSpacing.s, vertical = ViraSpacing.xxs),
-                    )
-                }
-                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.reveal(0.28f)) {
-                    if (count != null) {
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier.graphicsLayer {
+                            val s = if (reduceMotion) 1f else 0.6f + 0.4f * appear.value
+                            scaleX = s; scaleY = s; alpha = appear.value.coerceIn(0f, 1f)
+                        },
+                    ) {
+                        ViraCelebrationBurst(area = area)
+                        hero()
+                    }
+                    if (eyebrow != null) {
                         Text(
-                            "${shownCount.value.roundToInt()}",
-                            style = ViraFont.timer,
+                            eyebrow,
+                            style = ViraFont.callout,
                             color = ink,
-                            maxLines = 1,
-                            modifier = Modifier.clearAndSetSemantics { },
+                            textAlign = TextAlign.Center,
+                            // Només contorn: un farciment translúcid menjaria contrast al text.
+                            modifier = Modifier.reveal(0.16f).border(1.5.dp, ink, CircleShape)
+                                .padding(horizontal = ViraSpacing.s, vertical = ViraSpacing.xxs),
                         )
                     }
-                    Text(
-                        caption,
-                        style = if (count == null) ViraFont.title else ViraFont.headline,
-                        color = ink,
-                        textAlign = TextAlign.Center,
-                    )
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.reveal(0.28f)) {
+                        if (count != null) {
+                            Text(
+                                "${shownCount.value.roundToInt()}",
+                                style = ViraFont.timer,
+                                color = ink,
+                                maxLines = 1,
+                                modifier = Modifier.clearAndSetSemantics { },
+                            )
+                        }
+                        Text(
+                            caption,
+                            style = if (count == null) ViraFont.title else ViraFont.headline,
+                            color = ink,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+                    if (message != null) {
+                        Text(message, style = ViraFont.headline, color = ink, textAlign = TextAlign.Center, modifier = Modifier.reveal(0.44f))
+                    }
+                    Box(Modifier.padding(top = ViraSpacing.s)) { extra() }
                 }
-                if (message != null) {
-                    Text(message, style = ViraFont.headline, color = ink, textAlign = TextAlign.Center, modifier = Modifier.reveal(0.44f))
-                }
-                Box(Modifier.padding(top = ViraSpacing.s)) { extra() }
+                // Ple amb el color del text i l'etiqueta amb el del fons: la mateixa parella, invertida.
+                Text(
+                    stringResource(R.string.streak_milestone_continue),
+                    style = ViraFont.headline,
+                    color = ViraColor.cardFill(area),
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .padding(top = ViraSpacing.l)
+                        .fillMaxWidth()
+                        .defaultMinSize(minHeight = ViraTouch.comfortable)
+                        .background(ink, CircleShape)
+                        .viraPressable(onClick = onContinue)
+                        .padding(vertical = ViraSpacing.m),
+                )
             }
-            Spacer(Modifier.weight(1f))
-            // Ple amb el color del text i l'etiqueta amb el del fons: la mateixa parella, invertida.
-            Text(
-                stringResource(R.string.streak_milestone_continue),
-                style = ViraFont.headline,
-                color = ViraColor.cardFill(area),
-                textAlign = TextAlign.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .defaultMinSize(minHeight = ViraTouch.comfortable)
-                    .background(ink, CircleShape)
-                    .viraPressable(onClick = onContinue)
-                    .padding(vertical = ViraSpacing.m),
-            )
         }
         if (celebrationsEnabled) ViraConfettiBurst(Modifier.align(Alignment.Center), over = area)
     }
