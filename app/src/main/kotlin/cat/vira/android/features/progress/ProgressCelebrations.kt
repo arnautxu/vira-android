@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import cat.vira.android.R
 import cat.vira.android.core.design.LocalViraEnvironment
 import cat.vira.android.core.design.components.ViraCelebrationMoment
+import cat.vira.android.core.design.components.ViraCelebrationBackdrop
 import cat.vira.android.core.design.components.ViraCelebrationScreen
 import cat.vira.android.core.design.components.ViraPictogram
 import cat.vira.android.core.design.components.viraPressable
@@ -42,6 +43,7 @@ import cat.vira.android.core.design.tokens.ViraSpacing
 import cat.vira.android.features.progress.logic.ChallengeItem
 import cat.vira.android.features.progress.logic.ChallengePeriod
 import cat.vira.android.features.progress.logic.StreakMilestone
+import cat.vira.android.features.progress.logic.StreakSceneVideo
 import cat.vira.android.features.progress.logic.StreakWeek
 import cat.vira.android.features.progress.logic.ViraLevel
 import cat.vira.android.features.progress.ui.ViraStreakFlame
@@ -74,6 +76,8 @@ fun StreakCelebration(
     today: LocalDate = LocalDate.now(),
     firstDayOfWeek: DayOfWeek = week.days.first().dayOfWeek,
     celebrationsEnabled: Boolean = true,
+    /// Ajustos → Sons diferent de «Cap»: les fites de 7 i 30 dies sonen amb el seu vídeo.
+    soundEnabled: Boolean = true,
     onShown: () -> Unit = {},
 ) {
     val cardTitle = when (cardKey) {
@@ -90,6 +94,18 @@ fun StreakCelebration(
         message = message,
         celebrationsEnabled = celebrationsEnabled,
         onShown = onShown,
+        // Cada dia de ratxa, una escena diferent; les fites, el seu clip. L'heroi d'aquí sota
+        // només surt quan el vídeo no es reprodueix (Reduir moviment, captures).
+        backdrop = StreakSceneVideo.celebrationBackdrop(streakDays, cardKey, soundEnabled)?.let {
+            ViraCelebrationBackdrop(
+                video = it.video,
+                tone = if (it.isDark) ViraCelebrationBackdrop.Tone.Dark else ViraCelebrationBackdrop.Tone.Light,
+                rise = it.rise,
+                sound = it.sound,
+                textPlacement = if (it.textOnTop) ViraCelebrationBackdrop.TextPlacement.Top else ViraCelebrationBackdrop.TextPlacement.Split,
+                protectsText = it.protectsText,
+            )
+        },
         extra = { StreakWeekBar(week, today, firstDayOfWeek, revealDelayMillis = 640) },
     ) {
         when (cardKey) {
