@@ -13,11 +13,13 @@ import java.time.Instant
 class ViraSyncCursors(private val preferences: SharedPreferences) {
 
     /// Data del cursor **menys el marge**: els rellotges de dos telèfons no coincideixen mai del
-    /// tot, i repetir feina és barat; perdre un canvi no.
+    /// tot, i repetir feina és barat; perdre un canvi no. Mai abans del sentinella `0001-01-01`: l'any
+    /// zero el servidor no l'accepta.
     fun get(key: String): Instant? =
         preferences.getString(ViraPreferences.SYNC_CURSOR_PREFIX + key, null)
             ?.let(ViraTime::parse)
             ?.minus(OVERLAP)
+            ?.let { maxOf(it, ViraTime.distantPast) }
 
     fun set(key: String, instant: Instant) {
         preferences.edit().putString(ViraPreferences.SYNC_CURSOR_PREFIX + key, ViraTime.format(instant)).apply()

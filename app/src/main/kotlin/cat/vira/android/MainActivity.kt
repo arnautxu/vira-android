@@ -32,6 +32,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        // Si Android tanca el procés a mig intercanvi, l'activitat nova ha de trobar aquest enllaç.
+        setIntent(intent)
         handleCallback(intent)
     }
 

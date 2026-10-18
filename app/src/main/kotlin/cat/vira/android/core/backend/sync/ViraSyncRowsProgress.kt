@@ -75,6 +75,9 @@ class ProgressCounterSyncTable(
             habitsCompletedCount = row.habitsCompletedCount, daysActiveCount = row.daysActiveCount,
             updatedAt = row.updatedAt,
         )))
+        // El comptador del servidor pot ser més vell que el llibre major que ja hi ha al telèfon (una
+        // passada anterior el va reparar i ara la baixada del llibre no porta res de nou).
+        CoinTransactionSyncTable.reconcileBalanceWithLedger(db, store(db))
         afterApply(db)
     }
 }

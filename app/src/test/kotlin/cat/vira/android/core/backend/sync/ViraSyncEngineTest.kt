@@ -16,6 +16,8 @@ import cat.vira.android.core.backend.ViraUserMetadata
 import cat.vira.android.core.data.ViraDatabase
 import cat.vira.android.core.data.ViraPreferences
 import cat.vira.android.core.data.ViraStore
+import cat.vira.android.core.data.ViraTime
+import cat.vira.android.core.data.model.CoinTransaction
 import cat.vira.android.core.data.model.EmotionEntry
 import cat.vira.android.core.data.model.PlanItem
 import kotlinx.coroutines.runBlocking
@@ -308,6 +310,24 @@ class ViraSyncEngineTest {
         assertEquals(engine.syncedTables, deletes)
         assertEquals(18, deletes.size)
         assertTrue(db.planItems().all().isEmpty())
+    }
+
+    @Test
+    fun unComptadorVellNoEsMenjaElLlibreMajor() = runBlocking {
+        store.counter()
+        db.coinTransactions().upsertRaw(listOf(CoinTransaction(amount = 50, updatedAt = Instant.parse("2026-10-01T10:00:00Z"))))
+        serverRows["progress_counters"] = """[{"total_xp":0,"coin_balance":0,"coins_earned_total":0,
+            "emotion_checkins_count":0,"focus_sessions_count":0,"habits_completed_count":0,"days_active_count":0,
+            "updated_at":"2026-10-17T10:00:00+00:00","user_id":"$userId"}]"""
+        engine(ViraConsentStatus.GRANTED).sync()
+        assertEquals(50, store.counter().coinBalance)
+    }
+
+    @Test
+    fun elCursorNoBaixaDeLAnyU() {
+        val cursors = ViraSyncCursors(preferences)
+        cursors.set("pull.progress_counters", ViraTime.distantPast)
+        assertEquals(ViraTime.distantPast, cursors.get("pull.progress_counters"))
     }
 
     @Test

@@ -19,6 +19,7 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
@@ -26,7 +27,6 @@ import kotlinx.serialization.json.jsonObject
 import java.time.Duration
 import java.time.Instant
 import java.util.UUID
-import java.util.concurrent.atomic.AtomicBoolean
 
 /// Puja el que s'ha fet al telèfon i baixa el que s'ha fet als altres (`ViraSyncEngine` de l'iPhone).
 ///
@@ -57,7 +57,7 @@ class ViraSyncEngine(
     private val _state = MutableStateFlow<State>(State.Idle)
     val state: StateFlow<State> = _state.asStateFlow()
 
-    private val isRunning = AtomicBoolean(false)
+    private val isRunning = MutableStateFlow(false)
     @Volatile private var rerunRequested = false
     @Volatile private var identity: Identity? = null
     private val cursors = ViraSyncCursors(preferences)
@@ -97,21 +97,24 @@ class ViraSyncEngine(
     ///
     /// Si ja n'hi ha una en marxa, se'n demana una altra en acabar: si entremig ha entrat un altre
     /// compte, la que corria s'atura i el compte nou no ha d'esperar cinc minuts.
+    ///
+    /// No torna fins que la passada demanada s'ha fet, la faci qui la faci: el treball en segon pla
+    /// s'hi espera, i si tornés abans Android podria tancar el procés a mitja passada.
     suspend fun sync() {
         if (!session.requiresAccount) return
         while (true) {
-            if (!isRunning.compareAndSet(false, true)) {
+            if (isRunning.compareAndSet(false, true)) {
+                try {
+                    do {
+                        rerunRequested = false
+                        pass()
+                    } while (rerunRequested)
+                } finally {
+                    isRunning.value = false
+                }
+            } else {
                 rerunRequested = true
-                // Qui la té en marxa ho veurà en acabar; si l'acaba de deixar, la passada és nostra.
-                if (isRunning.get()) return else continue
-            }
-            try {
-                do {
-                    rerunRequested = false
-                    pass()
-                } while (rerunRequested)
-            } finally {
-                isRunning.set(false)
+                isRunning.first { !it }
             }
             // Una petició arribada entre l'última comprovació i deixar el torn no es perd.
             if (!rerunRequested) return
@@ -312,7 +315,7 @@ class ViraSyncEngine(
             ViraDataEraser.eraseEverything(db, preferences, alsoErase)
         } finally {
             identity = null
-            isRunning.set(false)
+            isRunning.value = false
         }
     }
 
