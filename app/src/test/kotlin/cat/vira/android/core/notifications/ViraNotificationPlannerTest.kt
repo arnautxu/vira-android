@@ -163,6 +163,17 @@ class ViraNotificationPlannerTest {
         assertTrue(listOf(h, m, p).none { ViraNotificationPlanner.isStillPending(it, resolved, zone) })
     }
 
+    @Test
+    fun unaTascaMogudaOSenseHoraJaNoGuardaElSeuAvis() {
+        val day = today.atStartOfDay(zone).toInstant()
+        val item = PlanItem(title = "Dentista", day = day, time = at(today, 17))
+        val inputs = ViraNotificationInputs(planItems = listOf(item))
+        val n = plan(inputs).single()
+        assertTrue(ViraNotificationPlanner.isStillPending(n, inputs, zone))
+        assertTrue(!ViraNotificationPlanner.isStillPending(n, inputs.copy(planItems = listOf(item.copy(time = at(today, 18)))), zone))
+        assertTrue(!ViraNotificationPlanner.isStillPending(n, inputs.copy(planItems = listOf(item.copy(time = null))), zone))
+    }
+
     // Pla
 
     @Test

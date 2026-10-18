@@ -15,6 +15,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.RemoteInput
 import androidx.core.content.ContextCompat
 import cat.vira.android.R
+import cat.vira.android.core.data.ViraPreferences
 import kotlinx.serialization.json.Json
 
 /// L'alarma ha sonat: publica l'avís amb els seus botons.
@@ -30,7 +31,10 @@ class ViraNotificationAlarmReceiver : BroadcastReceiver() {
             Json.decodeFromString(ViraPlannedNotification.serializer(), raw)
         }.getOrNull() ?: return
         ViraNotificationScheduler(context).forget(notification.id)
-        post(context, notification)
+        // Una notícia de Viri ja dita no es torna a programar si després es canvia l'hora de Viri.
+        if (post(context, notification) && notification.id.endsWith(ViraStreakNotifications.NEWS_SUFFIX)) {
+            ViraStreakNotifications.clearPendingEvent(ViraPreferences.open(context))
+        }
     }
 
     companion object {
@@ -38,14 +42,16 @@ class ViraNotificationAlarmReceiver : BroadcastReceiver() {
 
         /// Publica l'avís. Sense permís (Android 13+) no es publica res i no passa res més: el
         /// permís es demana en context, quan l'usuari encén un avís, mai aquí.
-        fun post(context: Context, notification: ViraPlannedNotification) {
-            if (!ViraNotifications.canPost(context) || !ViraNotifications.isWanted(context, notification)) return
+        /// Retorna si s'ha publicat.
+        fun post(context: Context, notification: ViraPlannedNotification): Boolean {
+            if (!ViraNotifications.canPost(context) || !ViraNotifications.isWanted(context, notification)) return false
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
                 ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
                 PackageManager.PERMISSION_GRANTED
-            ) return
+            ) return false
             val shown = ViraNotifications.presented(context, notification)
             NotificationManagerCompat.from(context).notify(shown.id, 0, build(context, shown))
+            return true
         }
 
         fun build(context: Context, notification: ViraPlannedNotification): Notification {

@@ -10,6 +10,10 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import java.time.Instant
 import java.util.concurrent.TimeUnit
 
@@ -65,8 +69,22 @@ class ViraNotificationBootReceiver : BroadcastReceiver() {
                 ViraNotificationScheduler(context).rearm(Instant.now())
                 ViraNotificationWorker.request(context)
             }
-            // L'hora local d'un avís ha canviat d'instant: s'han de recalcular, no només tornar a posar.
-            Intent.ACTION_TIME_CHANGED, Intent.ACTION_TIMEZONE_CHANGED -> ViraNotificationWorker.request(context)
+            // L'hora local d'un avís ha canviat d'instant: s'han de recalcular, no només tornar a
+            // posar, i **ara**, abans que una alarma calculada amb la zona d'abans soni a deshora.
+            Intent.ACTION_TIME_CHANGED, Intent.ACTION_TIMEZONE_CHANGED -> {
+                val pending = goAsync()
+                scope.launch {
+                    try {
+                        ViraNotifications.reschedule(context.applicationContext)
+                    } finally {
+                        pending.finish()
+                    }
+                }
+            }
         }
+    }
+
+    private companion object {
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     }
 }

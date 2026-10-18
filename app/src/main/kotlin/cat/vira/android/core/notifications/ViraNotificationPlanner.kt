@@ -5,6 +5,7 @@ import cat.vira.android.core.data.model.FocusSession
 import cat.vira.android.core.data.model.Habit
 import cat.vira.android.core.data.model.IntakeStatus
 import cat.vira.android.core.data.model.Medication
+import cat.vira.android.core.data.model.PlanItem
 import cat.vira.android.core.data.model.PlanItemStatus
 import cat.vira.android.core.data.model.iosWeekday
 import cat.vira.android.core.data.model.status
@@ -192,9 +193,7 @@ object ViraNotificationPlanner {
             if (item.status != PlanItemStatus.PENDING) return@mapNotNull null
             val day = LocalDate.ofInstant(item.day, zone)
             if (day < today || day >= end) return@mapNotNull null
-            val time = item.time ?: return@mapNotNull null
-            // L'hora viu a part del dia: es recompon sobre el dia de l'ítem.
-            val fire = at(day, time, zone).minusSeconds((item.reminderOffsetMinutes ?: 0) * 60L)
+            val fire = planFire(item, zone) ?: return@mapNotNull null
             if (!fire.isAfter(now) || muted?.contains(fire) == true) return@mapNotNull null
             fire to item
         }
@@ -209,6 +208,8 @@ object ViraNotificationPlanner {
                 channel = ViraNotificationChannel.PLAN,
                 actions = ViraActionSet.PLAN,
                 planItemId = item.id.toString(),
+                // L'hora per la qual es va programar: un «Més tard» deixa de tocar si la tasca es mou.
+                scheduledAtMillis = fire.toEpochMilli(),
             )
         }
     }
@@ -282,7 +283,10 @@ object ViraNotificationPlanner {
             }
             ViraActionSet.PLAN -> {
                 val itemId = notification.planItemId?.toUuidOrNull()
-                inputs.planItems.any { it.id == itemId && it.status == PlanItemStatus.PENDING }
+                inputs.planItems.any { item ->
+                    item.id == itemId && item.status == PlanItemStatus.PENDING &&
+                        notification.scheduledAtMillis.let { at -> at == null || planFire(item, zone)?.toEpochMilli() == at }
+                }
             }
             ViraActionSet.VIRI -> {
                 val day = LocalDate.ofInstant(notification.fireAt, zone)
@@ -295,6 +299,13 @@ object ViraNotificationPlanner {
     /// L'aparellament d'una presa amb la seva hora és **al minut**, com a l'iPhone.
     fun sameMinute(a: Instant, b: Instant) =
         a.truncatedTo(ChronoUnit.MINUTES) == b.truncatedTo(ChronoUnit.MINUTES)
+
+    /// L'hora de l'avís d'una tasca: l'hora viu a part del dia i es recompon sobre el dia de
+    /// l'ítem, menys l'antelació. Sense hora, cap.
+    private fun planFire(item: PlanItem, zone: ZoneId): Instant? {
+        val time = item.time ?: return null
+        return at(LocalDate.ofInstant(item.day, zone), time, zone).minusSeconds((item.reminderOffsetMinutes ?: 0) * 60L)
+    }
 
     private fun Habit.isScheduled(day: LocalDate) =
         weekdays.isEmpty() || day.dayOfWeek.iosWeekday() in weekdays
