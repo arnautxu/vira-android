@@ -6,6 +6,7 @@ import android.content.Intent
 import android.os.Build
 import android.provider.Settings
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
@@ -18,6 +19,9 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import cat.vira.android.R
 import cat.vira.android.core.data.ViraPreferences
+import cat.vira.android.core.notifications.ViraNotifications
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /// Recordatoris i missatges de Viri (`USER_FLOWS.md` F24, `SettingsNotificationsSection`).
 ///
@@ -25,8 +29,8 @@ import cat.vira.android.core.data.ViraPreferences
 /// emocional —aquest amb hora pròpia, perquè no surt de cap pauta de l'usuari—. **Missatges de
 /// Viri** va a part: és gamificació, i tota la gamificació s'ha de poder apagar sense perdre res més.
 ///
-/// Aquí només es desen les preferències, amb els noms de l'iPhone: qui programa els avisos és el fil
-/// de Notificacions (`core/notifications`), que les llegeix i reprograma quan canvien.
+/// Aquí es desen les preferències, amb els noms de l'iPhone, i cada canvi demana a
+/// `ViraNotifications` que torni a programar els avisos.
 @Composable
 fun SettingsNotificationsSection() {
     var reminders by rememberBooleanPreference(ViraPreferences.REMINDERS_ENABLED, true)
@@ -57,6 +61,13 @@ fun SettingsNotificationsSection() {
     // encès que no farà mai res. Només compta el que hi ha en aquesta secció.
     val isDenied = remember(revision, reminders, viri) {
         !isPreview && (reminders || viri) && !notificationsAllowed(context)
+    }
+    // Qualsevol canvi d'aquí (o un permís que acaba d'arribar) canvia què s'ha de recordar.
+    LaunchedEffect(
+        revision, reminders, habits, medication, plan, emotion, emotionHour, emotionMinute,
+        detail, medicationDetail, viri, viriHour, viriMinute,
+    ) {
+        if (!isPreview) withContext(Dispatchers.Default) { ViraNotifications.reschedule(context.applicationContext) }
     }
 
     SettingsGroup(header = stringResource(R.string.settings_notifications_section)) {

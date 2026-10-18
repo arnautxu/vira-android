@@ -1,9 +1,8 @@
 package cat.vira.android.features.settings
 
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.NonCancellable
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.compose.runtime.collectAsState
 import cat.vira.android.core.backend.ViraBackend
 import cat.vira.android.core.backend.ViraSession
 import cat.vira.android.core.backend.sync.ViraSyncEngine
@@ -11,12 +10,14 @@ import cat.vira.android.core.data.ViraDataEraser
 import cat.vira.android.core.data.ViraDataExport
 import cat.vira.android.core.data.ViraStore
 import cat.vira.android.core.data.model.FocusProfile
+import cat.vira.android.core.notifications.ViraNotifications
 import cat.vira.android.features.settings.export.ViraDataExportPdf
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import androidx.compose.runtime.collectAsState
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
 import java.io.File
 
 /// El que les pantalles d'Ajustos llegeixen i fan fora d'elles mateixes: la sessió, la
@@ -78,12 +79,12 @@ class ViraSettingsBackend(private val context: Context, private val backend: Vir
     override suspend fun deleteAccount() = withContext(NonCancellable) {
         backend.session.deleteAccount()
         // Deixar les dades al telèfon després d'esborrar el compte seria una mitja veritat.
-        ViraDataEraser.eraseEverything(db, preferences)
+        ViraDataEraser.eraseEverything(db, preferences, alsoErase = { ViraNotifications.cancelEverything(context) })
         eraseOwnLeftovers()
     }
 
     override suspend fun eraseEverything() = withContext(NonCancellable) {
-        backend.engine.eraseEverything()
+        backend.engine.eraseEverything(alsoErase = { ViraNotifications.cancelEverything(context) })
         eraseOwnLeftovers()
     }
 

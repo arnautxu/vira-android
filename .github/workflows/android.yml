@@ -1,10 +1,28 @@
 name: Android
 
+# El disparador és el push. Abans `pull_request` també corria a cada commit, i cada commit d'una
+# branca amb PR es compilava dues vegades; ara només corre en obrir la PR. El push ja deixa el resultat a la PR (és el mateix commit),
+# prova la branca juntada amb main (pas «Junta el main d'ara») i és qui fa les captures de
+# captures/<branca>, que els fils necessiten abans d'obrir cap PR.
 on:
   push:
     # Les branques de captures només guarden imatges.
     branches-ignore: ['captures/**']
+    # Un canvi que només toca textos de documentació no canvia l'APK ni les captures.
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+  # Un sol build més per PR, quan s'obre: main pot haver canviat des de l'últim push de la
+  # branca. Els commits següents ja els cobreix el push.
   pull_request:
+    types: [opened, reopened]
+
+# Un push nou a la mateixa branca atura el que encara corria per a l'anterior: només compta
+# l'últim. A main cada build té grup propi (el número del build), perquè cap no se'n salti:
+# cada build de main és una release.
+concurrency:
+  group: android-${{ github.ref == 'refs/heads/main' && github.run_id || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: write
@@ -13,8 +31,22 @@ jobs:
   build:
     name: Compila, prova i deixa l'APK
     runs-on: ubuntu-latest
+    # Un build normal tarda uns 10 minuts. Si alguna cosa es penja, s'atura aquí i no ocupa
+    # la cua hores.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Abans ho feia el build de la PR: provar la branca tal com quedarà en fusionar-la, amb el
+      # main d'ara a sobre. Si no es pot juntar sense conflicte, es prova la branca sola.
+      - name: Junta el main d'ara a la branca
+        if: github.event_name == 'push' && github.ref != 'refs/heads/main'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898613+github-actions[bot]@users.noreply.github.com"
+          git merge --no-edit origin/main || { git merge --abort; echo "::warning::La branca té conflictes amb main; es prova sola."; }
 
       - name: JDK 21
         uses: actions/setup-java@v4
@@ -31,7 +63,7 @@ jobs:
       # El nom de l'artefacte no pot portar «/», i les branques dels fils sí (claude/…).
       - name: Nom de l'artefacte
         id: artefacte
-        run: echo "nom=vira-debug-${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}" | tr '/' '-' >> "$GITHUB_OUTPUT"
+        run: echo "nom=vira-debug-${GITHUB_REF_NAME}" | tr '/' '-' >> "$GITHUB_OUTPUT"
 
       - name: Desa l'APK de la branca
         uses: actions/upload-artifact@v4
@@ -39,29 +71,38 @@ jobs:
           name: ${{ steps.artefacte.outputs.nom }}
           path: app/build/outputs/apk/debug/app-debug.apk
 
-      # Captures (clar, fosc i lletra gran) de les proves de `src/screenshotTest`. Primer es
-      # comparen amb les aprovades que hi ha al repositori: si una pantalla canvia sense voler,
-      # aquest pas falla. Després es tornen a fer i es publiquen a la branca
-      # `captures/<branca>`, d'on el fil les agafa per posar-les al costat de les de l'iPhone.
+      # Captures (clar, fosc i lletra gran) de les proves de `src/screenshotTest`. Es comparen
+      # amb les aprovades que hi ha al repositori: si una pantalla canvia sense voler, el build
+      # falla al final. Les imatges que aquest pas fa servir per comparar es publiquen a la
+      # branca `captures/<branca>`, d'on el fil les agafa per posar-les al costat de les de
+      # l'iPhone. Abans es tornaven a fer amb updateDebugScreenshotTest, però aquella tasca
+      # renderitza en un procés propi que es queda sense memòria a partir d'unes 330 captures.
       - name: Compara les captures amb les aprovades
         id: compara
+        timeout-minutes: 15
         continue-on-error: true
-        run: |
-          if find app/src -type d -name reference -path '*creenshot*' | grep -q .; then
-            ./gradlew validateDebugScreenshotTest --no-daemon --no-configuration-cache
-          fi
-
-      - name: Fa les captures de la branca
-        if: github.event_name == 'push' && github.ref != 'refs/heads/main'
-        run: ./gradlew updateDebugScreenshotTest --no-daemon --no-configuration-cache
+        run: ./gradlew validateDebugScreenshotTest --no-daemon --no-configuration-cache
 
       - name: Publica les captures a captures/<branca>
         if: github.event_name == 'push' && github.ref != 'refs/heads/main'
         run: |
           set -e
-          src=$(find app/src -type d -name reference -path '*creenshot*' | head -1)
-          [ -n "$src" ] || exit 0
-          echo "Captures a $src"
+          out=app/build/outputs/screenshotTest-results/preview/debug
+          src=$(find "$out" -type d -name rendered 2>/dev/null | head -1)
+          if [ -z "$src" ]; then
+            echo "::warning::No hi ha captures renderitzades a $out."
+            find "$out" -maxdepth 4 -type d 2>/dev/null || true
+            exit 0
+          fi
+          # Si la comparació s'ha aturat a mig camí, no es trepitgen les captures bones de la
+          # branca amb un joc a mitges: n'hi ha d'haver almenys tantes com d'aprovades.
+          fetes=$(find "$src" -name '*.png' | wc -l)
+          aprovades=$(find app/src -path '*creenshot*/reference/*' -name '*.png' | wc -l)
+          echo "Captures a $src: $fetes imatges ($aprovades aprovades)"
+          if [ "$fetes" -lt "$aprovades" ]; then
+            echo "::warning::Només hi ha $fetes captures de $aprovades; no es publiquen."
+            exit 0
+          fi
           dest=$(mktemp -d)
           cp -R "$src"/. "$dest"/
           cd "$dest"
