@@ -138,7 +138,7 @@ fun FormDivider() = HorizontalDivider(color = ViraColor.separator)
 
 /// Fila tocable amb etiqueta a l'esquerra i valor a la dreta (un selector, una data).
 @Composable
-fun FormValueRow(label: String, value: String, onClick: () -> Unit, labelColor: Color = ViraColor.textPrimary) {
+fun FormValueRow(label: String, value: String, labelColor: Color = ViraColor.textPrimary, onClick: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().defaultMinSize(minHeight = ViraTouch.minimum).viraPressable(onClick = onClick)
             .padding(vertical = ViraSpacing.xs),

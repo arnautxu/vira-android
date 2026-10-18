@@ -3,6 +3,7 @@ package cat.vira.android.features.plan
 import cat.vira.android.core.data.ViraDatabase
 import cat.vira.android.core.data.ViraStore
 import cat.vira.android.core.data.ViraTime
+import cat.vira.android.core.data.model.CoinReason
 import cat.vira.android.core.data.model.Habit
 import cat.vira.android.core.data.model.HabitLog
 import cat.vira.android.core.data.model.IntakeStatus
@@ -12,6 +13,7 @@ import cat.vira.android.core.data.model.PlanItem
 import cat.vira.android.core.data.model.PlanItemRecurrence
 import cat.vira.android.core.data.model.PlanItemStatus
 import cat.vira.android.core.data.model.status
+import cat.vira.android.core.design.components.PendingCompletion
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -31,7 +33,7 @@ data class PlanSnapshot(
     val activeHabits: List<Habit> get() = habits.filter { !it.isArchived }.sortedBy { it.createdAt }
     val activeMedications: List<Medication> get() = medications.filter { it.isActive }.sortedBy { it.createdAt }
 
-    fun items(on day: LocalDate, zone: ZoneId = ZoneId.systemDefault()): List<PlanItem> {
+    fun items(day: LocalDate, zone: ZoneId = ZoneId.systemDefault()): List<PlanItem> {
         val start = PlanDay.start(day, zone)
         return PlanItemOrder.sorted(items.filter { it.day == start }, zone)
     }
@@ -69,25 +71,36 @@ class PlanActions(
     // Calendari
 
     /// Marca o desmarca (`PlanItemCompletion.toggle`). En marcar, l'estat canvia **a l'instant**,
-    /// es crea la propera instància si es repeteix i l'arrel obre la finestra de "Desfer"; la
-    /// recompensa, si ningú la desfà, la concedeix l'arrel. Desmarcar mai en resta cap.
+    /// es crea la propera instància si es repeteix i la cua de l'arrel obre la finestra de
+    /// "Desfer"; la recompensa, si ningú la desfà, la concedeix la cua. Desmarcar mai en resta cap.
     fun toggle(item: PlanItem) {
         val id = PlanCompletionIds.item(item)
         if (item.status == PlanItemStatus.DONE) {
             write { save(db.planItems(), item.copy(statusRaw = PlanItemStatus.PENDING.raw, completedAt = null)) }
-            host.onUndone(id)
+            host.undo(id)
         } else {
             write {
                 save(db.planItems(), item.copy(statusRaw = PlanItemStatus.DONE.raw, completedAt = ViraTime.now()))
                 PlanItemCompletion.nextOccurrence(item, zone)?.let { create(db.planItems(), it) }
             }
-            host.onCompleted(
-                PlanCompletion(id, PlanCompletion.Kind.PlanItem, item.title) {
-                    write { db.planItems().byId(item.id)?.let { save(db.planItems(), it.copy(statusRaw = PlanItemStatus.PENDING.raw, completedAt = null)) } }
-                },
+            host.present(
+                PendingCompletion(
+                    id = id,
+                    reason = CoinReason.PLAN_ITEM,
+                    onUndo = {
+                        write {
+                            db.planItems().byId(item.id)?.let {
+                                save(db.planItems(), it.copy(statusRaw = PlanItemStatus.PENDING.raw, completedAt = null))
+                            }
+                        }
+                    },
+                ),
             )
         }
     }
+
+    /// Obre la captura ràpida del dia, amb la franja si s'hi arriba des d'un "Afegir aquí".
+    fun capture(day: LocalDate, period: DayPeriod?) = host.onCapture(day, period)
 
     fun delete(item: PlanItem) = write { delete(item) }
 
@@ -106,24 +119,44 @@ class PlanActions(
         copies.forEach { create(db.planItems(), it) }
     }
 
+    /// Un ítem nou (el pont de la captura ràpida): amb la repetició, com en desar.
+    fun create(item: PlanItem, recurrence: PlanItemRecurrence) = write {
+        val (first, copies) = PlanItemCompletion.applyRecurrence(item, recurrence, zone)
+        create(db.planItems(), first)
+        copies.forEach { create(db.planItems(), it) }
+    }
+
     // Hàbits
 
+    /// `HabitCompletion.toggle`: el registre s'insereix a l'instant i la recompensa (i el comptador
+    /// d'hàbits fets) arriba només si ningú ho desfà.
     fun toggle(habit: Habit, day: LocalDate, progress: HabitProgress) {
         val id = PlanCompletionIds.habit(habit, day, zone)
         val existing = progress.log(habit, day)
         if (existing != null) {
-            write { delete(existing) }
-            host.onUndone(id)
+            write {
+                delete(existing)
+                host.onScheduleChanged()
+            }
+            host.undo(id)
         } else {
             val log = HabitLog(day = PlanDay.start(day, zone), habitId = habit.id)
-            write { create(db.habitLogs(), log) }
-            host.onCompleted(
-                PlanCompletion(id, PlanCompletion.Kind.Habit, habit.title) {
-                    write { db.habitLogs().byId(log.id)?.let { delete(it) } }
-                },
+            write {
+                create(db.habitLogs(), log)
+                host.onScheduleChanged()
+            }
+            host.present(
+                PendingCompletion(
+                    id = id,
+                    reason = CoinReason.HABIT,
+                    onUndo = { write { db.habitLogs().byId(log.id)?.let { delete(it) } } },
+                    onCommit = {
+                        store?.let { it.save(it.db.progressCounters(), it.counter().let { c -> c.copy(habitsCompletedCount = c.habitsCompletedCount + 1) }) }
+                    },
+                    title = habit.title,
+                ),
             )
         }
-        host.onScheduleChanged()
     }
 
     fun save(habit: Habit, isNew: Boolean) = write {

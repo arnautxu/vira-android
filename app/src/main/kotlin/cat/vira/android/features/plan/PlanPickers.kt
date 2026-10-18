@@ -1,19 +1,12 @@
 package cat.vira.android.features.plan
 
-import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DatePicker
@@ -37,13 +30,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import cat.vira.android.R
-import cat.vira.android.core.design.components.ViraPictogram
 import cat.vira.android.core.design.components.viraPressable
 import cat.vira.android.core.design.tokens.ViraArea
 import cat.vira.android.core.design.tokens.ViraColor
@@ -203,38 +194,3 @@ fun <T> FormMenuRow(label: String, options: List<Pair<T, String>>, selected: T, 
         }
     }
 }
-
-/// Graella d'icones triables (`ViraIconPicker` de l'iPhone). Provisional: quan `core/design`
-/// la tingui per a tota l'app, aquesta marxa.
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-fun PlanIconPicker(icons: List<Pair<String, Int>>, selection: String, onSelect: (String) -> Unit) {
-    FlowRow(
-        Modifier.fillMaxWidth().padding(vertical = ViraSpacing.xs),
-        horizontalArrangement = Arrangement.spacedBy(ViraSpacing.xs),
-        verticalArrangement = Arrangement.spacedBy(ViraSpacing.xs),
-    ) {
-        icons.forEachIndexed { index, (name, drawable) ->
-            IconCell(drawable, isSelected = name == selection, index = index + 1, total = icons.size) { onSelect(name) }
-        }
-    }
-}
-
-@Composable
-private fun IconCell(@DrawableRes drawable: Int, isSelected: Boolean, index: Int, total: Int, onClick: () -> Unit) {
-    val description = stringResource(R.string.capture_icon) + " $index/$total"
-    Box(
-        Modifier.size(ViraTouch.comfortable)
-            .background(if (isSelected) ViraColor.surface(ViraArea.Plan) else Color.Transparent, CircleShape)
-            .then(if (isSelected) Modifier.border(2.dp, ViraColor.accent(ViraArea.Plan), CircleShape) else Modifier)
-            .viraPressable(onClick = onClick)
-            .semantics { selected = isSelected; contentDescription = description },
-        contentAlignment = Alignment.Center,
-    ) {
-        ViraPictogram(drawable, size = 40.dp)
-    }
-}
-
-/// Columna buida per sota de l'última fila: el contingut no queda sota la barra de pestanyes.
-@Composable
-fun PlanBottomSpace(height: androidx.compose.ui.unit.Dp) = Column(Modifier.padding(bottom = height)) {}
