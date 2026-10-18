@@ -84,10 +84,13 @@ internal object TodayPlanRules {
         zone: ZoneId,
     ): List<MedicationSlot> {
         val start = startOfDay(day, zone)
+        val date = start.atZone(zone).toLocalDate()
         return medications.flatMap { medication ->
             if (!isScheduled(medication, start, zone)) return@flatMap emptyList()
             medication.timesInMinutes.sorted().map { minutes ->
-                val at = start.atZone(zone).plusMinutes(minutes.toLong()).toInstant()
+                // L'hora de rellotge, no minuts des de mitjanit: el dia del canvi d'hora en té 23 o
+                // 25, i la presa de les 8:00 ha de ser a les 8:00, com l'avís que la recorda.
+                val at = date.atTime(minutes / 60, minutes % 60).atZone(zone).toInstant()
                 MedicationSlot(medication, at, intake(medication, intakes, at))
             }
         }.sortedBy { it.scheduledAt }

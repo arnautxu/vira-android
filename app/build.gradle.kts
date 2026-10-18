@@ -71,6 +71,9 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.media3.exoplayer)
+    // Bloqueig de l'app (`app/ViraAppLock.kt`)
+    implementation(libs.androidx.biometric)
+    implementation(libs.androidx.fragment)
     debugImplementation(libs.androidx.compose.ui.tooling)
     testImplementation(libs.junit)
 
@@ -98,5 +101,6 @@ dependencies {
 }
 
 // Les proves de captura (layoutlib) es queden sense memòria passades unes 70 captures amb el
-// valor per defecte (512 MB).
+// valor per defecte (512 MB), i a 3 GB també passades unes 230: la memòria creix amb cada
+// captura. Els executors de GitHub tenen 16 GB; Gradle se'n queda 3.
 tasks.withType<Test>().configureEach { maxHeapSize = "6g" }

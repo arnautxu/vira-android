@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.filterNotNull
 import cat.vira.android.features.parent.ParentRootScreen
@@ -16,7 +17,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,8 +29,14 @@ import cat.vira.android.core.design.PendingScreen
 import cat.vira.android.core.design.components.ViraActionButton
 import cat.vira.android.core.design.components.ViraActionHierarchy
 import cat.vira.android.core.design.tokens.ViraSpacing
-import cat.vira.android.features.progress.recordProgress
+import cat.vira.android.features.emotions.EmotionEntryCheckIn
+import cat.vira.android.features.entry.EntryFirstActionHosts
+import cat.vira.android.core.data.ViraRewards
+import cat.vira.android.core.data.ViraStore
+import cat.vira.android.features.progress.logic.ViraProgress
+import java.time.Instant
 import cat.vira.android.features.entry.EntryRequest
+import cat.vira.android.features.entry.LocalEntryFirstActionHosts
 import cat.vira.android.features.focus.FocusProfileEditorScreen
 import cat.vira.android.features.focus.FocusScreen
 import cat.vira.android.features.focus.FocusStartRequest
@@ -64,15 +70,27 @@ internal object ViraFeatureSlots {
 
     /// Fil Entrada (`features/entry`). En acabar, el flux marca la seva preferència i crida
     /// `onFinish`.
+    ///
+    /// La primera acció (E5) fa servir les pantalles de debò: el check-in sencer d'Emocions i
+    /// Concentra't arrencat sol amb els segons triats. L'entrada no les coneix; les hi passa l'arrel.
     @Composable
-    fun Entry(request: ViraEntryRequest, onFinish: () -> Unit) = cat.vira.android.features.entry.Entry(
-        request = when (request) {
-            ViraEntryRequest.Full -> EntryRequest.FULL
-            ViraEntryRequest.Account -> EntryRequest.ACCOUNT
-            ViraEntryRequest.Consent -> EntryRequest.CONSENT
-            ViraEntryRequest.NewPassword -> EntryRequest.NEW_PASSWORD
-        },
-        onFinish = onFinish,
+    fun Entry(request: ViraEntryRequest, onFinish: () -> Unit) {
+        CompositionLocalProvider(LocalEntryFirstActionHosts provides entryFirstActionHosts) {
+            cat.vira.android.features.entry.Entry(
+                request = when (request) {
+                    ViraEntryRequest.Full -> EntryRequest.FULL
+                    ViraEntryRequest.Account -> EntryRequest.ACCOUNT
+                    ViraEntryRequest.Consent -> EntryRequest.CONSENT
+                    ViraEntryRequest.NewPassword -> EntryRequest.NEW_PASSWORD
+                },
+                onFinish = onFinish,
+            )
+        }
+    }
+
+    private val entryFirstActionHosts = EntryFirstActionHosts(
+        checkIn = { onRecorded, onClose -> EmotionEntryCheckIn(onRecorded, onClose) },
+        focus = { seconds, onClose -> FocusScreen(FocusStartRequest(seconds = seconds, autostart = true), onClose) },
     )
 
     /// Fil Panell de pares (`features/parent`): l'arrel d'un compte de pare o mare. Els enllaços de
@@ -100,7 +118,7 @@ internal object ViraFeatureSlots {
 
     /// Fil Concentra't (`features/focus`): la preparació a pantalla completa, sense la barra
     /// (`FocusScreen(onClose = onClose)`); `link` és la tasca triada, si s'hi ha arribat des d'una
-    /// fila. La represa des de l'avís fix és `FocusResumeEffect { navigator.startFocus() }` a l'arrel.
+    /// fila. La represa des de l'avís fix és `FocusResumeEffect` a `RootScreen`.
     @Composable
     fun Focus(link: ViraFocusLink?, onClose: () -> Unit) =
         FocusScreen(FocusStartRequest(linkedTitle = link?.title, linkedItemID = link?.itemId), onClose)
@@ -117,8 +135,11 @@ internal object ViraFeatureSlots {
 
     /// Fil Viri i ratxa (`features/progress`): concedeix la recompensa d'una acció feta i en torna
     /// (monedes, XP). Ha de passar per `ViraProgress.record`, que també compta el dia per a la ratxa;
-    /// l'XP és `ViraRewards.rule(reason)?.coins`. Mai des de medicació.
-    suspend fun commitReward(backend: ViraBackend, reason: CoinReason): Pair<Int, Int> = recordProgress(backend, reason)
+    /// l'XP és `ViraRewards.rule(reason)?.coins`. Mai des de medicació. `at` és quan s'ha tocat.
+    suspend fun commitReward(backend: ViraBackend, reason: CoinReason, at: Instant): Pair<Int, Int> {
+        val coins = ViraProgress(ViraStore(backend.db)).record(reason, now = at)
+        return coins to (ViraRewards.rule(reason)?.coins ?: 0)
+    }
 
     /// Fil Pla (`HabitCelebrationView`): la celebració a pantalla completa del primer hàbit del dia.
     @Composable

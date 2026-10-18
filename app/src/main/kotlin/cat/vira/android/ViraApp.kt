@@ -5,6 +5,7 @@ import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.lifecycle.lifecycleScope
+import cat.vira.android.app.CelebrationQueue
 import cat.vira.android.app.ViraIncomingLinks
 import cat.vira.android.app.processCompletionQueue
 import cat.vira.android.core.backend.ViraBackend
@@ -31,6 +32,9 @@ class ViraApp : Application(), ViraNotificationHost {
 
     /// Els enllaços que han obert l'app i encara no ha fet servir ningú (`ViraIncomingLinks`).
     val incomingLinks = ViraIncomingLinks()
+    /// On ha de portar l'avís que s'acaba de tocar (`ViraNotifications.EXTRA_DESTINATION`). Viu al
+    /// procés i no a l'activitat: l'arrel el llegeix quan ja hi és i el buida.
+    internal val notificationDestination = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
 
     /// Els avisos llegeixen la mateixa base de dades que les pantalles (`ViraNotificationHost`).
     override val notificationDatabase: ViraDatabase get() = backend.db
@@ -48,7 +52,15 @@ class ViraApp : Application(), ViraNotificationHost {
 
     /// La finestra de «Desfer» i la recompensa que ve després (`ViraCompletionQueue`). És del
     /// procés perquè un gir de pantalla no se l'endugui a mitges.
-    internal val completions by lazy { processCompletionQueue(this, ProcessLifecycleOwner.get().lifecycleScope) }
+    internal val completions by lazy {
+        processCompletionQueue(this, ProcessLifecycleOwner.get().lifecycleScope).also { queue ->
+            queue.deferStreak = { deferred -> celebrations.defer(deferred) }
+        }
+    }
+
+    /// Les celebracions de ratxa, de carta i de nivell (`ViraCelebrationQueue`), també del procés:
+    /// una celebració encuada o retinguda no es perd en girar la pantalla.
+    internal val celebrations by lazy { CelebrationQueue(backend, ProcessLifecycleOwner.get().lifecycleScope) }
 
     override fun onCreate() {
         super.onCreate()
