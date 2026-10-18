@@ -1,6 +1,7 @@
 package cat.vira.android.features.focus
 
 import androidx.compose.runtime.getValue
+import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
@@ -96,6 +97,18 @@ fun FocusModeCarousel(modes: List<FocusMode>, selectedID: FocusModeID, side: Dp,
         }
     }
 
+    // Les captures no saben dibuixar un `HorizontalPager`: allà, el triat i els seus dos veïns, quiets
+    // i al mateix lloc on el carrusel els deixaria.
+    if (LocalInspectionMode.current) {
+        Box(Modifier.fillMaxWidth().height(side), contentAlignment = Alignment.Center) {
+            (-1..1).forEach { step ->
+                modes.getOrNull(selectedIndex + step)?.let { mode ->
+                    FocusMedallionButton(mode, side, step == 0, Modifier.offset(x = pageWidth * step)) {}
+                }
+            }
+        }
+        return
+    }
     BoxWithConstraints(Modifier.fillMaxWidth().height(side)) {
         val edge = ((maxWidth - pageWidth) / 2).coerceAtLeast(ViraSpacing.screenMargin)
         val mask = ViraColor.shadow
@@ -137,13 +150,13 @@ fun FocusModeCarousel(modes: List<FocusMode>, selectedID: FocusModeID, side: Dp,
 private fun <T> rememberUpdated(value: T) = androidx.compose.runtime.rememberUpdatedState(value)
 
 @Composable
-internal fun FocusMedallionButton(mode: FocusMode, side: Dp, selected: Boolean, onClick: () -> Unit) {
+private fun FocusMedallionButton(mode: FocusMode, side: Dp, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val scale by animateFloatAsState(if (selected) 1f else 0.5f, viraSpec(ViraMotion.standard(), decorative = true), label = "medallion")
     val opacity by animateFloatAsState(if (selected) 1f else 0.62f, viraSpec(ViraMotion.standard(), decorative = true), label = "opacity")
     val disc = FocusMedallionMetrics.discSide(side)
     val label = mode.label()
     val reduceMotion = LocalViraEnvironment.current.reduceMotion
-    Box(Modifier.size(side * 0.84f, side), contentAlignment = Alignment.Center) {
+    Box(modifier.size(side * 0.84f, side), contentAlignment = Alignment.Center) {
         Box(
             Modifier
                 .requiredSize(side)
