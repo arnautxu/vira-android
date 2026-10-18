@@ -219,6 +219,38 @@ class ViraSyncEngineTest {
     }
 
     @Test
+    fun siElPareFallaElFillEspera() = runBlocking {
+        server.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse {
+                requests += request
+                val table = request.requestUrl!!.pathSegments.last()
+                return when {
+                    table == "habits" -> MockResponse().setResponseCode(503)
+                    request.method == "GET" -> MockResponse().setBody("[]")
+                    else -> MockResponse().setResponseCode(201)
+                }
+            }
+        }
+        engine(ViraConsentStatus.GRANTED).sync()
+        assertTrue(requests.none { it.requestUrl!!.pathSegments.last() == "habit_logs" })
+        assertTrue(requests.any { it.requestUrl!!.pathSegments.last() == "focus_profiles" })
+    }
+
+    @Test
+    fun unaSessioRebutjadaAturaLaPassadaITancaLaSessio() = runBlocking {
+        server.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse {
+                requests += request
+                return MockResponse().setResponseCode(401).setBody("""{"code":"PGRST301"}""")
+            }
+        }
+        val engine = engine(ViraConsentStatus.GRANTED)
+        engine.sync()
+        assertEquals(ViraSyncEngine.State.Failed(cat.vira.android.core.backend.ViraBackendError.SESSION_EXPIRED), engine.state.value)
+        assertEquals(1, requests.size)
+    }
+
+    @Test
     fun esborrarHoTotComencaPelServidor() = runBlocking {
         store.create(db.planItems(), PlanItem(title = "Deures"))
         val engine = engine(ViraConsentStatus.GRANTED)

@@ -66,8 +66,21 @@ object ViraDataEraser {
         preferences: SharedPreferences,
         alsoErase: suspend () -> Unit = {},
     ) {
+        // `eraseEverything` treu l'aparença, que és del telèfon i no de la persona: es guarda abans.
+        val kept = preferences.all.filterKeys { it in deviceKeys }
         eraseEverything(db, preferences, alsoErase)
         resetPreferences(preferences)
+        preferences.edit().apply {
+            kept.forEach { (key, value) ->
+                when (value) {
+                    is String -> putString(key, value)
+                    is Boolean -> putBoolean(key, value)
+                    is Int -> putInt(key, value)
+                    is Long -> putLong(key, value)
+                    is Float -> putFloat(key, value)
+                }
+            }
+        }.apply()
     }
 
     /// Sense propietari anotat la resposta és **no**: qui feia servir l'app en local i ara es fa un

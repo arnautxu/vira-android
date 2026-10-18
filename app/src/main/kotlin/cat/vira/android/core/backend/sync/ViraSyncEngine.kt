@@ -57,6 +57,7 @@ class ViraSyncEngine(
     val state: StateFlow<State> = _state.asStateFlow()
 
     private val isRunning = AtomicBoolean(false)
+    @Volatile private var rerunRequested = false
     @Volatile private var identity: Identity? = null
     private val cursors = ViraSyncCursors(preferences)
 
@@ -92,9 +93,27 @@ class ViraSyncEngine(
     }
 
     /// Sincronitza si té sentit fer-ho. Silenciosa: no interromp res ni demana res.
+    ///
+    /// Si ja n'hi ha una en marxa, se'n demana una altra en acabar: si entremig ha entrat un altre
+    /// compte, la que corria s'atura i el compte nou no ha d'esperar cinc minuts.
     suspend fun sync() {
+        if (!session.requiresAccount) return
+        if (!isRunning.compareAndSet(false, true)) {
+            rerunRequested = true
+            return
+        }
+        try {
+            do {
+                rerunRequested = false
+                pass()
+            } while (rerunRequested)
+        } finally {
+            isRunning.set(false)
+        }
+    }
+
+    private suspend fun pass() {
         val user = session.user ?: return
-        if (!session.requiresAccount || !isRunning.compareAndSet(false, true)) return
         identity = Identity(user.id, session.dataGeneration)
         _state.value = State.Syncing
         try {
@@ -115,7 +134,6 @@ class ViraSyncEngine(
             _state.value = State.Failed(ViraBackendError.UNAVAILABLE)
         } finally {
             identity = null
-            isRunning.set(false)
         }
     }
 
@@ -128,19 +146,34 @@ class ViraSyncEngine(
         requireCurrentAccount()
 
         var firstFailure: Exception? = null
+        val failed = mutableSetOf<String>()
         suspend fun attempt(name: String, work: suspend () -> Unit) {
             try {
                 work()
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Exception) {
-                log("Sincronització de $name fallida: ${(error as? ViraBackendException)?.error ?: error.javaClass.simpleName}")
+                val reason = (error as? ViraBackendException)?.error
+                log("Sincronització de $name fallida: ${reason ?: error.javaClass.simpleName}")
+                // El servidor no reconeix la sessió: cap taula més anirà bé, i la interfície ho ha de saber.
+                if (reason == ViraBackendError.SESSION_EXPIRED) {
+                    session.invalidate()
+                    throw error
+                }
+                failed += name
                 if (firstFailure == null) firstFailure = error
             }
         }
 
         attempt("tombstones") { flushTombstones(token) }
-        for (table in tables) attempt(table.table) { sync(table, scope, token) }
+        for (table in tables) {
+            // Sense el pare, els fills que arribessin es descartarien i el cursor ja els hauria passat.
+            if (PARENTS[table.table] in failed) {
+                failed += table.table
+                continue
+            }
+            attempt(table.table) { sync(table, scope, token) }
+        }
 
         requireCurrentAccount()
         firstFailure?.let { throw it }
@@ -305,6 +338,14 @@ class ViraSyncEngine(
     companion object {
         /// Files per pàgina. PostgREST en torna 1.000 com a màxim.
         const val PAGE_SIZE = 500
+
+        /// Taules que depenen d'una altra: si el pare falla en una passada, el fill s'hi espera.
+        val PARENTS = mapOf(
+            "plan_assistance_details" to "plan_items",
+            "plan_assistance_links" to "plan_items",
+            "habit_logs" to "habits",
+            "medication_intakes" to "medications",
+        )
 
         /// Ids per esborrat: prou curt perquè l'adreça no passi de 8 kB.
         const val TOMBSTONE_CHUNK = 100

@@ -23,6 +23,8 @@ import cat.vira.android.core.data.model.ProgressCounter
 import cat.vira.android.core.data.model.SkinOwnership
 import cat.vira.android.core.data.model.Streak
 import cat.vira.android.core.data.model.ViraProfile
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.UseSerializers
@@ -123,10 +125,12 @@ object ViraDataExport {
         appVersion: String,
         today: LocalDate = LocalDate.now(ZoneId.systemDefault()),
     ): File {
-        val folder = File(directory, "export-${UUID.randomUUID()}").apply { mkdirs() }
-        val file = File(folder, "vira-${today.format(DateTimeFormatter.ISO_LOCAL_DATE)}.json")
-        file.writeText(encode(snapshot(db, appVersion)))
-        return file
+        val snapshot = snapshot(db, appVersion)
+        // Sense límits, el JSON pot ser gran: ni codificar-lo ni escriure'l bloqueja la pantalla.
+        return withContext(Dispatchers.IO) {
+            val folder = File(directory, "export-${UUID.randomUUID()}").apply { mkdirs() }
+            File(folder, "vira-${today.format(DateTimeFormatter.ISO_LOCAL_DATE)}.json").apply { writeText(encode(snapshot)) }
+        }
     }
 
     private val json = Json { encodeDefaults = true; explicitNulls = false }
