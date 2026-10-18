@@ -87,14 +87,22 @@ jobs:
         if: github.event_name == 'push' && github.ref != 'refs/heads/main'
         run: |
           set -e
-          out=app/build/outputs/screenshotTest-results
+          out=app/build/outputs/screenshotTest-results/preview/debug
           src=$(find "$out" -type d -name rendered 2>/dev/null | head -1)
           if [ -z "$src" ]; then
             echo "::warning::No hi ha captures renderitzades a $out."
             find "$out" -maxdepth 4 -type d 2>/dev/null || true
             exit 0
           fi
-          echo "Captures a $src: $(find "$src" -name '*.png' | wc -l) imatges"
+          # Si la comparació s'ha aturat a mig camí, no es trepitgen les captures bones de la
+          # branca amb un joc a mitges: n'hi ha d'haver almenys tantes com d'aprovades.
+          fetes=$(find "$src" -name '*.png' | wc -l)
+          aprovades=$(find app/src -path '*creenshot*/reference/*' -name '*.png' | wc -l)
+          echo "Captures a $src: $fetes imatges ($aprovades aprovades)"
+          if [ "$fetes" -lt "$aprovades" ]; then
+            echo "::warning::Només hi ha $fetes captures de $aprovades; no es publiquen."
+            exit 0
+          fi
           dest=$(mktemp -d)
           cp -R "$src"/. "$dest"/
           cd "$dest"
