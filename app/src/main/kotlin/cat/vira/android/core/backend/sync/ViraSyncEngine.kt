@@ -19,6 +19,7 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -27,6 +28,7 @@ import kotlinx.serialization.json.jsonObject
 import java.time.Duration
 import java.time.Instant
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicLong
 
 /// Puja el que s'ha fet al telèfon i baixa el que s'ha fet als altres (`ViraSyncEngine` de l'iPhone).
 ///
@@ -58,7 +60,8 @@ class ViraSyncEngine(
     val state: StateFlow<State> = _state.asStateFlow()
 
     private val isRunning = MutableStateFlow(false)
-    @Volatile private var rerunRequested = false
+    private val requested = AtomicLong(0)
+    private val served = MutableStateFlow(0L)
     @Volatile private var identity: Identity? = null
     private val cursors = ViraSyncCursors(preferences)
 
@@ -102,22 +105,23 @@ class ViraSyncEngine(
     /// s'hi espera, i si tornés abans Android podria tancar el procés a mitja passada.
     suspend fun sync() {
         if (!session.requiresAccount) return
-        while (true) {
+        // Cada petició té un número; una passada serveix totes les que ja existien quan va començar.
+        val ticket = requested.incrementAndGet()
+        while (served.value < ticket) {
             if (isRunning.compareAndSet(false, true)) {
                 try {
-                    do {
-                        rerunRequested = false
+                    while (served.value < requested.get()) {
+                        val upTo = requested.get()
                         pass()
-                    } while (rerunRequested)
+                        served.value = upTo
+                    }
                 } finally {
                     isRunning.value = false
                 }
             } else {
-                rerunRequested = true
-                isRunning.first { !it }
+                // Qui la té en marxa ens servirà; si plega abans (un esborrat, una cancel·lació), la fem nosaltres.
+                combine(served, isRunning) { done, running -> done >= ticket || !running }.first { it }
             }
-            // Una petició arribada entre l'última comprovació i deixar el torn no es perd.
-            if (!rerunRequested) return
         }
     }
 
@@ -261,12 +265,18 @@ class ViraSyncEngine(
 
             // Res d'això és un canvi local: s'escriu en cru, sense segellar. Si es datés amb l'hora
             // d'ara, es tornaria a enviar tot seguit i la pilota no pararia mai.
-            db.withTransaction { table.apply(rows, db) }
+            // Dins de la transacció: si entremig ha entrat un altre compte, el seu esborrat ja ha passat
+            // o s'espera que acabem, i les files del compte vell no hi poden entrar.
+            db.withTransaction {
+                requireCurrentAccount()
+                table.apply(rows, db)
+            }
 
             newest = maxOf(newest ?: batchNewest, batchNewest)
             if (page.size < PAGE_SIZE) break
             boundary = ViraSyncPage.after(ViraSyncPage.boundary(page.last(), table.tieColumns))
         }
+        requireCurrentAccount()
         newest?.let { cursors.set("pull.${table.table}", it) }
     }
 

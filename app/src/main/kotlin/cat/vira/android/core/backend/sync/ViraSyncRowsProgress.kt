@@ -6,6 +6,7 @@ import cat.vira.android.core.backend.InstantSerializer
 import cat.vira.android.core.backend.UuidSerializer
 import cat.vira.android.core.data.ViraDatabase
 import cat.vira.android.core.data.ViraStore
+import cat.vira.android.core.data.ViraTime
 import cat.vira.android.core.data.model.ProgressCounter
 import cat.vira.android.core.data.model.Streak
 import cat.vira.android.core.data.model.ViraProfile
@@ -118,7 +119,7 @@ class StreakSyncTable(
         val row = rows.lastOrNull() ?: return
         val model = store(db).streak()
         if (!shouldOverwrite(row, model)) return
-        db.streaks().upsertRaw(listOf(model.copy(
+        val merged = model.copy(
             currentDays = row.currentDays,
             // El rècord no baixa mai, ni tan sols per una fila més nova d'un telèfon que en sabia menys.
             bestDays = maxOf(model.bestDays, row.bestDays),
@@ -135,7 +136,13 @@ class StreakSyncTable(
             hasCelebratedWeekStreak = model.hasCelebratedWeekStreak || row.hasCelebratedWeekStreak,
             hasCelebratedMonthStreak = model.hasCelebratedMonthStreak || row.hasCelebratedMonthStreak,
             updatedAt = row.updatedAt,
-        )))
+        )
+        // Si la unió hi ha afegit alguna cosa que el servidor no té, és un canvi d'aquest telèfon i es
+        // data d'ara: amb la data del servidor no tornaria a pujar mai i els altres no el veurien.
+        val learnedSomething = merged.bestDays != row.bestDays || merged.activeDays != row.activeDays.toSortedSet().toList() ||
+            merged.hasCelebratedWeekStreak != row.hasCelebratedWeekStreak ||
+            merged.hasCelebratedMonthStreak != row.hasCelebratedMonthStreak
+        db.streaks().upsertRaw(listOf(if (learnedSomething) merged.copy(updatedAt = ViraTime.now()) else merged))
         afterApply(db)
     }
 }
