@@ -38,7 +38,7 @@ class ViraNotificationAlarmReceiver : BroadcastReceiver() {
         /// Publica l'avís. Sense permís (Android 13+) no es publica res i no passa res més: el
         /// permís es demana en context, quan l'usuari encén un avís, mai aquí.
         fun post(context: Context, notification: ViraPlannedNotification) {
-            if (!ViraNotifications.canPost(context)) return
+            if (!ViraNotifications.canPost(context) || !ViraNotifications.isWanted(context, notification)) return
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
                 ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
                 PackageManager.PERMISSION_GRANTED

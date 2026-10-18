@@ -1,13 +1,19 @@
 package cat.vira.android.core.notifications
 
 import android.Manifest
+import android.app.AlarmManager
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
+import android.provider.Settings
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import cat.vira.android.core.data.ViraDatabase
 import cat.vira.android.core.data.ViraPreferences
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.time.Instant
 import java.time.ZoneId
 
@@ -46,11 +52,47 @@ object ViraNotifications {
     }
 
     /// Refà els recordatoris i els avisos de Viri.
+    ///
+    /// Les passades van d'una en una: el treball de segon pla i un botó de l'avís poden arribar
+    /// alhora, i una passada vella que acabés l'última tornaria a posar un avís que la nova ja
+    /// havia tret (una cosa feta mentrestant).
     suspend fun reschedule(context: Context, now: Instant = Instant.now(), zone: ZoneId = ZoneId.systemDefault()) {
         val host = context.notificationHost ?: return
-        rescheduleReminders(context, host.notificationDatabase, now, zone)
-        rescheduleStreak(context, host, now, zone)
+        passes.withLock {
+            rescheduleReminders(context, host.notificationDatabase, now, zone)
+            rescheduleStreak(context, host, now, zone)
+        }
     }
+
+    private val passes = Mutex()
+
+    /// Si l'avís encara el vol l'usuari en el moment de sonar. Un «Més tard» o una alarma
+    /// endarrerida poden sonar després d'apagar-ne la categoria: aleshores no surt.
+    fun isWanted(context: Context, notification: ViraPlannedNotification): Boolean {
+        val p = ViraPreferences.open(context)
+        if (notification.channel == ViraNotificationChannel.VIRI) return ViraNotificationPreferences.viriMessagesEnabled(p)
+        if (!ViraNotificationPreferences.remindersEnabled(p)) return false
+        return when (notification.channel) {
+            ViraNotificationChannel.MEDICATION -> ViraNotificationPreferences.medicationEnabled(p)
+            ViraNotificationChannel.HABITS -> ViraNotificationPreferences.habitsEnabled(p)
+            ViraNotificationChannel.PLAN -> ViraNotificationPreferences.planEnabled(p)
+            ViraNotificationChannel.EMOTION -> ViraNotificationPreferences.emotionEnabled(p)
+            ViraNotificationChannel.VIRI -> true
+        }
+    }
+
+    /// Si el sistema deixa posar alarmes exactes. A Android 14+ el permís neix **retirat** i
+    /// l'usuari l'ha de donar als Ajustos del sistema (`exactAlarmSettings`); sense ell, els avisos
+    /// arriben igual però poden endarrerir-se uns minuts.
+    fun canScheduleExact(context: Context): Boolean =
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+            context.getSystemService(AlarmManager::class.java)?.canScheduleExactAlarms() == true
+
+    /// La pantalla del sistema on es donen les alarmes exactes a Vira (Android 12+). La fa servir
+    /// Ajustos → Notificacions quan `canScheduleExact` és fals.
+    fun exactAlarmSettings(context: Context): Intent? =
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) null
+        else Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:${context.packageName}"))
 
     suspend fun rescheduleReminders(context: Context, db: ViraDatabase, now: Instant, zone: ZoneId) {
         val scheduler = ViraNotificationScheduler(context)
@@ -69,7 +111,7 @@ object ViraNotifications {
             emotionTime = ViraNotificationPreferences.emotionTime(preferences),
         )
         val planned = ViraNotificationPlanner.plan(snapshot(db), settings, now, zone, text(context))
-        scheduler.replace(reminderPrefixes, planned)
+        scheduler.replace(reminderPrefixes, planned, now)
     }
 
     private suspend fun rescheduleStreak(context: Context, host: ViraNotificationHost, now: Instant, zone: ZoneId) {
@@ -94,7 +136,7 @@ object ViraNotifications {
             zone = zone,
             text = text(context),
         )
-        scheduler.replace(streakPrefixes, planned)
+        scheduler.replace(streakPrefixes, planned, now)
     }
 
     /// Posa la ratxa al dia des del segon pla i deixa apuntat el que hagi passat. És l'únic camí

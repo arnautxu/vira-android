@@ -86,6 +86,30 @@ class ViraNotificationSystemTest {
     }
 
     @Test
+    fun treureHoTotSEnduTambeElsMesTard() {
+        scheduler.add(ViraNotificationActions.snoozed(planned("habit-a"), now))
+        scheduler.cancelAll(listOf("habit-"))
+        assertTrue("cap avís pot sonar amb el contingut d'abans", scheduler.armed().isEmpty())
+    }
+
+    @Test
+    fun unaAlarmaEndarreridaNoEsTreuEnReferLaFinestra() {
+        scheduler.replace(listOf("habit-"), listOf(planned("habit-late", minutes = -5), planned("habit-old", minutes = -90)), now)
+        scheduler.replace(listOf("habit-"), emptyList(), now)
+        assertEquals(
+            "la de fa cinc minuts encara pot sonar tard; la de fa hora i mitja ja no",
+            listOf("habit-late"), scheduler.armed().map { it.id },
+        )
+    }
+
+    @Test
+    fun unAvisDUnaCategoriaApagadaNoSurt() {
+        ViraPreferences.open(app).edit().putBoolean(ViraNotificationPreferences.REMINDERS_HABITS_ENABLED, false).commit()
+        assertFalse(ViraNotifications.isWanted(app, planned("habit-a")))
+        assertTrue(ViraNotifications.isWanted(app, planned("plan-a").copy(channel = ViraNotificationChannel.PLAN)))
+    }
+
+    @Test
     fun enArrencarElTelefonNomesTornenLesQueHanDeSonar() {
         scheduler.replace(listOf("habit-"), listOf(planned("habit-past", minutes = -5), planned("habit-future")))
         scheduler.rearm(now)
