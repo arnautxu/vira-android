@@ -169,7 +169,9 @@ private fun StreakRoute(backend: ViraBackend, progress: ViraProgress, onBack: ()
     val emotions by db.emotionEntries().observeAll().collectAsStateWithLifecycle(emptyList())
     val items by db.planItems().observeAll().collectAsStateWithLifecycle(emptyList())
     // Es calcula de les dades: desfer una acció es reflecteix sola.
-    val missing by produceState<Set<cat.vira.android.features.progress.logic.StreakRules.DayRequirement>?>(null, habitLogs, emotions, items) {
+    // El dia d'avui també és clau: passada la mitjanit, el que faltava ahir no és el que falta avui.
+    val today = rememberNow().atZone(ZoneId.systemDefault()).toLocalDate()
+    val missing by produceState<Set<cat.vira.android.features.progress.logic.StreakRules.DayRequirement>?>(null, habitLogs, emotions, items, today) {
         value = progress.missingRequirements()
     }
     // El mes que s'està mirant. Es pot retrocedir: el passat és el que dona valor al calendari.
@@ -177,7 +179,6 @@ private fun StreakRoute(backend: ViraBackend, progress: ViraProgress, onBack: ()
     val month = YearMonth.parse(monthText)
 
     val days = ViraDays(ZoneId.systemDefault(), WeekFields.of(viraLocale()).firstDayOfWeek)
-    val today = rememberNow().atZone(ZoneId.systemDefault()).toLocalDate()
     StreakContent(
         ui = StreakUi(
             streak = streak,
