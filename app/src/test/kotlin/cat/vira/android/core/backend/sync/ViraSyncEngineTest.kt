@@ -1,0 +1,217 @@
+package cat.vira.android.core.backend.sync
+
+import android.content.SharedPreferences
+import android.net.Uri
+import androidx.test.core.app.ApplicationProvider
+import cat.vira.android.core.backend.ViraAuthBackend
+import cat.vira.android.core.backend.ViraBackendConfig
+import cat.vira.android.core.backend.ViraConsentStatus
+import cat.vira.android.core.backend.ViraOAuthProvider
+import cat.vira.android.core.backend.ViraRestClient
+import cat.vira.android.core.backend.ViraSession
+import cat.vira.android.core.backend.ViraStoredSession
+import cat.vira.android.core.backend.ViraUser
+import cat.vira.android.core.backend.ViraUserMetadata
+import cat.vira.android.core.data.ViraDatabase
+import cat.vira.android.core.data.ViraPreferences
+import cat.vira.android.core.data.ViraStore
+import cat.vira.android.core.data.model.EmotionEntry
+import cat.vira.android.core.data.model.PlanItem
+import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import okhttp3.OkHttpClient
+import okhttp3.mockwebserver.Dispatcher
+import okhttp3.mockwebserver.MockResponse
+import okhttp3.mockwebserver.MockWebServer
+import okhttp3.mockwebserver.RecordedRequest
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import java.time.Instant
+import java.util.Collections
+import java.util.UUID
+
+/// El motor sencer contra un servidor fals: què puja, què no puja mai i què baixa.
+@RunWith(RobolectricTestRunner::class)
+class ViraSyncEngineTest {
+
+    private val userId = UUID.fromString("6f1c2a3b-0000-4000-8000-000000000001")
+    private val server = MockWebServer()
+    private val requests: MutableList<RecordedRequest> = Collections.synchronizedList(mutableListOf())
+    /// Les files que el servidor torna per taula, en la primera pàgina.
+    private val serverRows = mutableMapOf<String, String>()
+
+    private lateinit var db: ViraDatabase
+    private lateinit var preferences: SharedPreferences
+    private lateinit var store: ViraStore
+
+    @Before
+    fun setUp() {
+        server.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse {
+                requests += request
+                val table = request.requestUrl!!.pathSegments.last()
+                return when (request.method) {
+                    "GET" -> MockResponse().setBody(serverRows.remove(table) ?: "[]")
+                    else -> MockResponse().setResponseCode(201)
+                }
+            }
+        }
+        server.start()
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        db = ViraDatabase.inMemory(context)
+        preferences = ViraPreferences.open(context).also { it.edit().clear().commit() }
+        store = ViraStore(db)
+    }
+
+    @After
+    fun tearDown() {
+        db.close()
+        server.shutdown()
+    }
+
+    private suspend fun engine(consent: ViraConsentStatus): ViraSyncEngine {
+        val config = ViraBackendConfig.Values(server.url("/").toString().trimEnd('/'), "anon")
+        val rest = ViraRestClient(config, OkHttpClient())
+        val session = ViraSession(FakeAuth(ViraUser(userId, "a@b.c", consent = consent)), db, preferences, rest)
+        session.restore()
+        return ViraSyncEngine(session, db, preferences, rest, store)
+    }
+
+    private fun bodies(table: String, method: String = "POST") =
+        requests.filter { it.method == method && it.requestUrl!!.pathSegments.last() == table }
+
+    @Test
+    fun pujaElNucliIMaiLesEmocionsSensePermis() = runBlocking {
+        store.create(db.planItems(), PlanItem(title = "Deures de mates"))
+        store.create(db.emotionEntries(), EmotionEntry(emotionRaw = "calm"))
+
+        val engine = engine(ViraConsentStatus.PENDING)
+        engine.sync()
+
+        assertTrue(engine.state.value is ViraSyncEngine.State.Succeeded)
+        val upload = bodies("plan_items").single()
+        assertTrue(upload.body.readUtf8().contains("Deures de mates"))
+        assertEquals("plan_items", upload.requestUrl!!.pathSegments.last())
+        assertEquals("id", upload.requestUrl!!.queryParameter("on_conflict"))
+        // Ni pujada ni baixada: la capa sencera no existeix sense el permís.
+        assertTrue(requests.none { it.requestUrl!!.pathSegments.last() == "emotion_entries" })
+    }
+
+    @Test
+    fun ambPermisLesEmocionsPugen() = runBlocking {
+        store.create(db.emotionEntries(), EmotionEntry(emotionRaw = "calm"))
+        engine(ViraConsentStatus.GRANTED).sync()
+        assertEquals(1, bodies("emotion_entries").size)
+    }
+
+    @Test
+    fun elsComptadorsBuitsNoTrepitgenElCompte() = runBlocking {
+        store.counter()
+        store.streak()
+        store.profile()
+        engine(ViraConsentStatus.GRANTED).sync()
+        assertTrue(bodies("progress_counters").isEmpty())
+        assertTrue(bodies("streaks").isEmpty())
+        assertTrue(bodies("profiles").isEmpty())
+    }
+
+    @Test
+    fun laPrimeraPassadaBaixaAbansDePujarIFiltraPerCompte() = runBlocking {
+        val id = UUID.randomUUID()
+        serverRows["plan_items"] = """
+            [{"id":"$id","title":"De l'iPhone","notes":null,"day":"2026-10-18T00:00:00+00:00","time":null,
+              "status":"pending","completed_at":null,"reminder_offset_minutes":null,"recurrence":"none",
+              "symbol_name":"picto-flag","sort_index":0,"created_at":"2026-10-17T10:00:00+00:00",
+              "updated_at":"2026-10-17T10:00:00.123456+00:00","user_id":"$userId"}]
+        """.trimIndent()
+        store.create(db.planItems(), PlanItem(title = "D'aquí"))
+
+        engine(ViraConsentStatus.GRANTED).sync()
+
+        val planRequests = requests.filter { it.requestUrl!!.pathSegments.last() == "plan_items" }
+        assertEquals("GET", planRequests.first().method)
+        assertEquals("eq.$userId", planRequests.first().requestUrl!!.queryParameter("user_id"))
+        val pulled = db.planItems().byId(id)!!
+        assertEquals("De l'iPhone", pulled.title)
+        assertEquals(Instant.parse("2026-10-17T10:00:00.123456Z"), pulled.updatedAt)
+        assertEquals(2, db.planItems().all().size)
+    }
+
+    @Test
+    fun elsEsborratsSurtenPrimer() = runBlocking {
+        val item = store.create(db.planItems(), PlanItem(title = "Fora"))
+        store.delete(item)
+        engine(ViraConsentStatus.GRANTED).sync()
+
+        val delete = requests.first { it.method == "DELETE" }
+        assertEquals("in.(${item.id})", delete.requestUrl!!.queryParameter("id"))
+        assertEquals("eq.$userId", delete.requestUrl!!.queryParameter("user_id"))
+        assertTrue(db.tombstones().all().isEmpty())
+    }
+
+    @Test
+    fun unaTaulaQueFallaNoAturaLesAltres() = runBlocking {
+        server.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse {
+                requests += request
+                val table = request.requestUrl!!.pathSegments.last()
+                return when {
+                    table == "plan_items" -> MockResponse().setResponseCode(400).setBody("""{"code":"PGRST204"}""")
+                    request.method == "GET" -> MockResponse().setBody("[]")
+                    else -> MockResponse().setResponseCode(201)
+                }
+            }
+        }
+        store.create(db.habits(), cat.vira.android.core.data.model.Habit(title = "Llegir"))
+        val engine = engine(ViraConsentStatus.GRANTED)
+        engine.sync()
+
+        assertEquals(1, bodies("habits").size)
+        assertTrue(engine.state.value is ViraSyncEngine.State.Failed)
+    }
+
+    @Test
+    fun esborrarHoTotComencaPelServidor() = runBlocking {
+        store.create(db.planItems(), PlanItem(title = "Deures"))
+        val engine = engine(ViraConsentStatus.GRANTED)
+        engine.eraseEverything()
+
+        val deletes = requests.filter { it.method == "DELETE" }.map { it.requestUrl!!.pathSegments.last() }
+        assertEquals(engine.syncedTables, deletes)
+        assertEquals(18, deletes.size)
+        assertTrue(db.planItems().all().isEmpty())
+    }
+
+    @Test
+    fun lesFilesPujenAmbLesClausDelServidor() {
+        val row = PlanItemSyncTable.encode(PlanItemSyncRow(PlanItem(title = "x")))
+        val keys = row.keys
+        assertTrue("updated_at" in keys && "created_at" in keys && "sort_index" in keys)
+        assertTrue(keys.none { it.any(Char::isUpperCase) })
+        val array: JsonArray = Json.parseToJsonElement("[$row]").jsonArray
+        assertEquals("x", array.first().jsonObject.getValue("title").jsonPrimitive.content)
+    }
+
+    private class FakeAuth(private val user: ViraUser) : ViraAuthBackend {
+        private val session = ViraStoredSession("token", "refresh", Long.MAX_VALUE / 2, user)
+        override suspend fun signUp(email: String, password: String, metadata: ViraUserMetadata) = session
+        override suspend fun signIn(email: String, password: String) = session
+        override suspend fun sendPasswordReset(email: String) = Unit
+        override suspend fun updatePassword(password: String) = Unit
+        override suspend fun startOAuth(provider: ViraOAuthProvider) = Unit
+        override suspend fun session(fromCallback: Uri) = session
+        override suspend fun session() = session
+        override suspend fun storedSession() = session
+        override suspend fun signOut() = Unit
+        override suspend fun updateMetadata(metadata: ViraUserMetadata) = user
+    }
+}

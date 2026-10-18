@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- El compte i la sincronització (`core/backend`). -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application
         android:name=".ViraApp"
         android:allowBackup="false"
@@ -17,6 +20,13 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- Tornada del navegador després d'entrar amb Google o Apple, i enllaç del correu. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="vira" android:host="auth-callback" />
             </intent-filter>
         </activity>
     </application>
