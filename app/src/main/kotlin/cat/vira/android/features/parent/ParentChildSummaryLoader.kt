@@ -29,12 +29,12 @@ class ParentChildSummaryLoader(
         val weekAgo = clock().minus(Duration.ofDays(7))
 
         if (link.scopeUsage) {
-            val profiles = rows("profiles", child, accessToken)
+            val profiles = rows("profiles", child, accessToken, "display_name")
             // Només l'XP, per una funció: la fila sencera de `progress_counters` porta també el
             // recompte d'emocions, que és de l'àmbit d'emocions (`20261018122414`).
             val xp = count("parent_child_total_xp", child, accessToken)
-            val streaks = rows("streaks", child, accessToken)
-            val sessions = rows("focus_sessions", child, accessToken)
+            val streaks = rows("streaks", child, accessToken, "current_days")
+            val sessions = rows("focus_sessions", child, accessToken, "started_at,completed")
             summary = summary.copy(
                 displayName = profiles.firstOrNull()?.string("display_name"),
                 totalXP = xp,
@@ -46,8 +46,8 @@ class ParentChildSummaryLoader(
         }
 
         if (link.scopeHabits) {
-            val logs = rows("habit_logs", child, accessToken)
-            val items = rows("plan_items", child, accessToken)
+            val logs = rows("habit_logs", child, accessToken, "day")
+            val items = rows("plan_items", child, accessToken, "status")
             summary = summary.copy(
                 habitsDoneLastWeek = logs.count { it.instant("day")?.isAfter(weekAgo) ?: false },
                 tasksPending = items.count { it.string("status") == "pending" },
@@ -80,7 +80,7 @@ class ParentChildSummaryLoader(
     suspend fun displayNames(links: List<ParentLink>, accessToken: String): Map<UUID, String> = coroutineScope {
         links.filter { it.scopeUsage }.map { link ->
             async {
-                val name = runCatching { rows("profiles", link.childUserId, accessToken) }
+                val name = runCatching { rows("profiles", link.childUserId, accessToken, "display_name") }
                     .getOrNull()?.firstOrNull()?.string("display_name")?.trim()
                 if (name.isNullOrEmpty()) null else link.childUserId to name
             }
@@ -93,8 +93,11 @@ class ParentChildSummaryLoader(
         return ParentLinkClient.scalar(rest.rpc(function, body, token))?.toIntOrNull()
     }
 
-    private suspend fun rows(table: String, child: UUID, token: String): List<JsonObject> =
-        rest.select(table, listOf(Param("user_id", "eq.$child")), token).mapNotNull { it as? JsonObject }
+    /// Només les columnes que fan falta per comptar: el títol o les notes d'una tasca no han de
+    /// baixar mai al telèfon del pare o la mare, encara que la política del servidor les deixi.
+    private suspend fun rows(table: String, child: UUID, token: String, columns: String): List<JsonObject> =
+        rest.select(table, listOf(Param("user_id", "eq.$child"), Param("select", columns)), token)
+            .mapNotNull { it as? JsonObject }
 
     private fun JsonObject.string(key: String) = (this[key] as? JsonPrimitive)?.contentOrNull
     private fun JsonObject.int(key: String) = (this[key] as? JsonPrimitive)?.intOrNull

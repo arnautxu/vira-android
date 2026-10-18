@@ -34,6 +34,8 @@ import cat.vira.android.core.design.tokens.ViraColor
 import cat.vira.android.core.design.tokens.ViraFont
 import cat.vira.android.core.design.tokens.ViraSpacing
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /// Què veu aquesta persona, decidit pel fill o la filla (`ParentPanelScopesView` de l'iPhone).
 ///
@@ -47,14 +49,20 @@ internal fun ParentPanelScopesScreen(link: ParentLink, deps: ParentDeps, onBack:
     var confirming by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<ViraBackendError?>(null) }
     val scope = rememberCoroutineScope()
+    val saving = remember { Mutex() }
 
     // Es desa a cada canvi, sense botó: tancar un àmbit ha de tenir efecte quan es toca, no quan
     // es confirma. Un «Desa» que algú no premi deixaria la porta oberta.
+    // Els desats van d'un en un i sempre amb l'últim estat: dos tocs ràpids no poden arribar
+    // desordenats i tornar a obrir un àmbit que ja s'ha tancat.
     fun change(updated: ParentLink) {
         draft = updated
         error = null
         scope.launch {
-            parentAttempt({ error = it }) { deps.client.updateScopes(updated, deps.session.accessToken()) }?.let { onChange() }
+            saving.withLock {
+                val latest = draft
+                parentAttempt({ error = it }) { deps.client.updateScopes(latest, deps.session.accessToken()) }?.let { onChange() }
+            }
         }
     }
 
@@ -82,7 +90,7 @@ internal fun ParentPanelScopesScreen(link: ParentLink, deps: ParentDeps, onBack:
                             confirming = false
                             isWorking = true
                             scope.launch {
-                                val done = parentAttempt({ error = it }) { deps.client.revoke(draft, deps.session.accessToken()) }
+                                val done = saving.withLock { parentAttempt({ error = it }) { deps.client.revoke(draft, deps.session.accessToken()) } }
                                 isWorking = false
                                 if (done != null) { onChange(); onBack() }
                             }

@@ -27,6 +27,7 @@ class ParentChildSummaryLoaderTest {
     private val child = UUID.randomUUID()
     private val server = MockWebServer()
     private val paths: MutableList<String> = Collections.synchronizedList(mutableListOf())
+    private val selects: MutableMap<String, String?> = Collections.synchronizedMap(mutableMapOf())
     /// Què torna cada camí. El que no hi és torna `[]`.
     private val responses = mutableMapOf<String, String>()
     private lateinit var loader: ParentChildSummaryLoader
@@ -37,6 +38,7 @@ class ParentChildSummaryLoaderTest {
             override fun dispatch(request: RecordedRequest): MockResponse {
                 val path = request.requestUrl!!.encodedPath
                 paths += path
+                selects[path] = request.requestUrl!!.queryParameter("select")
                 return MockResponse().setBody(responses[path] ?: "[]")
             }
         }
@@ -50,6 +52,15 @@ class ParentChildSummaryLoaderTest {
 
     private fun link(usage: Boolean = false, habits: Boolean = false, emotions: Boolean = false, medication: Boolean = false) =
         ParentLink(UUID.randomUUID(), child, UUID.randomUUID(), usage, habits, emotions, medication, now)
+
+    /// Comptar tasques no vol dir baixar-ne el títol ni les notes.
+    @Test
+    fun nomesBaixaLesColumnesQueCompta() = runBlocking {
+        loader.load(link(usage = true, habits = true), "token")
+        assertEquals("status", selects["/rest/v1/plan_items"])
+        assertEquals("day", selects["/rest/v1/habit_logs"])
+        assertFalse(selects.filterKeys { !it.contains("/rpc/") }.values.any { it == null || it == "*" })
+    }
 
     @Test
     fun ambTotTancatNoEsPreguntaRes() = runBlocking {

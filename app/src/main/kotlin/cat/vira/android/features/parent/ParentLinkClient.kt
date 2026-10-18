@@ -78,8 +78,11 @@ class ParentLinkClient(
 
     // Recordatoris proposats
 
+    private val pending = listOf(Param("accepted_at", "is.null"), Param("dismissed_at", "is.null"))
+
     suspend fun reminders(accessToken: String): List<ParentReminder> =
-        select("parent_reminders", recentFirst, ParentReminder.serializer(), accessToken)
+        // Només els pendents, abans del límit: si no, cinquanta de resolts taparien un pendent més vell.
+        select("parent_reminders", pending + recentFirst, ParentReminder.serializer(), accessToken)
 
     /// Neix sense `accepted_at` ni `dismissed_at`, i sense `parent_user_id`: això ho posa el servidor.
     suspend fun propose(title: String, day: Instant?, childId: UUID, accessToken: String) {

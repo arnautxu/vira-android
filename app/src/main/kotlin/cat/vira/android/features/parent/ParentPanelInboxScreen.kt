@@ -80,11 +80,13 @@ internal fun ParentPanelInboxScreen(deps: ParentDeps, onBack: () -> Unit) {
                     scope.launch {
                         // Acceptar-lo el converteix en una tasca teva, igual que si l'haguessis
                         // apuntat tu. A partir d'aquí ja no és de ningú altre.
-                        if (accepted) {
+                        // Primer es marca al servidor i després es crea la tasca: si la xarxa falla,
+                        // el recordatori segueix pendent i tornar-hi no en deixa dues.
+                        val resolved = parentAttempt({ error = it }) { deps.client.resolve(reminder, accepted, deps.session.accessToken()) }
+                        if (resolved != null && accepted) {
                             val day = startOfDay(reminder.day ?: ViraTime.now())
                             deps.store.create(deps.store.db.planItems(), PlanItem(title = reminder.title, day = day))
                         }
-                        parentAttempt({ error = it }) { deps.client.resolve(reminder, accepted, deps.session.accessToken()) }
                         load()
                     }
                 },

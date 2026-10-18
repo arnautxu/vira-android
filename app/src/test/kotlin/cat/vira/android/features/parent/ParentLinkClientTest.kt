@@ -44,6 +44,16 @@ class ParentLinkClientTest {
         createdAt = Instant.parse("2026-10-01T10:00:00Z"),
     )
 
+    /// Els resolts no compten per al límit: un pendent vell no pot quedar tapat.
+    @Test
+    fun elsRecordatorisEsFiltrenPerPendentsAlServidor() = runBlocking {
+        server.enqueue(MockResponse().setBody("[]"))
+        client.reminders("token")
+        val url = server.takeRequest().requestUrl!!
+        assertEquals("is.null", url.queryParameter("accepted_at"))
+        assertEquals("is.null", url.queryParameter("dismissed_at"))
+    }
+
     @Test
     fun trencarElVincleTancaElsQuatreAmbitsNoNomesElVincle() = runBlocking {
         server.enqueue(MockResponse().setResponseCode(201))
