@@ -134,6 +134,8 @@ class StreakSyncTable(
     private val store: (ViraDatabase) -> ViraStore,
     private val afterApply: suspend (ViraDatabase) -> Unit,
 ) : ViraSyncTable<StreakSyncRow>("streaks", ViraSyncLayer.CORE, StreakSyncRow.serializer(), conflictTarget = "user_id") {
+    override val mergesOnPull = true
+
 
     override suspend fun local(db: ViraDatabase) = db.streaks().all().map(::StreakSyncRow)
 

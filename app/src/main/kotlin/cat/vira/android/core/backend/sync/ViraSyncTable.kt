@@ -43,6 +43,10 @@ abstract class ViraSyncTable<R : ViraSyncRow>(
     /// al telèfon. Vegeu `ViraSyncRowsEmotionCounts.kt`.
     open fun withholds(scope: ViraSyncScope): Boolean = false
 
+    /// La baixada no substitueix sinó que uneix (`StreakSyncTable`): llavors sempre es baixa abans
+    /// de pujar, perquè la unió vegi la fila del servidor abans que la pujada la reemplaci.
+    open val mergesOnPull: Boolean = false
+
     /// El que queda per pujar després de treure-hi el que no pot sortir del telèfon.
     open fun preparedForUpload(rows: List<R>, scope: ViraSyncScope): List<R> = rows
 

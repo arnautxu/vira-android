@@ -92,7 +92,10 @@ class ViraSyncEngine(
     /// passada periòdica i el canvi d'estat en demanarien dues alhora.
     suspend fun syncIfStale() {
         val last = (state.value as? State.Succeeded)?.at
-        if (last != null && Duration.between(last, clock()) < AUTOMATIC_INTERVAL) return
+        // Un rellotge que ha anat enrere dona una estona negativa: compta com a vella, o no se
+        // sincronitzaria fins que l'hora tornés a passar per l'última.
+        val elapsed = last?.let { Duration.between(it, clock()) }
+        if (elapsed != null && !elapsed.isNegative && elapsed < AUTOMATIC_INTERVAL) return
         sync()
     }
 
@@ -210,7 +213,9 @@ class ViraSyncEngine(
         if (!scope.allows(table.layer) || !allowsNow(table)) return
         // La primera passada d'aquest compte en aquest telèfon mira el servidor **abans** d'enviar-hi
         // res: el que hi hagi aquí acabat de néixer no ha de trepitjar la història del compte.
-        if (cursors.get("pull.${table.table}") == null) {
+        // I les taules que s'uneixen en baixar (la ratxa) també: si pugés primer, podria trepitjar al
+        // servidor una fila que portava dies que aquest telèfon encara no ha vist.
+        if (cursors.get("pull.${table.table}") == null || table.mergesOnPull) {
             pull(table, token)
             push(table, token)
         } else {
