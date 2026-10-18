@@ -20,7 +20,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -180,7 +180,7 @@ private fun Footer(onOpenCalendar: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(stringResource(R.string.home_open_calendar), style = ViraFont.callout, color = ink)
-        Icon(Icons.Filled.KeyboardArrowRight, contentDescription = null, tint = ink, modifier = Modifier.size(20.dp))
+        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = ink, modifier = Modifier.size(20.dp))
     }
 }
 

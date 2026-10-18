@@ -21,7 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -124,7 +124,7 @@ internal fun TodayHabitsStrip(
                 horizontalArrangement = Arrangement.spacedBy(ViraSpacing.xxs),
             ) {
                 Text(stringResource(R.string.today_habits_title), style = ViraFont.headline, color = ViraColor.onSurface(area))
-                Icon(Icons.Filled.KeyboardArrowRight, contentDescription = null, tint = ViraColor.onSurface(area), modifier = Modifier.size(20.dp))
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = ViraColor.onSurface(area), modifier = Modifier.size(20.dp))
             }
             Spacer(Modifier.weight(1f))
             if (habits.isNotEmpty()) {

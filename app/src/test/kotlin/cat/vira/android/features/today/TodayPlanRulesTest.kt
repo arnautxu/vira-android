@@ -25,7 +25,7 @@ class TodayPlanRulesTest {
     @Test
     fun cadaDiaFinsAlCapDeSetmanaAcabaDiumengeEnCatala() {
         // Dimecres 5 d'agost: dijous, divendres, dissabte i diumenge.
-        val days = TodayPlanRules.additionalDays(PlanItemRecurrence.DAILY_UNTIL_WEEK_END, day(8, 5), zone, Locale.forLanguageTag("ca"))
+        val days = TodayPlanRules.additionalDays(PlanItemRecurrence.DAILY_UNTIL_WEEK_END, day(8, 5), zone, Locale.forLanguageTag("ca-ES"))
         assertEquals(listOf(day(8, 6), day(8, 7), day(8, 8), day(8, 9)), days)
     }
 
