@@ -131,7 +131,7 @@ private fun MainTabs(navigator: ViraNavigator) {
     }
     // Sense alliberar en desaparèixer: el bloqueig de l'app treu les pestanyes un moment i el tutorial
     // torna en desbloquejar. La propera composició ja hi posa el valor bo.
-    SideEffect { celebrations.tutorialVisible = tutorial.step != null }
+    SideEffect { celebrations.tutorialVisible = tutorial.holdsCelebrations }
     val tabBounds = remember { mutableStateMapOf<String, Rect>() }
 
     // Enrere des d'una altra pestanya torna a Avui, que és on s'obre l'app; des d'Avui, surt.

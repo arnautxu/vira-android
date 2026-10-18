@@ -113,7 +113,9 @@ private suspend fun completedChallenge(app: ViraApp, reason: CoinReason, shown: 
     val claims = db.challengeClaims().all()
     // La mateixa clau es pot recollir cada dia o setmana: l'inici del cicle separa «ja t'ho he
     // ensenyat avui» de «l'has tornat a completar la setmana següent».
-    fun key(item: ChallengeItem) = "${item.key}-${ViraChallenges.cycleStart(item.period, now, days).epochSecond}"
+    // I el compte: el que s'ha ensenyat a un altre compte en aquest procés no compta per a aquest.
+    val account = app.backend.session.dataGeneration
+    fun key(item: ChallengeItem) = "$account-${item.key}-${ViraChallenges.cycleStart(item.period, now, days).epochSecond}"
     // Els ja ensenyats queden fora **en triar**: un diari sense recollir no pot tapar el setmanal.
     val item = ChallengeItem.catalog.firstOrNull {
         it.requirementReason == reason && key(it) !in shown &&

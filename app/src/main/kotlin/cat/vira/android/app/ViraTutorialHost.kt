@@ -8,6 +8,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import cat.vira.android.core.data.ViraDatabase
 import cat.vira.android.core.data.ViraPreferences
 import cat.vira.android.features.entry.EntryPreferences
@@ -23,6 +24,13 @@ class ViraTutorialState internal constructor(
     private val stepName: MutableState<String?>,
     val prefs: EntryPreferences,
 ) {
+    /// Encara es mira si toca: mentrestant, les celebracions esperen, o una sortiria just abans que
+    /// el tutorial i el taparia.
+    internal var checking by mutableStateOf(!preferences.getBoolean(ViraPreferences.TUTORIAL_COMPLETED, false))
+
+    /// El tutorial és a la pantalla o hi pot ser d'aquí a un moment.
+    val holdsCelebrations: Boolean get() = checking || step != null
+
     val step: ViraTutorialStep? get() = stepName.value?.let(ViraTutorialStep::valueOf)
 
     /// L'última parada que s'ha ensenyat, per dibuixar-la mentre la cortina es fon.
@@ -64,8 +72,12 @@ fun rememberViraTutorial(navigator: ViraNavigator): ViraTutorialState {
     }
     val completed by rememberPreference(backend.preferences, ViraPreferences.TUTORIAL_COMPLETED, false)
     LaunchedEffect(completed) {
-        if (completed || state.step != null) return@LaunchedEffect
+        if (completed || state.step != null) {
+            state.checking = false
+            return@LaunchedEffect
+        }
         if (hasUsedApp(backend.db)) state.show(ViraTutorialStep.first)
+        state.checking = false
     }
     return state
 }
