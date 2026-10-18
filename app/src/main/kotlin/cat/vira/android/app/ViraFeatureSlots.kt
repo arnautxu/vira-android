@@ -82,6 +82,11 @@ internal object ViraFeatureSlots {
     fun HabitCelebration(title: String, coins: Int, xp: Int, onContinue: () -> Unit) =
         HabitCelebrationScreen(title, coins, xp, onContinue)
 
+    /// Fil Concentra't: `FocusProfileEditorScreen` amb el mode `profileId` (`null`, un de nou). Es desa
+    /// sol.
+    @Composable
+    fun FocusProfileEditor(profileId: UUID?, onClose: () -> Unit) = PendingModal(onClose)
+
     /// Fil Ajustos i compte (`features/settings`). Per editar un mode de Concentra't,
     /// `LocalViraNavigator.current.editFocusProfile(id)`.
     @Composable
