@@ -26,13 +26,18 @@ import cat.vira.android.core.design.components.ViraActionButton
 import cat.vira.android.core.design.components.ViraActionHierarchy
 import cat.vira.android.core.design.components.ViraCelebrationMoment
 import cat.vira.android.core.design.components.ViraCelebrationScreen
+import cat.vira.android.core.design.components.CompletionPhase
 import cat.vira.android.core.design.components.ViraCompletionCheck
 import cat.vira.android.core.design.components.ViraEmptyState
+import cat.vira.android.core.design.components.ViraIconPicker
+import cat.vira.android.core.design.components.ViraInlineCompletion
 import cat.vira.android.core.design.components.ViraInlineError
 import cat.vira.android.core.design.components.ViraLevelBar
 import cat.vira.android.core.design.components.ViraLevelProgress
 import cat.vira.android.core.design.components.ViraPageTitle
 import cat.vira.android.core.design.components.ViraPictogram
+import cat.vira.android.core.design.components.ViraPictogramName
+import cat.vira.android.core.design.components.ViraRewardTally
 import cat.vira.android.core.design.components.ViraProfileSummary
 import cat.vira.android.core.design.components.ViraSectionItem
 import cat.vira.android.core.design.components.ViraSectionSwitcher
@@ -222,4 +227,29 @@ fun CelebrationMoment() = ViraTheme(reduceMotion = true) {
         },
         summary = { ViraLevelBar(ViraLevelProgress(level = 4, totalXP = 450, currentLevelXP = 50, xpToNext = 250)) },
     )
+}
+
+@PreviewTest @ViraCaptures @Composable
+fun InlineCompletion() = Gallery(ViraArea.Plan) {
+    Column(Modifier.padding(horizontal = ViraSpacing.screenMargin), verticalArrangement = Arrangement.spacedBy(ViraSpacing.s)) {
+        listOf(
+            ViraArea.Plan to CompletionPhase.Pending,
+            ViraArea.Focus to CompletionPhase.Revealing(coins = 5, xp = 5),
+            ViraArea.Emotions to CompletionPhase.Revealing(coins = 0, xp = 3),
+        ).forEach { (area, phase) ->
+            Box(Modifier.fillMaxWidth().background(ViraGradient.card(area), RoundedCornerShape(ViraRadius.l)).padding(ViraSpacing.m)) {
+                ViraInlineCompletion(phase, ViraColor.onCard(area), onUndo = {})
+            }
+        }
+        ViraRewardTally(coins = 3, xp = 3, color = ViraColor.textPrimary)
+    }
+}
+
+@PreviewTest @ViraCaptures @Composable
+fun IconPicker() = Gallery(ViraArea.Plan) {
+    Column(Modifier.padding(horizontal = ViraSpacing.screenMargin), verticalArrangement = Arrangement.spacedBy(ViraSpacing.m)) {
+        ViraIconPicker(ViraPictogramName.planIcons, selection = ViraPictogramName.flag, onSelect = {})
+        // La triada és fora de les sis primeres: es queda a la vista igualment.
+        ViraIconPicker(ViraPictogramName.habitIcons, selection = ViraPictogramName.habitMusic, onSelect = {})
+    }
 }
