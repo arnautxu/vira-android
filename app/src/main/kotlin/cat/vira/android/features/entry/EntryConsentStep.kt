@@ -126,15 +126,23 @@ fun EntryNicknameStep(services: EntryServices, onContinue: () -> Unit) {
     val scope = rememberCoroutineScope()
     var draft by rememberSaveable { mutableStateOf("") }
     var stored by remember { mutableStateOf("") }
+    var saving by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         stored = services.displayName()
         if (draft.isEmpty()) draft = stored
     }
 
     fun save() {
+        // Un sol desament: un segon toc avançaria el flux des del pas següent i se'l saltaria.
+        if (saving) return
+        saving = true
         val trimmed = draft.trim()
         scope.launch {
-            if (trimmed != stored) services.setDisplayName(trimmed)
+            try {
+                if (trimmed != stored) services.setDisplayName(trimmed)
+            } finally {
+                saving = false
+            }
             onContinue()
         }
     }
@@ -147,6 +155,6 @@ fun EntryNicknameStep(services: EntryServices, onContinue: () -> Unit) {
             kind = EntryFieldKind.NAME,
             onSubmit = ::save,
         )
-        EntryPrimaryButton(stringResource(R.string.action_continue), ::save)
+        EntryPrimaryButton(stringResource(R.string.action_continue), ::save, isLoading = saving)
     }
 }

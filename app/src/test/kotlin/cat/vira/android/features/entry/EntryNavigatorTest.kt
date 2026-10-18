@@ -42,6 +42,26 @@ class EntryNavigatorTest {
     }
 
     @Test
+    fun `l'estat es recupera despres de recrear l'activitat`() {
+        val nav = navigator()
+        nav.startFresh(); nav.advance(); nav.advance(); nav.advance()
+        nav.completeFirstAction(EntryFirstActionOutcome.Task("Deures"))
+        val copy = navigator().apply { restore(nav.snapshot()) }
+        assertEquals(nav.step, copy.step)
+        assertEquals(nav.history, copy.history)
+        assertEquals(EntryFirstActionOutcome.Task("Deures"), copy.outcome)
+    }
+
+    @Test
+    fun `qui passa a registrar-se des de ja tinc compte veu la privacitat`() {
+        val nav = navigator()
+        nav.signInFromWelcome(); assertEquals(EntryStep.ACCOUNT, nav.step)
+        nav.toggleSigningUp()
+        assertTrue(nav.isSigningUp)
+        assertEquals(EntryStep.PRIVACY, nav.step)
+    }
+
+    @Test
     fun `la recuperacio des del compte torna al compte i continua`() {
         val nav = navigator(start = EntryStep.ACCOUNT)
         nav.go(EntryStep.PASSWORD_RESET)

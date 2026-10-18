@@ -30,6 +30,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -93,17 +95,23 @@ fun EntryFlow(
     val state by services.state.collectAsState()
     val isRecovering by services.isRecoveringPassword.collectAsState()
     val finish by rememberUpdatedState(onFinish)
-    val nav = remember(services, steps) {
-        EntryNavigator(
-            steps = steps,
-            prefs = prefs,
-            requiresAccount = { services.requiresAccount },
-            user = { services.user },
-            onFinish = { finish() },
-            initialStep = initialStep,
-            initialOutcome = initialOutcome,
-        )
-    }
+    fun navigator() = EntryNavigator(
+        steps = steps,
+        prefs = prefs,
+        requiresAccount = { services.requiresAccount },
+        user = { services.user },
+        onFinish = { finish() },
+        initialStep = initialStep,
+        initialOutcome = initialOutcome,
+    )
+    // Sobreviu a la recreació de l'activitat: vegeu `EntryNavigator.snapshot`.
+    val nav = rememberSaveable(
+        services, steps,
+        saver = Saver<EntryNavigator, ArrayList<Any?>>(
+            save = { it.snapshot() },
+            restore = { saved -> navigator().also { it.restore(saved) } },
+        ),
+    ) { navigator() }
     val environment = LocalViraEnvironment.current
     val lineOnStage = !environment.isAccessibilitySize
     val band = if (environment.isAccessibilitySize) 0.86f else 0.7f

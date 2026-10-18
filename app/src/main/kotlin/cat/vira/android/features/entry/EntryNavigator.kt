@@ -60,6 +60,41 @@ class EntryNavigator(
 
     private var stepBeforeRecovery: EntryStep? = null
 
+    /// L'estat que ha de sobreviure a la recreació de l'activitat (tema, mida de lletra, el procés
+    /// mort mentre Google o el correu tenen l'app al fons): sense, el flux tornaria a començar,
+    /// perdria el rol triat i deixaria repetir la primera acció.
+    fun snapshot(): ArrayList<Any?> = arrayListOf(
+        step.name, ArrayList(history.map { it.name }), role.name, isSigningUp, cameFromSignIn, email,
+        outcome?.let(::encode), stepBeforeRecovery?.name,
+    )
+
+    fun restore(saved: List<Any?>) {
+        step = EntryStep.valueOf(saved[0] as String)
+        @Suppress("UNCHECKED_CAST")
+        history = (saved[1] as List<String>).map(EntryStep::valueOf)
+        role = ViraAccountRole.valueOf(saved[2] as String)
+        isSigningUp = saved[3] as Boolean
+        cameFromSignIn = saved[4] as Boolean
+        email = saved[5] as String
+        @Suppress("UNCHECKED_CAST")
+        outcome = (saved[6] as List<Any>?)?.let(::decode)
+        stepBeforeRecovery = (saved[7] as String?)?.let(EntryStep::valueOf)
+        progress = progressPosition.fraction
+    }
+
+    private fun encode(value: EntryFirstActionOutcome): ArrayList<Any> = when (value) {
+        is EntryFirstActionOutcome.Task -> arrayListOf("task", value.title)
+        is EntryFirstActionOutcome.CheckIn -> arrayListOf("checkIn", value.earned.coins, value.earned.xp)
+        is EntryFirstActionOutcome.Focus -> arrayListOf("focus", value.earned.coins, value.earned.xp, value.completed)
+    }
+
+    private fun decode(saved: List<Any>): EntryFirstActionOutcome? = when (saved[0]) {
+        "task" -> EntryFirstActionOutcome.Task(saved[1] as String)
+        "checkIn" -> EntryFirstActionOutcome.CheckIn(EntryReward(saved[1] as Int, saved[2] as Int))
+        "focus" -> EntryFirstActionOutcome.Focus(saved[3] as Boolean, EntryReward(saved[1] as Int, saved[2] as Int))
+        else -> null
+    }
+
     init {
         progress = progressPosition.fraction
     }
@@ -149,6 +184,9 @@ class EntryNavigator(
     fun toggleSigningUp() {
         isSigningUp = !isSigningUp
         cameFromSignIn = !isSigningUp
+        // Privacitat abans que correu: qui ha entrat per "Ja tinc compte" i ara es registra encara
+        // no l'ha vista. Hi passa abans de poder escriure el correu.
+        if (isSigningUp && EntryStep.PRIVACY in steps && EntryStep.PRIVACY !in history) go(EntryStep.PRIVACY)
     }
 
     fun chose() { reaction += 1 }
