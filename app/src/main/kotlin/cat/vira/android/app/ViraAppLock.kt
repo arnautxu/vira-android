@@ -31,11 +31,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
@@ -95,14 +97,18 @@ fun ViraAppLock(content: @Composable () -> Unit) {
     }
 
     Box(Modifier.fillMaxSize()) {
-        content()
+        // Tapat no vol dir només amagat: TalkBack tampoc pot llegir ni tocar el que hi ha a sota.
+        Box(if (locked) Modifier.clearAndSetSemantics {} else Modifier) { content() }
         // Tancar és instantani (la captura del canviador es fa just ara); només obrir té fos.
         AnimatedVisibility(
             visible = locked,
             enter = EnterTransition.None,
             exit = fadeOut(ViraMotion.quick()),
         ) {
-            ViraLockScreen(onUnlock = prompt::show)
+            // Els tocs fora del botó s'acaben aquí i no arriben a la pantalla de sota.
+            Box(Modifier.pointerInput(Unit) { awaitPointerEventScope { while (true) awaitPointerEvent() } }) {
+                ViraLockScreen(onUnlock = prompt::show)
+            }
         }
     }
 }
@@ -115,9 +121,17 @@ private class ViraUnlockPrompt(private val activity: FragmentActivity, private v
 
     fun show() {
         if (isShowing) return
-        if (BiometricManager.from(activity).canAuthenticate(AUTHENTICATORS) != BiometricManager.BIOMETRIC_SUCCESS) {
-            onSuccess()
-            return
+        when (BiometricManager.from(activity).canAuthenticate(AUTHENTICATORS)) {
+            // Cap manera d'entrar: ni empremta, ni cara, ni codi.
+            BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED,
+            BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE,
+            BiometricManager.BIOMETRIC_ERROR_UNSUPPORTED,
+            -> { onSuccess(); return }
+            // El sistema no ho sap del cert: es prova igualment, com diu l'API.
+            BiometricManager.BIOMETRIC_SUCCESS, BiometricManager.BIOMETRIC_STATUS_UNKNOWN -> Unit
+            // Un error passatger (sensor ocupat, actualització pendent) no és «no hi ha bloqueig»:
+            // es queda tancat, amb «Desbloqueja» per tornar-ho a provar.
+            else -> return
         }
         isShowing = true
         val callback = object : BiometricPrompt.AuthenticationCallback() {
