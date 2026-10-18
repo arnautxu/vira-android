@@ -28,8 +28,7 @@ import java.util.Locale
 @Composable
 fun ViraCapture(content: @Composable () -> Unit) {
     ViraCaptureFixes.ensureFingerprint()
-    val locale = LocalConfiguration.current.locales[0]
-    if (Locale.getDefault() != locale) Locale.setDefault(locale)
+    // PROVA: sense canviar el locale, per saber quina de les dues peces deixa les captures d'1 px.
     content()
 }
 
