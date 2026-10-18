@@ -2,6 +2,7 @@ package cat.vira.android.core.design.components
 
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -39,4 +40,23 @@ fun ViraPictogram(
             .size(side)
             .clip(RoundedCornerShape(if (isScene) side * 0.22f else 0.dp)),
     )
+}
+
+/// El mateix pictograma pel nom que es desa a les files (`"picto-flag"`, `ViraPictogramName`).
+/// Un nom que no és al catàleg deixa el buit de la mida demanada, com `Image(name)` a l'iPhone:
+/// res no salta de lloc, i qui en vulgui un altre en aquest cas fa servir `resolved(…)`.
+@Composable
+fun ViraPictogram(
+    name: String,
+    modifier: Modifier = Modifier,
+    size: Dp = 56.dp,
+    isScene: Boolean = false,
+    scalesWithText: Boolean = false,
+) {
+    val drawable = ViraPictogramName.drawable(name)
+    if (drawable != null) {
+        ViraPictogram(drawable, modifier, size, isScene, scalesWithText)
+    } else {
+        Spacer(modifier.size(if (scalesWithText) size * LocalDensity.current.fontScale else size))
+    }
 }
