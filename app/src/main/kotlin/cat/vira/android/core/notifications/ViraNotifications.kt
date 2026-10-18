@@ -122,7 +122,10 @@ object ViraNotifications {
         // fer i no cauen dins d'una concentració que silencia Vira.
         val muted = ViraNotificationPlanner.muteWindow(inputs.focusSessions, now)
         scheduler.replace(reminderPrefixes, planned, now) {
-            ViraNotificationPlanner.isStillPending(it, inputs, zone, now) && muted?.contains(it.fireAt) != true
+            // Un «Més tard» no se l'emporta una concentració que encara no l'ha atrapat: si s'acaba
+            // abans, ha de sonar. Si encara dura quan arribi, l'alarma ho torna a mirar i calla.
+            ViraNotificationPlanner.isStillPending(it, inputs, zone, now) &&
+                (it.isSnooze || muted?.contains(it.fireAt) != true)
         }
         // Els que ja són a la pantalla d'una cosa que s'ha marcat a l'app, o d'una categoria apagada,
         // fora: tenen botons que actuarien sobre una cosa resolta.
@@ -229,7 +232,8 @@ object ViraNotifications {
             return if (notification.id.endsWith(ViraStreakNotifications.NEWS_SUFFIX)) {
                 isCurrentNews(ViraPreferences.open(context), notification)
             } else {
-                state.dayIsOpen
+                // `dayIsOpen` parla d'avui: un recordatori d'ahir endarrerit passada la mitjanit, no.
+                state.dayIsOpen && LocalDate.ofInstant(notification.fireAt, zone) == LocalDate.ofInstant(now, zone)
             }
         }
         if (reminderPrefixes.none { notification.id.startsWith(it) }) return true

@@ -12,6 +12,7 @@ import cat.vira.android.core.data.model.IntakeStatus
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -272,6 +273,27 @@ class ViraNotificationSystemTest {
         app.streak = ViraStreakState(isVisible = true, dayIsOpen = true)
         val viri = planned("${ViraStreakNotifications.PREFIX}2027-1-15").copy(actions = ViraActionSet.VIRI)
         assertFalse(ViraNotifications.isStillPending(app, viri, now = viri.fireAt.plusSeconds(3 * 3600)))
+    }
+
+    @Test
+    fun unRecordatoriDeViriDAhirNoSurtPassadaLaMitjanit() = runBlocking {
+        app.streak = ViraStreakState(isVisible = true, dayIsOpen = true)
+        val zone = ZoneId.of("UTC")
+        val lateYesterday = now.atZone(zone).toLocalDate().minusDays(1).atTime(23, 30).atZone(zone).toInstant()
+        val viri = planned("${ViraStreakNotifications.PREFIX}2027-1-14").copy(
+            actions = ViraActionSet.VIRI, fireAtMillis = lateYesterday.toEpochMilli(),
+        )
+        assertFalse(ViraNotifications.isStillPending(app, viri, zone, lateYesterday.plusSeconds(3600)))
+    }
+
+    @Test
+    fun nomesEsEsborraLaNoticiaQueHaSonat() {
+        val preferences = ViraPreferences.open(app)
+        ViraStreakNotifications.record(ViraStreakNotifications.Event.Protected, preferences, now)
+        val old = ViraStreakNotifications.pendingEventStamp(preferences)
+        ViraStreakNotifications.record(ViraStreakNotifications.Event.Milestone(30), preferences, now.plusSeconds(60))
+        ViraStreakNotifications.clearPendingEvent(preferences, onlyIfStamp = old)
+        assertNotNull("la nova es queda", ViraStreakNotifications.pendingEventStamp(preferences))
     }
 
     @Test

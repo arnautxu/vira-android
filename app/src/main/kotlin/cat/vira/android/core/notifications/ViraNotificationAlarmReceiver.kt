@@ -42,8 +42,9 @@ class ViraNotificationAlarmReceiver : BroadcastReceiver() {
                 // a treure l'alarma (o que la fila sigui d'un compte que ja no hi és).
                 if (!ViraNotifications.isStillPending(context.applicationContext, notification)) return@launch
                 // Una notícia de Viri ja dita no es torna a programar si després es canvia l'hora de Viri.
+                // Només si encara és la seva: una de més nova apuntada mentrestant no s'esborra.
                 if (post(context, notification) && notification.id.endsWith(ViraStreakNotifications.NEWS_SUFFIX)) {
-                    ViraStreakNotifications.clearPendingEvent(ViraPreferences.open(context))
+                    ViraStreakNotifications.clearPendingEvent(ViraPreferences.open(context), onlyIfStamp = notification.scheduledAtMillis)
                 }
             } finally {
                 pending.finish()

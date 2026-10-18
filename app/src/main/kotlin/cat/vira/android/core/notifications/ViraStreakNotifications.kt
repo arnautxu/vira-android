@@ -133,11 +133,15 @@ object ViraStreakNotifications {
     fun pendingEventStamp(preferences: SharedPreferences): Long? =
         preferences.getLong(EVENT_DATE_KEY, Long.MIN_VALUE).takeIf { preferences.contains(EVENT_KEY) && it != Long.MIN_VALUE }
 
-    fun clearPendingEvent(preferences: SharedPreferences) = preferences.edit {
-        remove(EVENT_KEY)
-        remove(EVENT_DAYS_KEY)
-        remove(EVENT_DATE_KEY)
-        remove(EVENT_MUTED_KEY)
+    /// Amb `onlyIfStamp`, només si la notícia pendent és encara aquesta.
+    fun clearPendingEvent(preferences: SharedPreferences, onlyIfStamp: Long? = null) {
+        if (onlyIfStamp != null && pendingEventStamp(preferences) != onlyIfStamp) return
+        preferences.edit {
+            remove(EVENT_KEY)
+            remove(EVENT_DAYS_KEY)
+            remove(EVENT_DATE_KEY)
+            remove(EVENT_MUTED_KEY)
+        }
     }
 
     // MARK: Càlcul de la finestra

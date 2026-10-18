@@ -182,6 +182,14 @@ class ViraNotificationPlannerTest {
     }
 
     @Test
+    fun duesConcentracionsQueEsTrepitgenSilencienFinsQueAcabaLaMesLlarga() {
+        val long = cat.vira.android.core.data.model.FocusSession(startedAt = now.minusSeconds(600), plannedSeconds = 3600, mutesNotifications = true)
+        val short = cat.vira.android.core.data.model.FocusSession(startedAt = now.minusSeconds(60), plannedSeconds = 300, mutesNotifications = true)
+        val window = ViraNotificationPlanner.muteWindow(listOf(long, short), now.plusSeconds(600))
+        assertTrue(window?.contains(now.plusSeconds(1800)) == true)
+    }
+
+    @Test
     fun unaTascaMogudaOSenseHoraJaNoGuardaElSeuAvis() {
         val day = today.atStartOfDay(zone).toInstant()
         val item = PlanItem(title = "Dentista", day = day, time = at(today, 17))

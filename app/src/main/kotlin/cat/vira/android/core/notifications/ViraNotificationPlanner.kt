@@ -76,12 +76,14 @@ object ViraNotificationPlanner {
     ///
     /// *Imperfecció acceptada (com a l'iPhone):* si la sessió es pausa, la finestra queda curta.
     fun muteWindow(sessions: List<FocusSession>, now: Instant): ClosedOpenRange? {
-        val session = sessions
+        // Totes les que encara duren, no només l'última: dues de telèfons diferents es poden
+        // trepitjar, i la més llarga mana fins que s'acaba.
+        val live = sessions
             .filter { it.endedAt == null && it.mutesNotifications }
-            .maxByOrNull { it.startedAt } ?: return null
-        val end = session.startedAt.plusSeconds(session.plannedSeconds.toLong())
-        if (!end.isAfter(now)) return null
-        return ClosedOpenRange(session.startedAt, end)
+            .map { it.startedAt to it.startedAt.plusSeconds(it.plannedSeconds.toLong()) }
+            .filter { (_, end) -> end.isAfter(now) }
+        if (live.isEmpty()) return null
+        return ClosedOpenRange(live.minOf { it.first }, live.maxOf { it.second })
     }
 
     fun habits(
