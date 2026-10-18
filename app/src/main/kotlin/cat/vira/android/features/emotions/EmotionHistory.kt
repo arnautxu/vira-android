@@ -48,7 +48,10 @@ class EmotionHistory(
         val dates = (range.days - 1 downTo 0).map { today.minusDays(it.toLong()) }
         val start = dates.first().atStartOfDay(zone).toInstant()
 
-        val inRange = source.filter { it.createdAt >= start }
+        // Fins a l'inici de demà: un registre amb data de més endavant (un rellotge desquadrat en
+        // un altre telèfon) no té cap dia on dibuixar-se i no pot sumar a les fitxes.
+        val end = today.plusDays(1).atStartOfDay(zone).toInstant()
+        val inRange = source.filter { it.createdAt >= start && it.createdAt < end }
         entries = inRange.sortedByDescending { it.createdAt }
 
         val byDay = entries.groupBy { it.createdAt.atZone(zone).toLocalDate() }

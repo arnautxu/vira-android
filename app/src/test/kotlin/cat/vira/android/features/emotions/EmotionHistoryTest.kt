@@ -43,6 +43,12 @@ class EmotionHistoryTest {
         assertEquals(1, history(listOf(entry(Emotion.CONTENT, 10)), EmotionHistoryRange.MONTH).entries.size)
     }
 
+    @Test fun unRegistreDeDemaNoCompta() {
+        val result = history(listOf(entry(Emotion.CONTENT, -1), entry(Emotion.SAD, 0, hour = 23)))
+        assertEquals(listOf(Emotion.SAD), result.entries.map { it.emotion })
+        assertEquals(listOf(Emotion.SAD), result.counts.map { it.emotion })
+    }
+
     @Test fun elsDiesSenseRegistreHiSonIgualment() {
         val result = history(listOf(entry(Emotion.CONTENT, 0)))
         assertEquals(7, result.days.size)

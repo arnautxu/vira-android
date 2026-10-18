@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -67,6 +68,14 @@ fun EmotionsScreen() {
 
     var category by rememberSaveable { mutableStateOf<MindfulnessCategory?>(null) }
     var exercise by rememberSaveable { mutableStateOf<MindfulnessExercise?>(null) }
+    // Si una altra pantalla (Ajuda ara, un avís) porta a una altra cara, la pila de Mindfulness
+    // se'n va: si no, en tornar es veuria la categoria i no el que s'ha demanat.
+    LaunchedEffect(resolved) {
+        if (resolved != EmotionsSection.Mindfulness) {
+            exercise = null
+            category = null
+        }
+    }
 
     // Mindfulness empeny dins de la pestanya: categoria i, a sobre, la sessió.
     exercise?.let { current ->

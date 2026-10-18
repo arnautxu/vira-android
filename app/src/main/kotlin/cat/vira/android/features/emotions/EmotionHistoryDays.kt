@@ -51,11 +51,14 @@ import java.util.Locale
 @Composable
 internal fun EmotionHistoryDayGrid(history: EmotionHistory, range: EmotionHistoryRange, today: LocalDate, modifier: Modifier = Modifier) {
     val scale = LocalDensity.current.fontScale
-    val face = (if (range == EmotionHistoryRange.WEEK) 40.dp else 30.dp) * scale
+    val scaled = (if (range == EmotionHistoryRange.WEEK) 40.dp else 30.dp) * scale
     BoxWithConstraints(modifier.fillMaxWidth()) {
         // La setmana, set columnes fixes perquè avui no salti de línia. Només amb lletra
-        // d'accessibilitat es deixa que la fila salti.
-        val columns = if (range == EmotionHistoryRange.WEEK && !LocalViraEnvironment.current.isAccessibilitySize) 7
+        // d'accessibilitat es deixa que la fila salti; fins aleshores la cara no creix més que
+        // la seva columna, o les veïnes es trepitjarien.
+        val fixedWeek = range == EmotionHistoryRange.WEEK && !LocalViraEnvironment.current.isAccessibilitySize
+        val face = if (fixedWeek) minOf(scaled, maxWidth / 7 - 6.dp) else scaled
+        val columns = if (fixedWeek) 7
         else ((maxWidth + ViraSpacing.xxs) / (face + ViraSpacing.xs + ViraSpacing.xxs)).toInt().coerceAtLeast(1)
         val gap = if (columns == 7 && range == EmotionHistoryRange.WEEK) 0.dp else ViraSpacing.xxs
         Column(verticalArrangement = Arrangement.spacedBy(ViraSpacing.xs)) {

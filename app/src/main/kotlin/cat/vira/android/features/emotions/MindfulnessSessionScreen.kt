@@ -90,14 +90,21 @@ internal fun MindfulnessSessionScreen(
     }
     LaunchedEffect(player.isFinished) { if (player.isFinished) onFinished() }
     val segment = script?.segment(player.currentTime)
-    // El ritme també al palmell, només a la respiració i només mentre sona.
-    LaunchedEffect(segment?.start) {
+    // El ritme també al palmell, només a la respiració i només mentre sona: en pausar es talla, i
+    // en continuar dins del mateix tram vibra el que en queda.
+    LaunchedEffect(segment?.start, player.isPlaying) {
+        if (!player.isPlaying) {
+            haptics.stop()
+            haptics.start()
+            return@LaunchedEffect
+        }
         val current = segment ?: return@LaunchedEffect
         val phase = current.phase
-        if (player.isPlaying && current.kind == MindfulnessScript.Kind.BREATH &&
+        if (current.kind == MindfulnessScript.Kind.BREATH &&
             (phase == MindfulnessScript.Phase.INHALE || phase == MindfulnessScript.Phase.EXHALE)
         ) {
-            haptics.play(phase == MindfulnessScript.Phase.INHALE, (current.end - current.start).toInt())
+            val remaining = (current.end - player.currentTime).toInt()
+            if (remaining > 0) haptics.play(phase == MindfulnessScript.Phase.INHALE, remaining)
         }
     }
 
