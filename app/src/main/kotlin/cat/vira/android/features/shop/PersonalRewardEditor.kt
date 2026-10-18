@@ -159,7 +159,7 @@ private fun StepButton(symbol: ShopSymbol, enabled: Boolean, onClick: () -> Unit
     val ink = if (enabled) ViraColor.accent(ViraArea.Today) else ViraColor.textSecondary
     Box(
         Modifier.size(ViraTouch.minimum)
-            .background(ViraColor.surfaceShift, CircleShape)
+            .background(ViraColor.surfaceShift(ViraArea.Rewards), CircleShape)
             .viraPressable(enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {

@@ -134,6 +134,7 @@ private fun star(w: Float) = Path().apply {
 
 /// La forma de totes les fitxes de la Botiga: **la de les targetes de Vira**. Degradat de l'àrea,
 /// radi gran i vora fina del to del text. Res de marcs gruixuts ni llavis.
+@Composable
 fun Modifier.shopFrame(area: ViraArea, ink: Color, radius: Dp = ViraRadius.l): Modifier {
     val shape = RoundedCornerShape(radius)
     return this
