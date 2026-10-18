@@ -23,6 +23,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
@@ -33,6 +34,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import cat.vira.android.R
 import cat.vira.android.core.design.LocalViraEnvironment
@@ -106,19 +108,23 @@ fun ViraCelebrationMoment(
             Bubble(
                 title, message,
                 Modifier
-                    // La bombolla trepitja la vora de l'escena: surt de Viri.
-                    .offset(y = -ViraSpacing.xxxl + ViraSpacing.s * (1f - bubble.value))
+                    // La bombolla trepitja la vora de l'escena: surt de Viri. Com el `padding`
+                    // negatiu de l'iPhone, s'enfila també a la maquetació, i el que ve darrere puja.
+                    .pullUp(ViraSpacing.xxxl)
                     .padding(horizontal = ViraSpacing.s)
-                    .graphicsLayer { alpha = bubble.value.coerceIn(0f, 1f) },
+                    .graphicsLayer {
+                        translationY = ViraSpacing.s.toPx() * (1f - bubble.value)
+                        alpha = bubble.value.coerceIn(0f, 1f)
+                    },
             )
-            Box(Modifier.offset(y = -ViraSpacing.xxxl).graphicsLayer { alpha = summaryIn.value.coerceIn(0f, 1f) }) { summary() }
+            Box(Modifier.graphicsLayer { alpha = summaryIn.value.coerceIn(0f, 1f) }) { summary() }
         }
     }
     val button: @Composable () -> Unit = {
         ViraActionButton(
             stringResource(R.string.streak_milestone_continue),
             onContinue,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.padding(top = ViraSpacing.l).fillMaxWidth(),
         )
     }
 
@@ -140,6 +146,13 @@ fun ViraCelebrationMoment(
             }
         }
     }
+}
+
+/// Puja el contingut `amount` i encongeix l'espai que ocupa en la mateixa mida.
+private fun Modifier.pullUp(amount: Dp): Modifier = layout { measurable, constraints ->
+    val placeable = measurable.measure(constraints)
+    val shift = amount.roundToPx()
+    layout(placeable.width, (placeable.height - shift).coerceAtLeast(0)) { placeable.place(0, -shift) }
 }
 
 @Composable

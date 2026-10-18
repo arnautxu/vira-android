@@ -8,12 +8,16 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -209,7 +213,13 @@ fun CelebrationMoment() = ViraTheme(reduceMotion = true) {
         title = stringResource(R.string.level_title, 4),
         message = stringResource(R.string.metrics_total_xp, 450),
         onContinue = {},
-        scene = { ViraPictogram(R.drawable.viri_meditating, size = 220.dp) },
+        // Com a l'iPhone (`scaledToFill`): l'escena omple el marc i se'n retalla el que sobra.
+        scene = {
+            Image(
+                painterResource(R.drawable.viri_meditating), null,
+                Modifier.fillMaxSize(), contentScale = ContentScale.Crop,
+            )
+        },
         summary = { ViraLevelBar(ViraLevelProgress(level = 4, totalXP = 450, currentLevelXP = 50, xpToNext = 250)) },
     )
 }

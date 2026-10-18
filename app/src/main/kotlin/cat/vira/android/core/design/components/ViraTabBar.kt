@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -25,11 +24,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import cat.vira.android.core.design.LocalViraEnvironment
@@ -81,13 +82,13 @@ fun ViraTabBar(
     val iconSize = (ViraTabBarMetrics.icon * LocalDensity.current.fontScale).coerceAtMost(ViraTabBarMetrics.iconCeiling)
     val half = items.size / 2
 
-    val content: @Composable RowScope.() -> Unit = {
+    val content: @Composable () -> Unit = {
         items.take(half).forEach { item ->
-            TabItem(item, item.key == selectedKey, iconSize, inactiveAlpha, fills = !scrolls) { onTabTap(item.key) }
+            TabItem(item, item.key == selectedKey, iconSize, inactiveAlpha) { onTabTap(item.key) }
         }
-        TabItem(focus, isSelected = false, iconSize, inactiveAlpha, fills = !scrolls, onClick = onFocus)
+        TabItem(focus, isSelected = false, iconSize, inactiveAlpha, onClick = onFocus)
         items.drop(half).forEach { item ->
-            TabItem(item, item.key == selectedKey, iconSize, inactiveAlpha, fills = !scrolls) { onTabTap(item.key) }
+            TabItem(item, item.key == selectedKey, iconSize, inactiveAlpha) { onTabTap(item.key) }
         }
     }
 
@@ -113,26 +114,19 @@ fun ViraTabBar(
             Row(
                 modifier = Modifier.horizontalScroll(rememberScrollState()).then(capsule),
                 verticalAlignment = Alignment.CenterVertically,
-                content = content,
-            )
+            ) { content() }
         } else {
-            Row(
-                modifier = Modifier.fillMaxWidth().then(capsule),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                content = content,
-            )
+            TabRow(Modifier.fillMaxWidth().then(capsule), content)
         }
     }
 }
 
 @Composable
-private fun RowScope.TabItem(
+private fun TabItem(
     item: ViraTabBarItem,
     isSelected: Boolean,
     iconSize: Dp,
     inactiveAlpha: Float,
-    fills: Boolean,
     onClick: () -> Unit,
 ) {
     val pill by animateColorAsState(
@@ -144,7 +138,6 @@ private fun RowScope.TabItem(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(ViraSpacing.xxs),
         modifier = Modifier
-            .then(if (fills) Modifier.weight(1f) else Modifier)
             .defaultMinSize(minHeight = ViraTouch.minimum)
             .background(pill, RoundedCornerShape(ViraRadius.m))
             .viraPressable(role = Role.Tab, onClick = onClick)
@@ -164,6 +157,37 @@ private fun RowScope.TabItem(
             maxLines = 1,
             softWrap = false,
         )
+    }
+}
+
+/// Reparteix l'ample com l'`HStack` de l'iPhone amb `.frame(maxWidth: .infinity)` i noms
+/// `fixedSize`: cap nom es talla, i l'espai que sobra es reparteix a parts iguals entre els que en
+/// necessiten menys.
+@Composable
+private fun TabRow(modifier: Modifier, content: @Composable () -> Unit) {
+    Layout(content = content, modifier = modifier) { measurables, constraints ->
+        val total = constraints.maxWidth
+        val widths = measurables.map { it.maxIntrinsicWidth(constraints.maxHeight) }.toIntArray()
+        // Els que ja ocupen més que una part igual es queden amb el seu ample; la resta es reparteix.
+        val fixed = BooleanArray(widths.size)
+        while (true) {
+            val free = fixed.count { !it }
+            if (free == 0) break
+            val share = (total - widths.indices.filter { fixed[it] }.sumOf { widths[it] }) / free
+            val grown = widths.indices.filter { !fixed[it] && widths[it] > share }
+            if (grown.isEmpty()) {
+                widths.indices.filter { !fixed[it] }.forEach { widths[it] = share }
+                break
+            }
+            grown.forEach { fixed[it] = true }
+        }
+        val placeables = measurables.mapIndexed { i, m -> m.measure(Constraints.fixedWidth(widths[i]).copy(maxHeight = constraints.maxHeight)) }
+        val height = placeables.maxOfOrNull { it.height } ?: 0
+        val width = placeables.sumOf { it.width }.coerceAtLeast(constraints.minWidth)
+        layout(width, height) {
+            var x = 0
+            placeables.forEach { it.place(x, (height - it.height) / 2); x += it.width }
+        }
     }
 }
 

@@ -109,7 +109,8 @@ fun <T> ViraTileGrid(
 ) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(ViraSpacing.s)) {
         if (LocalViraEnvironment.current.isAccessibilitySize) {
-            items.forEach { cell(it, Modifier.fillMaxWidth()) }
+            // Altura intrínseca: sense, l'espai flexible d'abans del peu s'emportaria tota l'alçada.
+            items.forEach { cell(it, Modifier.fillMaxWidth().height(IntrinsicSize.Min)) }
         } else {
             items.chunked(2).forEach { row ->
                 Row(
