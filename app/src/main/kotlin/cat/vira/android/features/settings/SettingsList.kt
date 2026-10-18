@@ -42,6 +42,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import cat.vira.android.R
+import cat.vira.android.core.design.viraLocale
 import cat.vira.android.core.design.LocalViraEnvironment
 import cat.vira.android.core.design.components.ViraPictogram
 import cat.vira.android.core.design.components.viraPressable
@@ -249,7 +250,7 @@ fun SettingsTimeRow(title: String, hour: Int, minute: Int, onChange: (hour: Int,
     val context = LocalContext.current
     val is24 = DateFormat.is24HourFormat(context)
     val time = LocalTime.of(hour.coerceIn(0, 23), minute.coerceIn(0, 59))
-    val text = time.format(DateTimeFormatter.ofPattern(if (is24) "HH:mm" else "h:mm a"))
+    val text = time.format(DateTimeFormatter.ofPattern(if (is24) "HH:mm" else "h:mm a", viraLocale()))
     Row(
         rowModifier.viraPressable(onClick = { isPicking = true }).padding(horizontal = ViraSpacing.m, vertical = ViraSpacing.xs),
         verticalAlignment = Alignment.CenterVertically,

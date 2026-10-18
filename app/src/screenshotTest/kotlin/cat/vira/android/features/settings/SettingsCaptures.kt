@@ -8,6 +8,7 @@ import cat.vira.android.core.backend.ViraSession
 import cat.vira.android.core.backend.ViraUser
 import cat.vira.android.core.backend.sync.ViraSyncEngine
 import cat.vira.android.core.data.model.FocusProfile
+import cat.vira.android.core.design.ViraCapture
 import cat.vira.android.core.design.ViraTheme
 import com.android.tools.screenshot.PreviewTest
 import java.time.Instant
@@ -35,9 +36,11 @@ private fun backend(session: ViraSession.State = signedIn) = PreviewSettingsBack
 
 @Composable
 private fun Capture(stack: List<SettingsPage> = emptyList(), session: ViraSession.State = signedIn) {
-    ViraTheme(reduceMotion = true) {
-        SettingsHost(backend(session)) {
-            SettingsNavigation(onClose = {}, initialStack = stack)
+    ViraCapture {
+        ViraTheme(reduceMotion = true) {
+            SettingsHost(backend(session)) {
+                SettingsNavigation(onClose = {}, initialStack = stack)
+            }
         }
     }
 }
@@ -69,6 +72,8 @@ fun SettingsAbout() = Capture(category(SettingsCategory.ABOUT))
 fun SettingsFocusModes() = Capture(listOf(SettingsPage.Category(SettingsCategory.APP), SettingsPage.FocusModes))
 
 @PreviewTest @SettingsPageCaptures @Composable
-fun SettingsParentAccount() = ViraTheme(reduceMotion = true) {
-    SettingsHost(backend()) { AccountSettingsContent(onClose = {}) }
+fun SettingsParentAccount() = ViraCapture {
+    ViraTheme(reduceMotion = true) {
+        SettingsHost(backend()) { AccountSettingsContent(onClose = {}) }
+    }
 }
