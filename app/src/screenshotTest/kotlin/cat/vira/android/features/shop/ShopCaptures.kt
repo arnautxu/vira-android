@@ -7,6 +7,7 @@ import androidx.compose.ui.Modifier
 import cat.vira.android.core.data.model.PersonalReward
 import cat.vira.android.core.data.model.ProgressCounter
 import cat.vira.android.core.data.model.Streak
+import cat.vira.android.core.design.ViraCapture
 import cat.vira.android.core.design.ViraCaptures
 import cat.vira.android.core.design.ViraScreenCaptures
 import cat.vira.android.core.design.ViraTheme
@@ -20,8 +21,10 @@ private val counter = ProgressCounter(coinBalance = 620, totalXP = 1_200, emotio
 private val streak = Streak(currentDays = 9, bestDays = 9)
 
 @Composable
-private fun Screen(content: @Composable () -> Unit) = ViraTheme(reduceMotion = true) {
-    Box(Modifier.background(ViraColor.background)) { content() }
+private fun Screen(content: @Composable () -> Unit) = ViraCapture {
+    ViraTheme(reduceMotion = true) {
+        Box(Modifier.background(ViraColor.background)) { content() }
+    }
 }
 
 @PreviewTest @ViraScreenCaptures @Composable

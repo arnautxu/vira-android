@@ -50,6 +50,7 @@ import cat.vira.android.core.design.tokens.ViraRadius
 import cat.vira.android.core.design.tokens.ViraSpacing
 import cat.vira.android.core.design.tokens.ViraTouch
 import cat.vira.android.core.design.tokens.viraSpec
+import cat.vira.android.core.design.viraLocale
 import java.text.NumberFormat
 
 // Les peces de la Botiga (`ShopGameKit` i `ShopGameControls` de l'iPhone): l'estructura és de joc
@@ -57,7 +58,8 @@ import java.text.NumberFormat
 // cofres a l'atzar ni monedes de pagament (`VIRI_AND_GAMIFICATION.md` §2.2.1 i §2.5).
 
 /// Un número amb la separació de milers de l'idioma (`formatted()` de l'iPhone).
-fun Int.viraFormatted(): String = NumberFormat.getIntegerInstance().format(this)
+@Composable
+fun Int.viraFormatted(): String = NumberFormat.getIntegerInstance(viraLocale()).format(this)
 
 /// Els símbols del sistema que fa servir la Botiga, dibuixats: Android no té els SF Symbols.
 enum class ShopSymbol { Circle, Sparkles, Diamond, Crown, Star, Check, Plus, Minus, Lock }
