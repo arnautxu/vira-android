@@ -20,6 +20,8 @@ import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -84,7 +86,7 @@ fun <T> PlanSegmented(options: List<Pair<T, String>>, selected: T, onSelect: (T)
 /// controls de 48 dp no caben a mida de lletra gran.
 @Composable
 fun WeekdayFields(weekdays: Set<Int>, onChange: (Set<Int>) -> Unit) {
-    val locale = LocalContext.current.resources.configuration.locales[0]
+    val locale = planLocale()
     val ordered = WeekdaySelection.ordered(PlanDay.firstDayOfWeek(locale))
     PlanSegmented(
         options = listOf(true to stringResource(R.string.habits_when_everyday), false to stringResource(R.string.habits_when_somedays)),
@@ -112,15 +114,27 @@ fun WeekdayFields(weekdays: Set<Int>, onChange: (Set<Int>) -> Unit) {
     }
 }
 
-/// Hores i dates amb el format del telèfon.
+/// L'idioma de la pantalla, no el del procés: és el que l'app ha triat (i el que fan servir les
+/// captures), i el que diu si la setmana comença en dilluns i si l'hora va a 24 h.
+@Composable
+@ReadOnlyComposable
+fun planLocale(): Locale = LocalConfiguration.current.locales[0]
+
+/// Hores i dates amb el format de l'idioma de la pantalla.
 object PlanFormat {
-    fun time(time: LocalTime, locale: Locale = Locale.getDefault()): String =
+    @Composable
+    @ReadOnlyComposable
+    fun time(time: LocalTime, locale: Locale = planLocale()): String =
         time.format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(locale))
 
-    fun date(date: LocalDate, locale: Locale = Locale.getDefault()): String =
+    @Composable
+    @ReadOnlyComposable
+    fun date(date: LocalDate, locale: Locale = planLocale()): String =
         date.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale))
 
-    fun minutes(minutes: Int, locale: Locale = Locale.getDefault()): String =
+    @Composable
+    @ReadOnlyComposable
+    fun minutes(minutes: Int, locale: Locale = planLocale()): String =
         time(LocalTime.of(minutes / 60 % 24, minutes % 60), locale)
 }
 

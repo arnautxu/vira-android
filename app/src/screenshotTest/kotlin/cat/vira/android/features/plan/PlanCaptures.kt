@@ -118,7 +118,7 @@ fun HabitsEmpty() = Screen(PlanSection.Habits, PlanSnapshot())
 
 @PreviewTest @ViraScreenCaptures @Composable
 fun HabitDetailScreen() = Screen(PlanSection.Habits) { actions ->
-    HabitDetail(Sample.reading, HabitProgress(Sample.logs, today, zone), actions, onEdit = {}, onClose = {}, zone = zone)
+    HabitDetail(Sample.reading, HabitProgress(Sample.logs, today, zone, PlanDay.firstDayOfWeek(planLocale())), actions, onEdit = {}, onClose = {}, zone = zone)
 }
 
 @PreviewTest @ViraScreenCaptures @Composable

@@ -94,7 +94,8 @@ fun HabitsSection(snapshot: PlanSnapshot, actions: PlanActions, chrome: PlanChro
     var editing by remember { mutableStateOf<Habit?>(null) }
     var detailId by rememberSaveable { mutableStateOf<String?>(null) }
     val habits = snapshot.activeHabits
-    val progress = remember(snapshot.habitLogs, today) { HabitProgress(snapshot.habitLogs, today) }
+    val firstDay = PlanDay.firstDayOfWeek(planLocale())
+    val progress = remember(snapshot.habitLogs, today, firstDay) { HabitProgress(snapshot.habitLogs, today, firstDay = firstDay) }
 
     LaunchedEffect(chrome.adding) {
         if (chrome.adding) {
@@ -144,14 +145,22 @@ private fun HabitsList(
     ) {
         HabitsTodayHero(habits, progress)
         Column(verticalArrangement = Arrangement.spacedBy(ViraSpacing.s)) {
-            Row(verticalAlignment = Alignment.Bottom) {
+            // A lletra gran la pista baixa a sota: al costat, "Avui" es partia per la meitat.
+            val title = @Composable { modifier: Modifier ->
                 Text(
                     stringResource(R.string.a11y_today),
                     style = ViraFont.headline,
                     color = ViraColor.textPrimary,
-                    modifier = Modifier.weight(1f).semantics { heading() },
+                    modifier = modifier.semantics { heading() },
                 )
+            }
+            val hint = @Composable {
                 Text(stringResource(R.string.habits_today_hint), style = ViraFont.footnoteEmphasis, color = ViraColor.accent(area))
+            }
+            if (LocalViraEnvironment.current.isAccessibilitySize) {
+                Column(verticalArrangement = Arrangement.spacedBy(ViraSpacing.xxs)) { title(Modifier); hint() }
+            } else {
+                Row(verticalAlignment = Alignment.Bottom) { title(Modifier.weight(1f)); hint() }
             }
             val tiles: List<@Composable (Modifier) -> Unit> = progress.ordered(habits).map { habit ->
                 @Composable { modifier: Modifier ->
@@ -256,7 +265,7 @@ fun ProgressRing(done: Int, total: Int, caption: String) {
 
 @Composable
 private fun WeekDots(habits: List<Habit>, progress: HabitProgress) {
-    val locale = Locale.getDefault()
+    val locale = planLocale()
     val track = ViraColor.lightArtworkVeil.copy(alpha = 0.5f)
     val fill = ViraColor.accent(area)
     val onFill = ViraColor.onAccent

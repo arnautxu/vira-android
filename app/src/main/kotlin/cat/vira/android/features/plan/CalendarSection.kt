@@ -13,14 +13,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
@@ -73,7 +75,7 @@ fun CalendarSection(
     var selection by rememberSaveable { mutableStateOf(today) }
     var mode by rememberSaveable { mutableStateOf(initialMode) }
     var editing by remember { mutableStateOf<PlanItem?>(null) }
-    val locale = java.util.Locale.getDefault()
+    val locale = planLocale()
     val firstDay = PlanDay.firstDayOfWeek(locale)
     val week = CalendarWeek.containing(selection, firstDay)
     val counts = remember(snapshot.items) { snapshot.countsByDay(zone) }
@@ -184,30 +186,20 @@ private fun DayContent(
     onEdit: (PlanItem) -> Unit,
     zone: ZoneId,
 ) {
-    LazyColumn(
-        Modifier.fillMaxSize(),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(
-            start = ViraSpacing.screenMargin,
-            end = ViraSpacing.screenMargin,
-            top = ViraSpacing.m,
-            bottom = viraTabBarClearance() + ViraSpacing.m,
-        ),
-        verticalArrangement = Arrangement.spacedBy(ViraSpacing.m),
-    ) {
+    PlanScrollColumn {
         if (reordering) {
-            item(key = "reorder") { ReorderList(items, actions, zone) }
+            ReorderList(items, actions, zone)
         } else {
             if (items.isEmpty()) {
-                item(key = "empty") {
-                    PlanSceneCard(R.drawable.viri_scene_calendar, stringResource(R.string.plan_day_empty_viri))
-                }
+                PlanSceneCard(R.drawable.viri_scene_calendar, stringResource(R.string.plan_day_empty_viri))
             }
-            DayPeriod.entries.forEach { period -> periodSection(period, items, actions, onAdd, onEdit, zone) }
+            DayPeriod.entries.forEach { period -> PeriodSection(period, items, actions, onAdd, onEdit, zone) }
         }
     }
 }
 
-private fun LazyListScope.periodSection(
+@Composable
+private fun PeriodSection(
     period: DayPeriod,
     dayItems: List<PlanItem>,
     actions: PlanActions,
@@ -216,20 +208,18 @@ private fun LazyListScope.periodSection(
     zone: ZoneId,
 ) {
     val items = dayItems.filter { PlanItemOrder.period(it, zone) == period }
-    item(key = "period-${period.name}") {
-        Column {
-            PlanGroupHeader(stringResource(period.title))
-            PlanGroupCard(
-                muted = items.isEmpty(),
-                rows = items.map { item ->
-                    @Composable {
-                        SwipeActionsRow(onEdit = { onEdit(item) }, onDelete = { actions.delete(item) }) {
-                            CalendarRow(item, onToggle = { actions.toggle(item) }, zone = zone)
-                        }
+    Column {
+        PlanGroupHeader(stringResource(period.title))
+        PlanGroupCard(
+            muted = items.isEmpty(),
+            rows = items.map { item ->
+                @Composable {
+                    SwipeActionsRow(onEdit = { onEdit(item) }, onDelete = { actions.delete(item) }) {
+                        CalendarRow(item, onToggle = { actions.toggle(item) }, zone = zone)
                     }
-                } + listOf(@Composable { AddSlotRow(period, onClick = { onAdd(period) }) }),
-            )
-        }
+                }
+            } + listOf(@Composable { AddSlotRow(period, onClick = { onAdd(period) }) }),
+        )
     }
 }
 
@@ -318,18 +308,9 @@ private fun ReorderList(items: List<PlanItem>, actions: PlanActions, zone: ZoneI
 /// no tenia model per a més d'un ítem per franja.
 @Composable
 private fun WeekContent(week: CalendarWeek, snapshot: PlanSnapshot, actions: PlanActions, onEdit: (PlanItem) -> Unit, zone: ZoneId) {
-    LazyColumn(
-        Modifier.fillMaxSize(),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(
-            start = ViraSpacing.screenMargin,
-            end = ViraSpacing.screenMargin,
-            top = ViraSpacing.m,
-            bottom = viraTabBarClearance() + ViraSpacing.m,
-        ),
-        verticalArrangement = Arrangement.spacedBy(ViraSpacing.m),
-    ) {
+    PlanScrollColumn {
         week.days.forEach { day ->
-            item(key = day.toString()) {
+            key(day) {
                 val items = snapshot.items(day, zone)
                 Column {
                     PlanGroupHeader(weekdayDay(day), uppercase = false)
@@ -358,4 +339,21 @@ private fun WeekContent(week: CalendarWeek, snapshot: PlanSnapshot, actions: Pla
             }
         }
     }
+}
+
+/// El cos del calendari. Una columna amb desplaçament i no una llista mandrosa: el dia són tres
+/// targetes i la setmana set grups, i la llista mandrosa no es dibuixa a les proves de captura
+/// (`PrefetchScheduler` peta amb `Build.FINGERPRINT` nul).
+@Composable
+private fun PlanScrollColumn(content: @Composable ColumnScope.() -> Unit) {
+    Column(
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(
+            start = ViraSpacing.screenMargin,
+            end = ViraSpacing.screenMargin,
+            top = ViraSpacing.m,
+            bottom = viraTabBarClearance() + ViraSpacing.m,
+        ),
+        verticalArrangement = Arrangement.spacedBy(ViraSpacing.m),
+        content = content,
+    )
 }

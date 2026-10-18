@@ -245,7 +245,7 @@ private fun ToggleButton(isDone: Boolean, onToggle: () -> Unit) {
 /// passat en blau clar, el futur més tènue i avui amb vora. Cap dia en vermell: només sumem.
 @Composable
 fun HabitMonthCard(habit: Habit, progress: HabitProgress) {
-    val locale = Locale.getDefault()
+    val locale = planLocale()
     val shape = RoundedCornerShape(ViraRadius.l)
     val cellHeight = 40.dp * LocalDensity.current.fontScale.coerceAtMost(2f)
     Column(
