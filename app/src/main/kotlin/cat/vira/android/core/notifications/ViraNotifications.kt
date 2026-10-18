@@ -259,6 +259,12 @@ object ViraNotifications {
             }
         }
         if (reminderPrefixes.none { notification.id.startsWith(it) }) return true
+        // El del registre emocional, si mentrestant s'ha canviat l'hora, tampoc: la nova ja té el seu.
+        if (notification.id.startsWith(ViraNotificationPlanner.EMOTION_PREFIX)) {
+            val fire = notification.fireAt.atZone(zone)
+            val time = ViraNotificationPreferences.emotionTime(ViraPreferences.open(context))
+            if (fire.hour != time.hour || fire.minute != time.minute) return false
+        }
         return ViraNotificationPlanner.isStillPending(notification, inputs, zone, now)
     }
 

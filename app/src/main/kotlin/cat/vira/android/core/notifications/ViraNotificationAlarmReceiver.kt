@@ -57,6 +57,9 @@ class ViraNotificationAlarmReceiver : BroadcastReceiver() {
                 ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
                 PackageManager.PERMISSION_GRANTED
             ) return false
+            // Un canal apagat als Ajustos del sistema no ensenya res: no compta com a dit.
+            val channel = NotificationManagerCompat.from(context).getNotificationChannelCompat(notification.channel.id)
+            if (channel != null && channel.importance == NotificationManagerCompat.IMPORTANCE_NONE) return false
             val shown = ViraNotifications.presented(context, notification)
             NotificationManagerCompat.from(context).notify(shown.id, 0, build(context, shown))
             return true

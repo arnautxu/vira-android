@@ -76,8 +76,11 @@ class ViraNotificationBootReceiver : BroadcastReceiver() {
             // L'hora local d'un avís ha canviat d'instant: s'han de recalcular, no només tornar a
             // posar, i **ara**, abans que una alarma calculada amb la zona d'abans soni a deshora.
             // També quan s'acaba de donar l'accés a les alarmes exactes: les que s'havien posat
-            // aproximades es tornen a posar a l'hora justa.
-            Intent.ACTION_TIME_CHANGED, Intent.ACTION_TIMEZONE_CHANGED, EXACT_ALARM_GRANTED -> {
+            // aproximades es tornen a posar a l'hora justa. I quan canvia l'idioma: el text va
+            // escrit dins de cada alarma.
+            Intent.ACTION_TIME_CHANGED, Intent.ACTION_TIMEZONE_CHANGED, Intent.ACTION_LOCALE_CHANGED, EXACT_ALARM_GRANTED -> {
+                // Els noms dels canals també van en l'idioma del telèfon.
+                if (intent.action == Intent.ACTION_LOCALE_CHANGED) ViraNotificationChannel.register(context)
                 val pending = goAsync()
                 scope.launch {
                     try {

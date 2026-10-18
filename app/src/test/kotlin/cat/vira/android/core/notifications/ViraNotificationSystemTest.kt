@@ -284,6 +284,30 @@ class ViraNotificationSystemTest {
     }
 
     @Test
+    fun unRecordatoriEmocionalDeLHoraDAbansNoSurt() = runBlocking {
+        val emotion = planned("${ViraNotificationPlanner.EMOTION_PREFIX}2027-1-15", actions = ViraActionSet.VIRI).copy(
+            channel = ViraNotificationChannel.EMOTION, fireAtMillis = Instant.parse("2027-01-15T19:00:00Z").toEpochMilli(),
+        )
+        assertTrue(ViraNotifications.isStillPending(app, emotion, ZoneId.of("UTC"), now))
+        ViraPreferences.open(app).edit().putInt(ViraNotificationPreferences.EMOTION_REMINDER_HOUR, 21).commit()
+        assertFalse("l'hora ha canviat", ViraNotifications.isStillPending(app, emotion, ZoneId.of("UTC"), now))
+    }
+
+    @Test
+    fun unCanalApagatNoCompteComAvisDit() {
+        val manager = app.getSystemService(android.app.NotificationManager::class.java)
+        ViraNotificationChannel.register(app)
+        shadowOf(app).grantPermissions(ViraNotifications.PERMISSION)
+        val viri = viriNudge()
+        assertTrue(ViraNotificationAlarmReceiver.post(app, viri))
+        manager.deleteNotificationChannel(ViraNotificationChannel.VIRI.id)
+        manager.createNotificationChannel(
+            android.app.NotificationChannel(ViraNotificationChannel.VIRI.id, "Viri", android.app.NotificationManager.IMPORTANCE_NONE),
+        )
+        assertFalse(ViraNotificationAlarmReceiver.post(app, viri))
+    }
+
+    @Test
     fun unaAlarmaQueArribaHoresTardNoSurt() = runBlocking {
         app.streak = ViraStreakState(isVisible = true, dayIsOpen = true)
         val viri = viriNudge()
