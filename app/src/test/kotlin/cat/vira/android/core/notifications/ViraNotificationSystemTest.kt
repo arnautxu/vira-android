@@ -4,6 +4,7 @@ import android.app.AlarmManager
 import android.app.Application
 import androidx.core.app.NotificationCompat
 import androidx.test.core.app.ApplicationProvider
+import cat.vira.android.R
 import cat.vira.android.core.data.ViraDatabase
 import cat.vira.android.core.data.ViraPreferences
 import cat.vira.android.core.data.model.Emotion
@@ -112,7 +113,11 @@ class ViraNotificationSystemTest {
         )
         val built = ViraNotificationAlarmReceiver.build(app, medication)
         val titles = (0 until NotificationCompat.getActionCount(built)).map { NotificationCompat.getAction(built, it)!!.title.toString() }
-        assertEquals(listOf("Presa", "Salta-la", "Més tard"), titles)
+        // Amb els textos de l'idioma de la prova (Robolectric surt en anglès), no escrits a mà.
+        val expected = listOf(
+            R.string.notification_action_taken, R.string.notification_action_skipped, R.string.notification_action_snooze,
+        ).map(app::getString)
+        assertEquals(expected, titles)
     }
 
     @Test
