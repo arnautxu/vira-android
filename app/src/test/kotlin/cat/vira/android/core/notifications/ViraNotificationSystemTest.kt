@@ -389,6 +389,21 @@ class ViraNotificationSystemTest {
     }
 
     @Test
+    fun unaPresaJaRespostaNoLaCanviaUnBotoVell() = runBlocking {
+        val n = planned("med-a", actions = ViraActionSet.MEDICATION)
+        app.notificationDatabase.medicationIntakes().upsertRaw(
+            listOf(
+                cat.vira.android.core.data.model.MedicationIntake(
+                    medicationId = UUID.fromString(n.medicationId), scheduledAt = Instant.ofEpochMilli(n.scheduledAtMillis!!),
+                    statusRaw = IntakeStatus.TAKEN.raw,
+                ),
+            ),
+        )
+        ViraNotificationActions.handle(app, ViraNotificationActions.Request(ViraNotificationActions.MEDICATION_SKIPPED, n), now)
+        assertTrue(app.calls.none { it.startsWith("intake") })
+    }
+
+    @Test
     fun unaAccioDesconegudaOSenseIdentificadorNoEscriuRes() = runBlocking {
         val n = planned("plan-a").copy(planItemId = null, habitId = "no és un id")
         ViraNotificationActions.handle(app, ViraNotificationActions.Request(ViraNotificationActions.PLAN_DONE, n), now)

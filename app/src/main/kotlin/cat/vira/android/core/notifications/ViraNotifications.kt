@@ -353,6 +353,16 @@ object ViraNotifications {
         else notification.copy(body = context.getString(R.string.notification_generic_body))
     }
 
+    /// Si aquella presa ja té resposta (a l'app, o d'un altre telèfon): un botó d'un avís que encara
+    /// era a la pantalla no la sobreescriu.
+    suspend fun intakeResolved(context: Context, medicationId: java.util.UUID, scheduledAt: Instant): Boolean {
+        val db = context.notificationHost?.notificationDatabase ?: return true
+        return db.medicationIntakes().all().any {
+            it.medicationId == medicationId && ViraNotificationPlanner.sameMinute(it.scheduledAt, scheduledAt) &&
+                it.status != cat.vira.android.core.data.model.IntakeStatus.PENDING
+        }
+    }
+
     private suspend fun snapshot(db: ViraDatabase) = ViraNotificationInputs(
         habits = db.habits().all(),
         habitLogs = db.habitLogs().all(),
