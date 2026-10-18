@@ -1,8 +1,9 @@
 name: Android
 
 # Un sol disparador: cada push. Abans també hi havia `pull_request`, i cada commit d'una branca
-# amb PR es compilava dues vegades. El push ja deixa el resultat a la PR (és el mateix commit) i
-# és qui fa les captures de captures/<branca>, que els fils necessiten abans d'obrir cap PR.
+# amb PR es compilava dues vegades. El push ja deixa el resultat a la PR (és el mateix commit),
+# prova la branca juntada amb main (pas «Junta el main d'ara») i és qui fa les captures de
+# captures/<branca>, que els fils necessiten abans d'obrir cap PR.
 on:
   push:
     # Les branques de captures només guarden imatges.
@@ -13,10 +14,11 @@ on:
       - 'docs/**'
 
 # Un push nou a la mateixa branca atura el que encara corria per a l'anterior: només compta
-# l'últim. A main no s'atura res, perquè cada build de main és una release.
+# l'últim. A main cada build té grup propi (el número del build), perquè cap no se'n salti:
+# cada build de main és una release.
 concurrency:
-  group: android-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+  group: android-${{ github.ref == 'refs/heads/main' && github.run_id || github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: write
@@ -27,6 +29,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Abans ho feia el build de la PR: provar la branca tal com quedarà en fusionar-la, amb el
+      # main d'ara a sobre. Si no es pot juntar sense conflicte, es prova la branca sola.
+      - name: Junta el main d'ara a la branca
+        if: github.ref != 'refs/heads/main'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898613+github-actions[bot]@users.noreply.github.com"
+          git merge --no-edit origin/main || { git merge --abort; echo "::warning::La branca té conflictes amb main; es prova sola."; }
 
       - name: JDK 21
         uses: actions/setup-java@v4
