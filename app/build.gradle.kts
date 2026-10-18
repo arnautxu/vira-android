@@ -20,6 +20,18 @@ android {
         resourceConfigurations += listOf("ca", "es", "en")
     }
 
+    // Una sola clau de proves per a tothom (la CI inclosa): sense ella, cada APK de la CI sortia
+    // signat amb una clau nova, el mòbil no deixava instal·lar-lo a sobre de l'anterior i Google no
+    // podia reconèixer l'app al selector de comptes. No és secreta: només signa les proves.
+    signingConfigs {
+        getByName("debug") {
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -67,6 +79,11 @@ dependencies {
     implementation(libs.ktor.client.okhttp)
     implementation(libs.okhttp)
     implementation(libs.androidx.browser)
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play)
+    implementation(libs.google.id)
+    implementation(libs.androidx.work.runtime)
+    implementation(libs.androidx.lifecycle.process)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(libs.okhttp.mockwebserver)
     testImplementation(libs.robolectric)

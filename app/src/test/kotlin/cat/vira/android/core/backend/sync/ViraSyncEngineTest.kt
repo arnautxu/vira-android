@@ -1,5 +1,6 @@
 package cat.vira.android.core.backend.sync
 
+import android.app.Application
 import android.content.SharedPreferences
 import android.net.Uri
 import androidx.test.core.app.ApplicationProvider
@@ -35,12 +36,15 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 import java.time.Instant
 import java.util.Collections
 import java.util.UUID
 
 /// El motor sencer contra un servidor fals: què puja, què no puja mai i què baixa.
+// L'Application buida: la de Vira engega WorkManager i la sincronització, que aquí no toquen.
 @RunWith(RobolectricTestRunner::class)
+@Config(application = Application::class)
 class ViraSyncEngineTest {
 
     private val userId = UUID.fromString("6f1c2a3b-0000-4000-8000-000000000001")
@@ -208,6 +212,7 @@ class ViraSyncEngineTest {
         override suspend fun sendPasswordReset(email: String) = Unit
         override suspend fun updatePassword(password: String) = Unit
         override suspend fun startOAuth(provider: ViraOAuthProvider) = Unit
+        override suspend fun signInWithGoogleIdToken(idToken: String, rawNonce: String) = session
         override suspend fun session(fromCallback: Uri) = session
         override suspend fun session() = session
         override suspend fun storedSession() = session

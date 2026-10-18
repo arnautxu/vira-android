@@ -31,6 +31,10 @@ interface ViraAuthBackend {
     /// Obre el navegador amb Google o Apple. La sessió arriba després, per `session(fromCallback:)`.
     suspend fun startOAuth(provider: ViraOAuthProvider)
 
+    /// Google amb el selector de comptes del telèfon: el testimoni el dona Android i Supabase el
+    /// verifica amb el mateix `nonce` que s'ha enviat a Google.
+    suspend fun signInWithGoogleIdToken(idToken: String, rawNonce: String): ViraStoredSession
+
     /// Tornada de `vira://auth-callback?code=…` (OAuth, confirmació de correu o recuperació).
     suspend fun session(fromCallback: Uri): ViraStoredSession
 
@@ -45,5 +49,6 @@ interface ViraAuthBackend {
     suspend fun updateMetadata(metadata: ViraUserMetadata): ViraUser
 }
 
-/// Google i Apple van tots dos pel navegador amb PKCE i tornen a `vira://auth-callback`.
+/// Pel navegador amb PKCE, tornant a `vira://auth-callback`. Google només hi va quan el selector
+/// de comptes no es pot fer servir (`ViraGoogleSignIn`).
 enum class ViraOAuthProvider { GOOGLE, APPLE }

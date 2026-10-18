@@ -1,5 +1,6 @@
 package cat.vira.android.core.backend
 
+import android.app.Activity
 import android.content.SharedPreferences
 import android.net.Uri
 import cat.vira.android.core.backend.sync.ViraSyncCursors
@@ -86,6 +87,21 @@ class ViraSession(
         } ?: false
 
     suspend fun startOAuth(provider: ViraOAuthProvider) = attempt { requireAuth().startOAuth(provider) }
+
+    /// Google: primer el selector de comptes del telèfon i, si no es pot, el navegador.
+    suspend fun signInWithGoogle(activity: Activity) {
+        val clientId = ViraBackendConfig.GOOGLE_WEB_CLIENT_ID
+        if (clientId == null) {
+            startOAuth(ViraOAuthProvider.GOOGLE)
+            return
+        }
+        when (val result = ViraGoogleSignIn(clientId).request(activity)) {
+            is ViraGoogleSignIn.Result.Token ->
+                attempt { adopt(requireAuth().signInWithGoogleIdToken(result.idToken, result.rawNonce)) }
+            ViraGoogleSignIn.Result.Cancelled -> Unit
+            ViraGoogleSignIn.Result.Unavailable -> startOAuth(ViraOAuthProvider.GOOGLE)
+        }
+    }
 
     suspend fun sendPasswordReset(email: String) = attempt {
         requireAuth().sendPasswordReset(email)

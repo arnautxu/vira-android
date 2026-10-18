@@ -27,4 +27,9 @@ object ViraBackendConfig {
     const val CALLBACK_SCHEME = "vira"
     const val CALLBACK_HOST = "auth-callback"
     const val CALLBACK_URL = "$CALLBACK_SCHEME://$CALLBACK_HOST"
+
+    /// L'identificador **web** de Google que té Supabase (Authentication → Providers → Google →
+    /// Client IDs). És públic: Google el posa a dins de cada testimoni. Mentre sigui `null`, Google
+    /// entra pel navegador, que ja funciona.
+    val GOOGLE_WEB_CLIENT_ID: String? = null
 }

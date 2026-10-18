@@ -1,5 +1,6 @@
 package cat.vira.android.core.data
 
+import android.app.Application
 import androidx.test.core.app.ApplicationProvider
 import cat.vira.android.core.data.model.PlanAssistanceDetail
 import cat.vira.android.core.data.model.PlanAssistanceLink
@@ -11,9 +12,12 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 import java.time.Instant
 
+// L'Application buida: la de Vira engega WorkManager i la sincronització, que aquí no toquen.
 @RunWith(RobolectricTestRunner::class)
+@Config(application = Application::class)
 class ViraStoreTest {
 
     private val now = Instant.parse("2026-10-18T10:00:00Z")
