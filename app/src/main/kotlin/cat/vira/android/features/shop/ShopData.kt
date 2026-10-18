@@ -25,6 +25,7 @@ class ShopData(val db: ViraDatabase, preferences: android.content.SharedPreferen
     val streak = db.streaks().observe()
     val skins = db.skinOwnerships().observeAll()
     val badges = db.badgeOwnerships().observeAll()
+    val accessories = db.accessoryOwnerships().observeAll()
     val profile = db.profiles().observe()
     val personalRewards = db.personalRewards().observeAll()
 }

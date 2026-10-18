@@ -97,3 +97,17 @@ fun CartaOberta() = Screen {
 fun CartaNova() = Screen {
     CardUnlockedScreen(requireNotNull(CardItem.item("week_streak")), owned = 6, onContinue = {})
 }
+
+@PreviewTest @ViraScreenCaptures @Composable
+fun PersonalitzarPerfil() = Screen {
+    ProfileCustomizeContent(
+        nickname = "Arnau", ownedSkins = listOfNotNull(SkinItem.item("chef"), SkinItem.item("hacker")), equippedKey = "chef",
+        pinnedKeys = listOf("first_checkin", "bolt"), ownedBadgeKeys = setOf("bolt"), counter = counter, streak = streak,
+        onDone = {}, onSaveNickname = {}, onEquip = {}, onToggleBadge = {},
+    )
+}
+
+@PreviewTest @ViraCaptures @Composable
+fun PrestatgeDeBadges() = Screen {
+    PinnedBadgesShelfContent(listOf("first_checkin", "bolt"), onCustomize = {})
+}
