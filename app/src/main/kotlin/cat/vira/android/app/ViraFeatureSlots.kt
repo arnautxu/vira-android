@@ -6,16 +6,22 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import cat.vira.android.R
 import cat.vira.android.core.backend.ViraBackend
 import cat.vira.android.core.data.model.CoinReason
+import cat.vira.android.core.data.model.FocusProfile
 import cat.vira.android.core.design.PendingScreen
 import cat.vira.android.core.design.components.ViraActionButton
 import cat.vira.android.core.design.components.ViraActionHierarchy
 import cat.vira.android.core.design.tokens.ViraSpacing
+import cat.vira.android.features.focus.FocusProfileEditorScreen
+import cat.vira.android.features.focus.FocusScreen
+import cat.vira.android.features.focus.FocusStartRequest
 import cat.vira.android.features.help.HelpBreatheScreen
 import cat.vira.android.features.help.HelpScreen
 import java.util.UUID
@@ -58,10 +64,10 @@ internal object ViraFeatureSlots {
 
     /// Fil Concentra't (`features/focus`): la preparació a pantalla completa, sense la barra
     /// (`FocusScreen(onClose = onClose)`); `link` és la tasca triada, si s'hi ha arribat des d'una
-    /// fila. Si l'app s'obre des de l'avís fix amb una sessió en
-    /// marxa, el mateix fil hi afegeix aquí la represa (`FocusRuntime.isActive`).
+    /// fila. La represa des de l'avís fix és `FocusResumeEffect { navigator.startFocus() }` a l'arrel.
     @Composable
-    fun Focus(link: ViraFocusLink?, onClose: () -> Unit) = PendingModal(onClose)
+    fun Focus(link: ViraFocusLink?, onClose: () -> Unit) =
+        FocusScreen(FocusStartRequest(linkedTitle = link?.title, linkedItemID = link?.itemId), onClose)
 
     /// Fil Ajuda ara (`features/help`): `HelpScreen(onClose, onOpenCheckIn)`. `onOpenCheckIn`
     /// tanca Ajuda ara i obre el check-in d'Emocions.
@@ -88,7 +94,14 @@ internal object ViraFeatureSlots {
     /// Fil Concentra't: `FocusProfileEditorScreen` amb el mode `profileId` (`null`, un de nou). Es desa
     /// sol.
     @Composable
-    fun FocusProfileEditor(profileId: UUID?, onClose: () -> Unit) = PendingModal(onClose)
+    fun FocusProfileEditor(profileId: UUID?, onClose: () -> Unit) {
+        val backend = LocalViraBackend.current
+        // Nou: l'editor de seguida. Existent: primer es llegeix, i fins aleshores no hi ha res a ensenyar.
+        val profile by produceState<FocusProfile?>(null, profileId) {
+            value = profileId?.let { backend.db.focusProfiles().byId(it) }
+        }
+        if (profileId == null || profile != null) FocusProfileEditorScreen(profile) { onClose() }
+    }
 
     /// Fil Ajustos i compte (`features/settings`). Per editar un mode de Concentra't,
     /// `LocalViraNavigator.current.editFocusProfile(id)`.
