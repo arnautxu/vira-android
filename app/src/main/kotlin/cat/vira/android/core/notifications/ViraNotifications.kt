@@ -15,6 +15,10 @@ import androidx.room.InvalidationTracker
 import cat.vira.android.R
 import cat.vira.android.core.data.ViraDatabase
 import cat.vira.android.core.data.ViraPreferences
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.serialization.json.Json
 import kotlinx.coroutines.sync.withLock
@@ -167,17 +171,18 @@ object ViraNotifications {
         }
         val time = ViraNotificationPreferences.viriTime(preferences)
         val muted = ViraNotificationPlanner.muteWindow(host.notificationDatabase.focusSessions().all(), now)
+        val (event, eventStamp) = ViraStreakNotifications.pendingNews(preferences, time, now, zone, muted) { stamp ->
+            scheduler.armed().any { it.id.endsWith(ViraStreakNotifications.NEWS_SUFFIX) && it.scheduledAtMillis == stamp }
+        }
         val planned = ViraStreakNotifications.requests(
             now = now,
-            event = ViraStreakNotifications.pendingEvent(preferences, time, now, zone, muted) { stamp ->
-                scheduler.armed().any { it.id.endsWith(ViraStreakNotifications.NEWS_SUFFIX) && it.scheduledAtMillis == stamp }
-            },
+            event = event,
             dayIsOpen = state.dayIsOpen,
             muted = muted,
             time = time,
             zone = zone,
             text = text(context),
-            eventStamp = ViraStreakNotifications.pendingEventStamp(preferences),
+            eventStamp = eventStamp,
         )
         // Un avís de Viri endarrerit no surt si el dia ja compta: diria que encara és obert.
         scheduler.replace(streakPrefixes, planned, now) {
@@ -279,10 +284,20 @@ object ViraNotifications {
         val appContext = context.applicationContext
         db.invalidationTracker.addObserver(
             object : InvalidationTracker.Observer(WATCHED_TABLES) {
-                override fun onInvalidated(tables: Set<String>) = ViraNotificationWorker.request(appContext)
+                override fun onInvalidated(tables: Set<String>) {
+                    // Una concentració que s'acaba abans d'hora torna els avisos que silenciava: ara,
+                    // no quan WorkManager vulgui, o el de dins de la finestra ja hauria passat.
+                    if (tables.any { it.equals("FocusSession", ignoreCase = true) }) {
+                        watchScope.launch { reschedule(appContext) }
+                    } else {
+                        ViraNotificationWorker.request(appContext)
+                    }
+                }
             },
         )
     }
+
+    private val watchScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private val WATCHED_TABLES = arrayOf(
         "Habit", "HabitLog", "Medication", "MedicationIntake", "PlanItem", "EmotionEntry", "FocusSession",

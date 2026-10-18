@@ -134,6 +134,19 @@ object ViraStreakNotifications {
         }
     }
 
+    /// La notícia i la seva marca d'un sol cop: un `record` entremig ajuntaria el text de l'una
+    /// amb la marca de l'altra.
+    fun pendingNews(
+        preferences: SharedPreferences,
+        time: ViraClock,
+        now: Instant,
+        zone: ZoneId,
+        muted: ClosedOpenRange? = null,
+        isArmed: (stamp: Long) -> Boolean = { true },
+    ): Pair<Event?, Long?> = synchronized(EVENT_LOCK) {
+        pendingEvent(preferences, time, now, zone, muted, isArmed) to pendingEventStamp(preferences)
+    }
+
     /// Quina notícia és: la data en què es va apuntar. Viatja amb l'avís perquè una notícia
     /// endarrerida que una de més nova ha substituït no surti ni esborri la nova.
     fun pendingEventStamp(preferences: SharedPreferences): Long? =
