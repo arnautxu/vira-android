@@ -6,6 +6,7 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import cat.vira.android.app.ViraIncomingLinks
+import cat.vira.android.app.processCompletionQueue
 import cat.vira.android.core.backend.ViraBackend
 import cat.vira.android.core.backend.sync.ViraSyncWorker
 import kotlinx.coroutines.Dispatchers
@@ -21,6 +22,10 @@ class ViraApp : Application() {
 
     /// Els enllaços que han obert l'app i encara no ha fet servir ningú (`ViraIncomingLinks`).
     val incomingLinks = ViraIncomingLinks()
+
+    /// La finestra de «Desfer» i la recompensa que ve després (`ViraCompletionQueue`). És del
+    /// procés perquè un gir de pantalla no se l'endugui a mitges.
+    internal val completions by lazy { processCompletionQueue(this, ProcessLifecycleOwner.get().lifecycleScope) }
 
     override fun onCreate() {
         super.onCreate()
