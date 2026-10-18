@@ -130,6 +130,7 @@ fun ViraTutorialOverlay(
                     if (step == ViraTutorialStep.INTEGRATIONS) {
                         EntryConnectionToggles(prefs)
                         EntryTogglesFootnote()
+                        Text(stringResource(R.string.tutorial_integrations_outside), style = ViraFont.footnote, color = ink)
                     }
                     // Els widgets no tenen interruptor: s'afegeixen des de la pantalla d'inici.
                     if (step == ViraTutorialStep.WIDGETS) {
