@@ -56,7 +56,9 @@ fun RootScreen() {
             popExitTransition = { slideOutVertically { it } + fadeOut() },
         ) {
             composable(MAIN_ROUTE) { MainTabs(navigator) }
-            composable(ViraModal.Focus.route) { ViraFeatureSlots.Focus(onClose = close) }
+            composable(ViraModal.Focus.route) {
+                ViraFeatureSlots.Focus(link = navigator.focusLink, onClose = close)
+            }
             composable(ViraModal.Help.route) {
                 ViraFeatureSlots.Help(
                     onClose = close,
@@ -86,7 +88,7 @@ private fun MainTabs(navigator: ViraNavigator) {
         selectedTab = tab,
         profile = rememberProfileSummary(),
         onTabTap = navigator::open,
-        onFocus = navigator::startFocus,
+        onFocus = { navigator.startFocus() },
         onProfile = { navigator.navigate(ViraDestination.Profile) },
         onSettings = navigator::openSettings,
         onHelp = navigator::openHelp,

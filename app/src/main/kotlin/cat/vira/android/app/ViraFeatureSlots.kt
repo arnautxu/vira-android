@@ -5,10 +5,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import cat.vira.android.R
+import cat.vira.android.core.backend.ViraBackend
+import cat.vira.android.core.data.model.CoinReason
 import cat.vira.android.core.design.PendingScreen
 import cat.vira.android.core.design.components.ViraActionButton
 import cat.vira.android.core.design.components.ViraActionHierarchy
@@ -40,7 +43,8 @@ internal object ViraFeatureSlots {
     @Composable
     fun Entry(request: ViraEntryRequest, onFinish: () -> Unit) = PendingScreen()
 
-    /// Fil Panell de pares (`features/parent`): l'arrel d'un compte de pare o mare.
+    /// Fil Panell de pares (`features/parent`): l'arrel d'un compte de pare o mare. Els enllaços de
+    /// vinculació arriben per `LocalViraIncomingLinks.current` (l'últim es conserva).
     @Composable
     fun ParentRoot() = PendingScreen()
 
@@ -49,10 +53,11 @@ internal object ViraFeatureSlots {
     fun ParentReleasePlaceholder() = PendingScreen()
 
     /// Fil Concentra't (`features/focus`): la preparació a pantalla completa, sense la barra
-    /// (`FocusScreen(onClose = onClose)`). Si l'app s'obre des de l'avís fix amb una sessió en
+    /// (`FocusScreen(onClose = onClose)`); `link` és la tasca triada, si s'hi ha arribat des d'una
+    /// fila. Si l'app s'obre des de l'avís fix amb una sessió en
     /// marxa, el mateix fil hi afegeix aquí la represa (`FocusRuntime.isActive`).
     @Composable
-    fun Focus(onClose: () -> Unit) = PendingModal(onClose)
+    fun Focus(link: ViraFocusLink?, onClose: () -> Unit) = PendingModal(onClose)
 
     /// Fil Ajuda ara (`features/help`): `HelpScreen(onClose, onOpenCheckIn)`. `onOpenCheckIn`
     /// tanca Ajuda ara i obre el check-in d'Emocions.
@@ -63,6 +68,18 @@ internal object ViraFeatureSlots {
     /// panell ràpid i Mindfulness.
     @Composable
     fun Breathe(onClose: () -> Unit) = PendingModal(onClose)
+
+    /// Fil Viri i ratxa (`features/progress`): concedeix la recompensa d'una acció feta i en torna
+    /// (monedes, XP). Ha de passar per `ViraProgress.record`, que també compta el dia per a la ratxa;
+    /// l'XP és `ViraRewards.rule(reason)?.coins`. Mai des de medicació.
+    suspend fun commitReward(backend: ViraBackend, reason: CoinReason): Pair<Int, Int> = 0 to 0
+
+    /// Fil Pla (`HabitCelebrationView`): la celebració a pantalla completa del primer hàbit del dia.
+    /// Mentre no hi és, es tanca sola.
+    @Composable
+    fun HabitCelebration(title: String, coins: Int, xp: Int, onContinue: () -> Unit) {
+        LaunchedEffect(Unit) { onContinue() }
+    }
 
     /// Fil Ajustos i compte (`features/settings`).
     @Composable
