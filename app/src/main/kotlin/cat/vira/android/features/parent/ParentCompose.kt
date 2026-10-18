@@ -1,6 +1,7 @@
 package cat.vira.android.features.parent
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -21,6 +22,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import cat.vira.android.R
 import cat.vira.android.core.backend.ViraBackendError
@@ -126,9 +128,21 @@ internal fun ParentComposeContent(
                     }
                     if (day != null) {
                         row {
-                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                                Text(stringResource(R.string.parent_compose_day), style = ViraFont.body, color = ViraColor.textPrimary, modifier = Modifier.weight(1f))
+                            // Amb lletra gran, l'etiqueta i la data van una sota l'altra: de costat, l'etiqueta
+                            // es queda sense amplada i es parteix lletra a lletra.
+                            val label: @Composable () -> Unit = {
+                                Text(stringResource(R.string.parent_compose_day), style = ViraFont.body, color = ViraColor.textPrimary)
+                            }
+                            val date: @Composable () -> Unit = {
                                 ViraActionButton(longDate(day, locale), { picking = true }, hierarchy = ViraActionHierarchy.Secondary)
+                            }
+                            if (LocalDensity.current.fontScale >= LARGE_TEXT) {
+                                Column(verticalArrangement = Arrangement.spacedBy(ViraSpacing.xs)) { label(); date() }
+                            } else {
+                                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                    Box(Modifier.weight(1f)) { label() }
+                                    date()
+                                }
                             }
                         }
                     }

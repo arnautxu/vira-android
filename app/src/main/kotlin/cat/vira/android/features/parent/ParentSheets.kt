@@ -21,6 +21,8 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
@@ -58,12 +60,13 @@ internal fun ParentSheet(onDismiss: () -> Unit, content: @Composable ColumnScope
 /// principal a la dreta (`.toolbar` amb `cancellationAction` i `confirmationAction`).
 @Composable
 internal fun ParentSheetBar(title: String, onCancel: () -> Unit, confirm: String? = null, confirmEnabled: Boolean = true, onConfirm: () -> Unit = {}) {
-    Row(Modifier.fillMaxWidth().padding(horizontal = ViraSpacing.xs), verticalAlignment = Alignment.CenterVertically) {
-        ViraActionButton(stringResource(R.string.action_cancel), onCancel, hierarchy = ViraActionHierarchy.Textual)
+    val titleText: @Composable (Modifier) -> Unit = { modifier ->
         Text(
             title, style = ViraFont.headline, color = ViraColor.textPrimary, textAlign = TextAlign.Center,
-            modifier = Modifier.weight(1f).semantics { heading() },
+            modifier = modifier.semantics { heading() },
         )
+    }
+    val confirmButton: @Composable () -> Unit = {
         if (confirm != null) {
             ViraActionButton(confirm, onConfirm, hierarchy = ViraActionHierarchy.Textual, enabled = confirmEnabled)
         } else {
@@ -71,7 +74,27 @@ internal fun ParentSheetBar(title: String, onCancel: () -> Unit, confirm: String
             Box(Modifier.defaultMinSize(minWidth = ViraTouch.minimum * 2))
         }
     }
+    // Amb lletra gran, el títol baixa a una línia pròpia: entre els dos botons no hi cap.
+    if (LocalDensity.current.fontScale >= LARGE_TEXT) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = ViraSpacing.xs)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                ViraActionButton(stringResource(R.string.action_cancel), onCancel, hierarchy = ViraActionHierarchy.Textual)
+                Spacer(Modifier.weight(1f))
+                if (confirm != null) confirmButton()
+            }
+            titleText(Modifier.fillMaxWidth().padding(horizontal = ViraSpacing.s))
+        }
+    } else {
+        Row(Modifier.fillMaxWidth().padding(horizontal = ViraSpacing.xs), verticalAlignment = Alignment.CenterVertically) {
+            ViraActionButton(stringResource(R.string.action_cancel), onCancel, hierarchy = ViraActionHierarchy.Textual)
+            titleText(Modifier.weight(1f))
+            confirmButton()
+        }
+    }
 }
+
+/// A partir d'aquí, les files que porten dues coses de costat les apilen.
+internal const val LARGE_TEXT = 1.5f
 
 /// El pare/mare introdueix el codi que el fill/a li ha donat (`ParentLinkRedeemView`).
 ///
