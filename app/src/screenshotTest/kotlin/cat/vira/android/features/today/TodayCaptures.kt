@@ -17,14 +17,14 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 
 /// Avui a l'ample d'un iPhone (393 dp), prou alt per veure la pantalla sencera.
-@Preview(name = "clar", widthDp = 393, heightDp = 1500, locale = "ca")
-@Preview(name = "fosc", widthDp = 393, heightDp = 1500, locale = "ca", uiMode = Configuration.UI_MODE_NIGHT_YES or Configuration.UI_MODE_TYPE_NORMAL)
-@Preview(name = "lletra-gran", widthDp = 393, heightDp = 2600, locale = "es", fontScale = 2f)
+@Preview(name = "clar", widthDp = 393, heightDp = 1800, locale = "ca")
+@Preview(name = "fosc", widthDp = 393, heightDp = 1800, locale = "ca", uiMode = Configuration.UI_MODE_NIGHT_YES or Configuration.UI_MODE_TYPE_NORMAL)
+@Preview(name = "lletra-gran", widthDp = 393, heightDp = 4600, locale = "es", fontScale = 2f)
 annotation class TodayCaptures
 
 @Preview(name = "clar", widthDp = 393, heightDp = 852, locale = "ca")
 @Preview(name = "fosc", widthDp = 393, heightDp = 852, locale = "ca", uiMode = Configuration.UI_MODE_NIGHT_YES or Configuration.UI_MODE_TYPE_NORMAL)
-@Preview(name = "lletra-gran", widthDp = 393, heightDp = 1600, locale = "es", fontScale = 2f)
+@Preview(name = "lletra-gran", widthDp = 393, heightDp = 2000, locale = "es", fontScale = 2f)
 annotation class CaptureCaptures
 
 private val zone: ZoneId = ZoneId.of("Europe/Madrid")
