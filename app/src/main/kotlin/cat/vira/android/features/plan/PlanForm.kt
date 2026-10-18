@@ -232,3 +232,18 @@ fun FormTextField(
         )
     }
 }
+
+/// Els avisos estan denegats: ho diu i porta als ajustos de l'app al telèfon.
+@Composable
+fun ReminderDeniedFooter() {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    Column(verticalArrangement = Arrangement.spacedBy(ViraSpacing.xxs)) {
+        FormFooter(androidx.compose.ui.res.stringResource(cat.vira.android.R.string.habits_reminder_denied))
+        FormActionRow(androidx.compose.ui.res.stringResource(cat.vira.android.R.string.action_open_settings), ViraColor.accent(ViraArea.Plan)) {
+            val intent = android.content.Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, context.packageName)
+                .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(intent)
+        }
+    }
+}

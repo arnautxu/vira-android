@@ -35,7 +35,9 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -240,6 +242,14 @@ private fun ReorderList(items: List<PlanItem>, actions: PlanActions, zone: ZoneI
     var startIndex by remember { mutableIntStateOf(0) }
     val heights = remember { mutableStateMapOf<java.util.UUID, Int>() }
     val shape = RoundedCornerShape(ViraRadius.s)
+    val upLabel = stringResource(R.string.plan_reorder_move_up)
+    val downLabel = stringResource(R.string.plan_reorder_move_down)
+    // TalkBack no pot arrossegar: cada fila ofereix "Mou amunt" i "Mou avall".
+    fun step(index: Int, delta: Int) {
+        val target = index + delta
+        if (target !in order.indices) return
+        actions.move(PlanItemOrder.move(order, index, target, zone))
+    }
 
     Column {
         Text(
@@ -258,6 +268,12 @@ private fun ReorderList(items: List<PlanItem>, actions: PlanActions, zone: ZoneI
                         .graphicsLayer { translationY = if (isDragged) dragOffset else 0f }
                         .then(if (isDragged) Modifier.shadow(8.dp, shape).background(ViraColor.cardFill(ViraArea.Plan), shape) else Modifier)
                         .onSizeChanged { heights[item.id] = it.height }
+                        .semantics {
+                            customActions = listOfNotNull(
+                                CustomAccessibilityAction(upLabel) { step(index, -1); true }.takeIf { index > 0 },
+                                CustomAccessibilityAction(downLabel) { step(index, 1); true }.takeIf { index < order.lastIndex },
+                            )
+                        }
                         .pointerInput(item.id) {
                             detectDragGesturesAfterLongPress(
                                 onDragStart = {

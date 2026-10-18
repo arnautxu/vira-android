@@ -32,7 +32,8 @@ fun HabitEditor(habit: Habit?, actions: PlanActions, onDismiss: () -> Unit, zone
     var weekdays by remember { mutableStateOf(habit?.weekdays?.toSet() ?: emptySet()) }
     var hasReminder by remember { mutableStateOf(habit?.reminderTime != null) }
     var reminder by remember { mutableStateOf(habit?.reminderTime?.atZone(zone)?.toLocalTime() ?: LocalTime.of(9, 0)) }
-    val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
+    var isDenied by remember { mutableStateOf(false) }
+    val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted -> isDenied = !granted }
     val canSave = title.isNotBlank()
 
     fun save() {
@@ -73,11 +74,20 @@ fun HabitEditor(habit: Habit?, actions: PlanActions, onDismiss: () -> Unit, zone
             FormTextField(notes, { notes = it }, label = stringResource(R.string.habits_notes_placeholder), singleLine = false)
         }
         // L'avís va en un grup propi: activar-lo demana un permís i porta l'hora al darrere.
-        FormSection(header = stringResource(R.string.habits_reminder)) {
+        // Un cop denegat, Android ja no torna a preguntar: callar deixaria un interruptor que no fa res.
+        FormSection(
+            header = stringResource(R.string.habits_reminder),
+            footer = if (isDenied) {
+                { ReminderDeniedFooter() }
+            } else {
+                null
+            },
+        ) {
             FormToggle(stringResource(R.string.habits_reminder_on), hasReminder, { isOn ->
                 hasReminder = isOn
-                if (isOn && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !ViraNotifications.canPost(context)) {
-                    permission.launch(ViraNotifications.PERMISSION)
+                isDenied = false
+                if (isOn && !ViraNotifications.canPost(context)) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) permission.launch(ViraNotifications.PERMISSION) else isDenied = true
                 }
             })
             if (hasReminder) {

@@ -44,7 +44,8 @@ fun MedicationEditor(medication: Medication?, actions: PlanActions, onDismiss: (
     var times by remember { mutableStateOf(medication?.timesInMinutes?.sorted()?.ifEmpty { null } ?: listOf(9 * 60)) }
     var hasReminder by remember { mutableStateOf(medication?.hasReminder ?: true) }
     var confirmingEnd by remember { mutableStateOf(false) }
-    val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
+    var isDenied by remember { mutableStateOf(false) }
+    val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted -> isDenied = !granted }
     val canSave = name.isNotBlank() && times.isNotEmpty()
 
     fun save() {
@@ -121,12 +122,18 @@ fun MedicationEditor(medication: Medication?, actions: PlanActions, onDismiss: (
         }
         FormSection(
             header = stringResource(R.string.habits_reminder),
-            footer = { FormFooter(stringResource(R.string.medication_disclaimer)) },
+            footer = {
+                Column(verticalArrangement = Arrangement.spacedBy(ViraSpacing.xs)) {
+                    if (isDenied) ReminderDeniedFooter()
+                    FormFooter(stringResource(R.string.medication_disclaimer))
+                }
+            },
         ) {
             FormToggle(stringResource(R.string.habits_reminder_on), hasReminder, { isOn ->
                 hasReminder = isOn
-                if (isOn && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !ViraNotifications.canPost(context)) {
-                    permission.launch(ViraNotifications.PERMISSION)
+                isDenied = false
+                if (isOn && !ViraNotifications.canPost(context)) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) permission.launch(ViraNotifications.PERMISSION) else isDenied = true
                 }
             })
         }
