@@ -10,11 +10,13 @@ import cat.vira.android.app.processCompletionQueue
 import cat.vira.android.core.backend.ViraBackend
 import cat.vira.android.core.backend.sync.ViraSyncWorker
 import cat.vira.android.core.data.ViraDatabase
+import cat.vira.android.core.data.ViraStore
 import cat.vira.android.core.notifications.ViraNotificationChannel
 import cat.vira.android.core.notifications.ViraNotificationEffects
 import cat.vira.android.core.notifications.ViraNotificationHost
 import cat.vira.android.core.notifications.ViraNotificationWorker
 import cat.vira.android.core.notifications.ViraNotifications
+import cat.vira.android.features.emotions.ViraEmotionCheckIn
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -33,8 +35,11 @@ class ViraApp : Application(), ViraNotificationHost {
     override val notificationDatabase: ViraDatabase get() = backend.db
 
     /// Els botons dels avisos fan el que fa cada pantalla: les hi connecta cada fil quan la seva
-    /// pantalla ja escriu. Fins aleshores, cap botó escriu res i Viri no programa cap avís.
-    override var notificationEffects = ViraNotificationEffects()
+    /// pantalla ja escriu. Fins aleshores, aquell botó no escriu res i Viri no programa cap avís.
+    override var notificationEffects = ViraNotificationEffects(
+        // El mateix registre que el check-in d'Emocions, sense intensitat ni nota.
+        logEmotion = { ViraEmotionCheckIn.record(ViraStore(backend.db), it) },
+    )
 
     /// La finestra de «Desfer» i la recompensa que ve després (`ViraCompletionQueue`). És del
     /// procés perquè un gir de pantalla no se l'endugui a mitges.
