@@ -302,19 +302,14 @@ class ViraSyncEngineTest {
     }
 
     @Test
-    fun lesLapidesDUnaCapaTancadaEsperenElPermis() = runBlocking {
+    fun lesLapidesSensiblesSurtenSensePermis() = runBlocking {
         val emotion = UUID.randomUUID()
-        val task = UUID.randomUUID()
-        db.tombstones().upsertRaw(listOf(
-            SyncTombstone(table = "emotion_entries", recordID = emotion),
-            SyncTombstone(table = "plan_items", recordID = task),
-        ))
+        db.tombstones().upsertRaw(listOf(SyncTombstone(table = "emotion_entries", recordID = emotion)))
         engine(ViraConsentStatus.PENDING).sync()
 
         val deletes = requests.filter { it.method == "DELETE" }.map { it.requestUrl!!.pathSegments.last() }
-        assertEquals(listOf("plan_items"), deletes)
-        assertEquals(listOf(emotion), db.tombstones().recordIDs("emotion_entries"))
-        assertTrue(db.tombstones().recordIDs("plan_items").isEmpty())
+        assertEquals(listOf("emotion_entries"), deletes)
+        assertTrue(db.tombstones().all().isEmpty())
     }
 
     @Test

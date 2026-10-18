@@ -188,12 +188,10 @@ class ViraSyncEngine(
 
         // Cada tros pel seu compte: un que el servidor rebutgi sempre no ha de deixar els de les
         // altres taules sense esborrar.
-        // Les làpides d'una capa tancada s'esperen: sense permís, la política RLS no deixa veure la fila
-        // i l'esborrat diria que sí sense haver tocat res. Esborrar la làpida llavors faria tornar la
-        // fila el dia que el permís torni.
-        val layers = tables.associate { it.table to it.layer }
-        val openGroups = tombstoneGroups().filter { group -> layers[group.first().table]?.let(scope::allows) ?: true }
-        for (group in openGroups) attempt("tombstones ${group.first().table}") { flushTombstones(group, token) }
+        // Les làpides surten sempre, també les d'una capa tancada: esborrar el que és teu no demana el
+        // permís del tutor (`own_delete` només mira `user_id`), i guardar-les deixaria al servidor el
+        // que l'usuari ja ha esborrat (`PRIVACY_AND_SAFETY.md` §5).
+        for (group in tombstoneGroups()) attempt("tombstones ${group.first().table}") { flushTombstones(group, token) }
         for (table in tables) {
             // Sense el pare, els fills que arribessin es descartarien i el cursor ja els hauria passat.
             if (PARENTS[table.table] in failed) {
