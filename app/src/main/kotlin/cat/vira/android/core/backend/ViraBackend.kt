@@ -45,10 +45,10 @@ class ViraBackend(context: Context) {
 
     /// Tornada de `vira://auth-callback`. Va al seu propi àmbit: si la pantalla es tanca a mig
     /// intercanvi, la sessió s'ha d'acabar d'obrir igualment.
-    fun handleCallback(uri: Uri) {
+    fun handleCallback(uri: Uri, onFailure: () -> Unit = {}) {
         scope.launch {
             restored.await()
-            session.handleCallback(uri)
+            if (!session.handleCallback(uri)) onFailure()
         }
     }
 

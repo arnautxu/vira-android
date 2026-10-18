@@ -36,9 +36,13 @@ class MainActivity : ComponentActivity() {
     /// Tornada del navegador (Google, Apple) o d'un enllaç del correu: `vira://auth-callback?…`.
     private fun handleCallback(intent: Intent?) {
         val uri = intent?.data ?: return
-        if (uri.toString() == handled) return
-        handled = uri.toString()
-        (application as ViraApp).backend.handleCallback(uri)
+        val key = uri.toString()
+        if (key == handled) return
+        handled = key
+        // Si l'intercanvi falla (sense xarxa), el mateix enllaç s'ha de poder tornar a fer servir.
+        (application as ViraApp).backend.handleCallback(uri) {
+            runOnUiThread { if (handled == key) handled = null }
+        }
     }
 
     private var handled: String? = null

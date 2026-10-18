@@ -121,8 +121,9 @@ class ViraSession(
     ///
     /// Amb PKCE, la tornada d'una recuperació i la d'una alta confirmada són el mateix URL. Qui les
     /// distingeix és la marca que es deixa en demanar el correu, vàlida una hora.
-    suspend fun handleCallback(uri: Uri) {
-        if (uri.scheme != ViraBackendConfig.CALLBACK_SCHEME || uri.host != ViraBackendConfig.CALLBACK_HOST) return
+    /// Torna si la sessió s'ha obert: qui ho demana pot deixar provar-ho un altre cop si no.
+    suspend fun handleCallback(uri: Uri): Boolean {
+        if (uri.scheme != ViraBackendConfig.CALLBACK_SCHEME || uri.host != ViraBackendConfig.CALLBACK_HOST) return false
         val isRecovery = uri.getQueryParameter("type") == "recovery" || hasPendingRecoveryRequest()
         val adopted = attempt {
             adopt(requireAuth().session(fromCallback = uri))
@@ -130,6 +131,7 @@ class ViraSession(
         }
         // Només si ha anat bé: un reintent sense xarxa sovint torna sense `type=recovery`.
         if (adopted != null) forgetRecoveryRequest()
+        return adopted != null
     }
 
     suspend fun updatePassword(password: String) {
