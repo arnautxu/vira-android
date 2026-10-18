@@ -44,6 +44,8 @@ enum class ViraModal(val route: String) {
     /// La respiració directa, sense passar per Ajuda ara (des dels widgets i els accessos).
     Breathe("breathe"),
     Settings("settings"),
+    /// L'editor d'un mode de Concentra't, des d'Ajustos.
+    FocusProfileEditor("focus-profile"),
 }
 
 /// L'estat de la navegació de l'arrel: quina pestanya, quina cara de cada una i el camí dins de
@@ -106,6 +108,15 @@ class ViraNavigator internal constructor(
     fun openHelp() = presentModal(ViraModal.Help)
     fun openBreathe() = presentModal(ViraModal.Breathe)
     fun openSettings() = presentModal(ViraModal.Settings)
+
+    /// El mode que s'edita (`null` és un de nou). El llegeix l'editor de Concentra't.
+    var editingFocusProfileId by mutableStateOf<UUID?>(null)
+        private set
+
+    fun editFocusProfile(profileId: UUID?) {
+        editingFocusProfileId = profileId
+        presentModal(ViraModal.FocusProfileEditor)
+    }
 
     private fun showProgress(destination: ProgressDestination? = null) {
         progressPath.clear()

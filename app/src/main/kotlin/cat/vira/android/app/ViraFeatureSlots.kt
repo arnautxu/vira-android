@@ -16,6 +16,7 @@ import cat.vira.android.core.design.PendingScreen
 import cat.vira.android.core.design.components.ViraActionButton
 import cat.vira.android.core.design.components.ViraActionHierarchy
 import cat.vira.android.core.design.tokens.ViraSpacing
+import java.util.UUID
 
 /// Quin tros del flux d'entrada demana l'arrel (`EntryFlowView(steps:)` a l'iPhone).
 enum class ViraEntryRequest {
@@ -81,7 +82,13 @@ internal object ViraFeatureSlots {
         LaunchedEffect(Unit) { onContinue() }
     }
 
-    /// Fil Ajustos i compte (`features/settings`).
+    /// Fil Concentra't: `FocusProfileEditorScreen` amb el mode `profileId` (`null`, un de nou). Es desa
+    /// sol.
+    @Composable
+    fun FocusProfileEditor(profileId: UUID?, onClose: () -> Unit) = PendingModal(onClose)
+
+    /// Fil Ajustos i compte (`features/settings`). Per editar un mode de Concentra't,
+    /// `LocalViraNavigator.current.editFocusProfile(id)`.
     @Composable
     fun Settings(onClose: () -> Unit) = PendingModal(onClose)
 }
