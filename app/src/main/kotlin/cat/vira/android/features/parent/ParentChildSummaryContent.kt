@@ -25,6 +25,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.unit.dp
 import cat.vira.android.R
+import cat.vira.android.core.design.viraLocale
 import cat.vira.android.core.design.LocalViraEnvironment
 import cat.vira.android.core.design.components.ViraTag
 import cat.vira.android.core.design.components.ViraTile
@@ -75,7 +76,7 @@ private fun Tile(scope: ParentScope, link: ParentLink, summary: ParentChildSumma
         ) { ViraTag(tag, pictogram = R.drawable.picto_key) }
         return
     }
-    val locale = currentLocale()
+    val locale = viraLocale()
     val value: Int? = when (scope) {
         ParentScope.USAGE -> summary.streakDays
         ParentScope.HABITS -> summary.habitsDoneLastWeek
@@ -125,7 +126,7 @@ private val ParentScope.area: ViraArea
 internal fun ParentWeekCard(summary: ParentChildSummary) {
     val shape = RoundedCornerShape(ViraRadius.l)
     val ink = ViraColor.onCard(ViraArea.Rewards)
-    val locale = currentLocale()
+    val locale = viraLocale()
     val title = stringResource(R.string.parent_week_title)
     val streak = summary.streakDays?.let { number(it, locale) } ?: "—"
     val unit = stringResource(R.string.parent_week_streak_unit)

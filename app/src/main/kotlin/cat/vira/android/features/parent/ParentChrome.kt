@@ -21,14 +21,12 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
@@ -196,10 +194,6 @@ internal suspend fun <T> parentAttempt(onError: (ViraBackendError) -> Unit, bloc
 } catch (_: Exception) {
     onError(ViraBackendError.UNAVAILABLE); null
 }
-
-@Composable
-@ReadOnlyComposable
-internal fun currentLocale(): Locale = LocalConfiguration.current.locales[0]
 
 /// «12 de setembre» (`.dateTime.day().month(.wide)`).
 internal fun dayMonth(instant: Instant, locale: Locale): String =

@@ -21,6 +21,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import cat.vira.android.R
+import cat.vira.android.core.design.viraLocale
 import cat.vira.android.core.backend.ViraBackendError
 import cat.vira.android.core.data.ViraTime
 import cat.vira.android.core.data.model.PlanItem
@@ -101,7 +102,7 @@ internal fun ParentPanelInboxContent(
     error: String?,
     onResolve: (ParentReminder, Boolean) -> Unit,
 ) {
-    val locale = currentLocale()
+    val locale = viraLocale()
     val pending = reminders.filter { it.isPending }
     Column(
         Modifier

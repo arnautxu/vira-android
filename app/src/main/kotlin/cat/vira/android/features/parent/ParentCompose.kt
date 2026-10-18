@@ -25,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import cat.vira.android.R
+import cat.vira.android.core.design.viraLocale
 import cat.vira.android.core.backend.ViraBackendError
 import cat.vira.android.core.data.ViraTime
 import cat.vira.android.core.design.components.ViraActionButton
@@ -98,7 +99,7 @@ internal fun ParentComposeContent(
 ) {
     val isMessage = mode == ParentComposeMode.MESSAGE
     var picking by remember { mutableStateOf(false) }
-    val locale = currentLocale()
+    val locale = viraLocale()
 
     Column(Modifier.fillMaxWidth().navigationBarsPadding()) {
         ParentSheetBar(

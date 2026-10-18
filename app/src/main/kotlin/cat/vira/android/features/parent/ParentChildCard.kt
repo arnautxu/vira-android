@@ -29,6 +29,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.unit.dp
 import cat.vira.android.R
+import cat.vira.android.core.design.viraLocale
 import cat.vira.android.core.design.LocalViraEnvironment
 import cat.vira.android.core.design.components.ViraPictogram
 import cat.vira.android.core.design.components.viraPressable
@@ -77,7 +78,7 @@ internal fun ParentChildCard(link: ParentLink, name: String?, onOpen: () -> Unit
     val shape = RoundedCornerShape(ViraRadius.l)
     val environment = LocalViraEnvironment.current
     val title = name ?: stringResource(R.string.parent_child_title)
-    val since = stringResource(R.string.parent_child_since, dayMonth(link.createdAt, currentLocale()))
+    val since = stringResource(R.string.parent_child_since, dayMonth(link.createdAt, viraLocale()))
     val closedTag = stringResource(R.string.parent_tile_closed_tag)
     val labels = ParentScope.entries.map { stringResource(it.title) }
     val scopes = ParentScope.entries.zip(labels).joinToString(", ") { (scope, label) ->

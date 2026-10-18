@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import cat.vira.android.core.design.ViraCapture
 import cat.vira.android.core.design.ViraScreenCaptures
 import cat.vira.android.core.design.ViraTheme
 import cat.vira.android.core.design.components.viraSectionBackground
@@ -26,9 +27,9 @@ private val closedLink = ParentLink(UUID.fromString("00000000-0000-4000-8000-000
 private val week = ParentChildSummary("Marc", 1240, 12, 4, 9, 3, 5, null)
 
 @Composable
-private fun Screen(content: @Composable () -> Unit) = ViraTheme(reduceMotion = true) {
+private fun Screen(content: @Composable () -> Unit) = ViraCapture { ViraTheme(reduceMotion = true) {
     Column(Modifier.fillMaxSize().viraSectionBackground(ViraArea.Today)) { content() }
-}
+} }
 
 @PreviewTest @ViraScreenCaptures @Composable
 fun ParentRoot() = Screen {
@@ -61,18 +62,18 @@ fun ParentChildSend() = Screen {
 }
 
 @PreviewTest @ViraScreenCaptures @Composable
-fun ParentRedeem() = ViraTheme(reduceMotion = true) {
+fun ParentRedeem() = ViraCapture { ViraTheme(reduceMotion = true) {
     Column(Modifier.fillMaxSize().background(ViraColor.background)) {
         ParentRedeemContent("4829", {}, false, null, {}, {})
     }
-}
+} }
 
 @PreviewTest @ViraScreenCaptures @Composable
-fun ParentComposeReminder() = ViraTheme(reduceMotion = true) {
+fun ParentComposeReminder() = ViraCapture { ViraTheme(reduceMotion = true) {
     Column(Modifier.fillMaxSize().background(ViraColor.background)) {
         ParentComposeContent(ParentComposeMode.REMINDER, "Prepara la motxilla", {}, Instant.parse("2026-10-20T00:00:00Z"), {}, false, null, {}, {})
     }
-}
+} }
 
 @PreviewTest @ViraScreenCaptures @Composable
 fun TeenParentPanel() = Screen {
@@ -98,4 +99,4 @@ fun TeenParentInbox() = Screen {
 }
 
 @PreviewTest @ViraScreenCaptures @Composable
-fun ParentPlaceholder() = ViraTheme(reduceMotion = true) { ParentPanelPlaceholder(onAccount = {}) }
+fun ParentPlaceholder() = ViraCapture { ViraTheme(reduceMotion = true) { ParentPanelPlaceholder(onAccount = {}) } }
