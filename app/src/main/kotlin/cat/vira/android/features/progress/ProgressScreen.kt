@@ -73,7 +73,8 @@ import java.time.temporal.WeekFields
 fun ProgressScreen() {
     val navigator = LocalViraNavigator.current
     val backend = LocalViraBackend.current
-    val progress = remember(backend) { ViraProgress(ViraStore(backend.db)) }
+    val firstDay = WeekFields.of(viraLocale()).firstDayOfWeek
+    val progress = remember(backend, firstDay) { ViraProgress(ViraStore(backend.db), firstDayOfWeek = { firstDay }) }
     LaunchedEffect(progress) { progress.reconcileOnLaunch() }
 
     val path = navigator.progressPath

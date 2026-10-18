@@ -12,6 +12,7 @@ import cat.vira.android.core.data.model.FocusSession
 import cat.vira.android.core.data.model.Habit
 import cat.vira.android.core.data.model.HabitLog
 import cat.vira.android.core.data.model.PlanItem
+import cat.vira.android.core.data.model.Streak
 import cat.vira.android.features.progress.logic.ChallengeItem
 import cat.vira.android.features.progress.logic.ChallengePeriod
 import cat.vira.android.features.progress.logic.StreakRules.DayRequirement
@@ -157,6 +158,15 @@ class ViraProgressTest {
         store.save(db.streaks(), store.streak().copy(freezesAvailable = 4))
         assertFalse(progress.buyFreeze())
         assertEquals(1_000, store.counter().coinBalance)
+    }
+
+    @Test fun enCanviarDeMesElsDiesGratuïtsArribenAbansDeComprar() = runBlocking {
+        // Pantalla oberta del mes passat: la compra no pot cobrar un dia que el mes nou ja regala.
+        store.save(db.progressCounters(), store.counter().copy(coinBalance = 500))
+        store.save(db.streaks(), store.streak().copy(freezesAvailable = 2, lastGrantMonth = store.streak().lastGrantMonth - 1))
+        assertFalse(progress.buyFreeze())
+        assertEquals(Streak.MAX_FREEZES, store.streak().freezesAvailable)
+        assertEquals(500, store.counter().coinBalance)
     }
 
     @Test fun elFocusDescongelaSenseComptarElDia() = runBlocking {

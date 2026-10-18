@@ -11,8 +11,11 @@ import cat.vira.android.core.data.model.FocusSession
 import cat.vira.android.core.data.model.Streak
 import cat.vira.android.features.progress.logic.StreakRules.DayRequirement
 import cat.vira.android.features.progress.logic.StreakRules.ReconcileOutcome
+import java.time.DayOfWeek
 import java.time.Instant
 import java.time.ZoneId
+import java.time.temporal.WeekFields
+import java.util.Locale
 
 /// Punt d'entrada **únic** per registrar que l'usuari ha fet alguna cosa (`ViraProgress.swift` i
 /// `ViraStreak.swift` de l'iPhone).
@@ -38,10 +41,13 @@ class ViraProgress(
     /// (`ViraStreakNotifications.record(.milestone)` de l'iPhone). Ho decideix Notificacions.
     private val onMilestone: suspend (Int) -> Unit = {},
     focusMinimumSeconds: Int = ViraRewards.FOCUS_MINIMUM_SECONDS,
+    /// Primer dia de la setmana dels reptes setmanals: el mateix que fa servir la pantalla, o un
+    /// repte que s'ensenya llest podria caure en un altre cicle en recollir-lo.
+    private val firstDayOfWeek: () -> DayOfWeek = { WeekFields.of(Locale.getDefault()).firstDayOfWeek },
 ) {
     private val db get() = store.db
     private val rewards = ViraRewards(store, clock, zone, focusMinimumSeconds)
-    private fun days() = ViraDays(zone())
+    private fun days() = ViraDays(zone(), firstDayOfWeek())
 
     /// Registra una acció completada. Retorna les **ViriCoins** concedides, que és el que la
     /// interfície celebra (0 si el sostre diari ja era esgotat).
@@ -108,11 +114,13 @@ class ViraProgress(
     /// Compra un dia guardat més (200 ViriCoins). `false` sense tocar res si no hi ha monedes o ja
     /// s'ha arribat al sostre.
     suspend fun buyFreeze(now: Instant = clock()): Boolean = db.withTransaction {
-        val streak = store.streak()
-        if (!StreakRules.canBuyFreeze(streak)) return@withTransaction false
-        if (!rewards.spend(Streak.FREEZE_PRICE, CoinReason.PURCHASE_FREEZE, now)) return@withTransaction false
-        saveStreak(streak.copy(freezesAvailable = streak.freezesAvailable + 1))
-        true
+        // El mes nou primer: amb la pantalla oberta a mitjanit de canvi de mes, els dies gratuïts
+        // s'han de sumar abans de decidir si cal comprar-ne.
+        val streak = StreakRules.refreshMonthlyGrant(store.streak(), now, days())
+        val bought = StreakRules.canBuyFreeze(streak) &&
+            rewards.spend(Streak.FREEZE_PRICE, CoinReason.PURCHASE_FREEZE, now)
+        saveStreak(if (bought) streak.copy(freezesAvailable = streak.freezesAvailable + 1) else streak)
+        bought
     }
 
     /// Recull el premi d'un repte complet i encara no recollit aquest cicle. `false` sense tocar res
