@@ -42,6 +42,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import cat.vira.android.R
+import cat.vira.android.core.design.LocalViraEnvironment
 import cat.vira.android.core.design.components.ViraPictogram
 import cat.vira.android.core.design.components.viraPressable
 import cat.vira.android.core.design.tokens.ViraArea
@@ -166,13 +167,19 @@ fun SettingsNavigationRow(onClick: () -> Unit, label: @Composable () -> Unit) {
 /// Etiqueta i valor, sense acció (`LabeledContent`).
 @Composable
 fun SettingsValueRow(value: String, label: @Composable () -> Unit) {
-    Row(
-        rowModifier.semantics(mergeDescendants = true) {}.padding(horizontal = ViraSpacing.m, vertical = ViraSpacing.xs),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(Modifier.weight(1f)) { label() }
-        Spacer(Modifier.width(ViraSpacing.s))
-        Text(value, style = ViraFont.body, color = ViraColor.textSecondary)
+    val modifier = rowModifier.semantics(mergeDescendants = true) {}.padding(horizontal = ViraSpacing.m, vertical = ViraSpacing.xs)
+    // A lletra gran el valor baixa a sota: al costat, l'etiqueta quedava en una lletra per línia.
+    if (LocalViraEnvironment.current.isAccessibilitySize) {
+        Column(modifier, verticalArrangement = Arrangement.spacedBy(ViraSpacing.textRelated)) {
+            label()
+            Text(value, style = ViraFont.body, color = ViraColor.textSecondary)
+        }
+    } else {
+        Row(modifier, verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.weight(1f)) { label() }
+            Spacer(Modifier.width(ViraSpacing.s))
+            Text(value, style = ViraFont.body, color = ViraColor.textSecondary)
+        }
     }
 }
 

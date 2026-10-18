@@ -141,7 +141,7 @@ fun SettingsCategoryHero(category: SettingsCategory, tally: SettingsTally, modif
                     .semantics(mergeDescendants = true) {},
                 verticalArrangement = Arrangement.spacedBy(ViraSpacing.xs),
             ) {
-                Row(verticalAlignment = Alignment.Bottom) {
+                Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(ViraSpacing.s)) {
                     Text(stringResource(category.heroTitle), style = ViraFont.headline, color = ink, modifier = Modifier.weight(1f))
                     Text(stringResource(R.string.challenge_progress, count.on, count.total), style = ViraFont.headline, color = ink)
                 }
