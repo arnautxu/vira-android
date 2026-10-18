@@ -31,6 +31,9 @@ class ViraApp : Application(), ViraNotificationHost {
 
     /// Els enllaços que han obert l'app i encara no ha fet servir ningú (`ViraIncomingLinks`).
     val incomingLinks = ViraIncomingLinks()
+    /// On ha de portar l'avís que s'acaba de tocar (`ViraNotifications.EXTRA_DESTINATION`). Viu al
+    /// procés i no a l'activitat: l'arrel el llegeix quan ja hi és i el buida.
+    internal val notificationDestination = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
 
     /// Els avisos llegeixen la mateixa base de dades que les pantalles (`ViraNotificationHost`).
     override val notificationDatabase: ViraDatabase get() = backend.db

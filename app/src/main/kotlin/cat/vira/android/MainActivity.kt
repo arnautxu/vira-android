@@ -20,6 +20,7 @@ import cat.vira.android.app.ViraOnboardingGate
 import cat.vira.android.app.rememberPreference
 import cat.vira.android.core.data.ViraPreferences
 import cat.vira.android.core.design.ViraTheme
+import cat.vira.android.core.notifications.ViraNotifications
 
 /// `FragmentActivity` i no `ComponentActivity` a seques: el diàleg de l'empremta n'és un fragment.
 class MainActivity : FragmentActivity() {
@@ -83,6 +84,13 @@ class MainActivity : FragmentActivity() {
     /// Qualsevol altre enllaç (el de vinculació del panell de pares) es reparteix a `incomingLinks`
     /// abans de passar-lo a l'auth, que l'ignoraria en silenci.
     private fun handleCallback(intent: Intent?, isRestored: Boolean = false) {
+        // Tocar un avís: on porta. Una activitat recreada ja l'havia fet servir.
+        if (!isRestored) {
+            intent?.getStringExtra(ViraNotifications.EXTRA_DESTINATION)?.let {
+                (application as ViraApp).notificationDestination.value = it
+                intent.removeExtra(ViraNotifications.EXTRA_DESTINATION)
+            }
+        }
         val uri = intent?.data ?: return
         if (uri.scheme == "vira" && uri.host == "auth-callback") {
             backend.handleCallback(uri)

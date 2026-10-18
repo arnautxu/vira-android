@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
@@ -37,6 +38,7 @@ import cat.vira.android.core.design.components.ViraTabBar
 import cat.vira.android.core.design.components.ViraTabBarItem
 import cat.vira.android.core.design.components.ViraTopBar
 import cat.vira.android.core.design.tokens.ViraColor
+import cat.vira.android.core.notifications.ViraNotifications
 import cat.vira.android.features.emotions.EmotionsScreen
 import cat.vira.android.features.entry.ViraTutorialOverlay
 import cat.vira.android.features.focus.FocusResumeEffect
@@ -57,7 +59,18 @@ fun RootScreen() {
         onDispose { }
     }
     val close: () -> Unit = { navController.popBackStack() }
-    val celebrations = (LocalContext.current.applicationContext as ViraApp).celebrations
+    val app = LocalContext.current.applicationContext as ViraApp
+    val celebrations = app.celebrations
+    // L'avís tocat porta a Avui o al check-in, com `openFromIntent` de l'iPhone: una pantalla oberta,
+    // mai una dada escrita.
+    val notificationDestination by app.notificationDestination.collectAsStateWithLifecycle()
+    LaunchedEffect(notificationDestination) {
+        when (notificationDestination ?: return@LaunchedEffect) {
+            ViraNotifications.DESTINATION_CHECK_IN -> navigator.navigate(ViraDestination.Emotions(EmotionsSection.CheckIn))
+            else -> navigator.open(ViraTab.Today)
+        }
+        app.notificationDestination.value = null
+    }
     // Una sessió en marxa torna a la vista quan l'app torna a primer pla (des de l'avís fix).
     FocusResumeEffect { navigator.startFocus(navigator.focusLink) }
 
@@ -104,7 +117,18 @@ private fun MainTabs(navigator: ViraNavigator) {
     val tab = navigator.selectedTab
     val tutorial = rememberViraTutorial(navigator)
     // Mentre hi ha la cortina, cap celebració agafa la pantalla; es queden pendents.
-    val celebrations = (LocalContext.current.applicationContext as ViraApp).celebrations
+    val app = LocalContext.current.applicationContext as ViraApp
+    val celebrations = app.celebrations
+    // L'avís tocat porta a Avui o al check-in, com `openFromIntent` de l'iPhone: una pantalla oberta,
+    // mai una dada escrita.
+    val notificationDestination by app.notificationDestination.collectAsStateWithLifecycle()
+    LaunchedEffect(notificationDestination) {
+        when (notificationDestination ?: return@LaunchedEffect) {
+            ViraNotifications.DESTINATION_CHECK_IN -> navigator.navigate(ViraDestination.Emotions(EmotionsSection.CheckIn))
+            else -> navigator.open(ViraTab.Today)
+        }
+        app.notificationDestination.value = null
+    }
     SideEffect { celebrations.tutorialVisible = tutorial.step != null }
     DisposableEffect(celebrations) { onDispose { celebrations.tutorialVisible = false } }
     val tabBounds = remember { mutableStateMapOf<String, Rect>() }
