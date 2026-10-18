@@ -125,21 +125,35 @@ class ViraNavigator internal constructor(
     }
 
     internal companion object {
-        /// Sobreviu a un gir de pantalla i a un procés que Android tanca en segon pla.
-        val saver: Saver<ViraNavigator, List<Int>> = Saver(
+        /// Sobreviu a un gir de pantalla i a un procés que Android tanca en segon pla, incloent el
+        /// que porta la finestra oberta (la tasca de Concentra't, el mode que s'edita): la navegació
+        /// de l'arrel restaura la ruta i la pantalla ha de trobar les mateixes dades.
+        val saver: Saver<ViraNavigator, List<String>> = Saver(
             save = { navigator ->
-                listOf(navigator.selectedTab.ordinal, navigator.planSection.ordinal, navigator.emotionsSection.ordinal) +
-                    navigator.progressPath.map { it.ordinal }
+                listOf(
+                    navigator.selectedTab.name,
+                    navigator.planSection.name,
+                    navigator.emotionsSection.name,
+                    navigator.focusLink?.title ?: NONE,
+                    navigator.focusLink?.itemId?.toString() ?: NONE,
+                    navigator.editingFocusProfileId?.toString() ?: NONE,
+                ) + navigator.progressPath.map { it.name }
             },
             restore = { saved ->
                 ViraNavigator(
-                    tab = ViraTab.entries[saved[0]],
-                    plan = PlanSection.entries[saved[1]],
-                    emotions = EmotionsSection.entries[saved[2]],
-                    path = saved.drop(3).map { ProgressDestination.entries[it] },
-                )
+                    tab = ViraTab.valueOf(saved[0]),
+                    plan = PlanSection.valueOf(saved[1]),
+                    emotions = EmotionsSection.valueOf(saved[2]),
+                    path = saved.drop(6).map(ProgressDestination::valueOf),
+                ).apply {
+                    val linkedId = saved[4].takeUnless { it == NONE }?.let(UUID::fromString)
+                    focusLink = linkedId?.let { ViraFocusLink(saved[3], it) }
+                    editingFocusProfileId = saved[5].takeUnless { it == NONE }?.let(UUID::fromString)
+                }
             },
         )
+
+        private const val NONE = "\u0000"
     }
 }
 

@@ -46,7 +46,8 @@ internal object ViraFeatureSlots {
     fun Entry(request: ViraEntryRequest, onFinish: () -> Unit) = PendingScreen()
 
     /// Fil Panell de pares (`features/parent`): l'arrel d'un compte de pare o mare. Els enllaços de
-    /// vinculació arriben per `LocalViraIncomingLinks.current` (l'últim es conserva).
+    /// vinculació arriben per `LocalViraIncomingLinks.current.pending`; un cop fet servir,
+    /// `consume(uri)`.
     @Composable
     fun ParentRoot() = PendingScreen()
 
