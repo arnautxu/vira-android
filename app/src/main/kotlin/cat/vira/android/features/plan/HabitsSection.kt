@@ -36,6 +36,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
@@ -248,8 +249,10 @@ fun ProgressRing(done: Int, total: Int, caption: String) {
     val track = ViraColor.lightArtworkVeil.copy(alpha = 0.55f)
     val fill = ViraColor.accent(area)
     val fraction by animateFloatAsState(if (total == 0) 0f else done.toFloat() / total, ViraMotion.standard(), label = "ring")
-    Box(Modifier.size(78.dp), contentAlignment = Alignment.Center) {
-        Canvas(Modifier.size(78.dp)) {
+    // L'anell creix amb la lletra: "1/2 preses" a mida gran no hi cabia i trepitjava el traç.
+    val diameter = 78.dp * LocalDensity.current.fontScale.coerceIn(1f, 1.7f)
+    Box(Modifier.size(diameter), contentAlignment = Alignment.Center) {
+        Canvas(Modifier.size(diameter)) {
             val stroke = 9.dp.toPx()
             val inset = stroke / 2
             val arcSize = Size(size.width - stroke, size.height - stroke)

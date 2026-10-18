@@ -62,7 +62,10 @@ object PlanDay {
 
     /// Primer dia de la setmana segons la configuració regional: a ca/es dilluns, en anglès americà
     /// diumenge (`calendar.firstWeekday`). No es pot fixar a mà.
-    fun firstDayOfWeek(locale: Locale = Locale.getDefault()): DayOfWeek = WeekFields.of(locale).firstDayOfWeek
+    /// Sense país (només "ca" o "es") Java tria el diumenge dels Estats Units; el criteri de CLDR
+    /// per al món, i el de l'iPhone en català i castellà, és el dilluns.
+    fun firstDayOfWeek(locale: Locale = Locale.getDefault()): DayOfWeek =
+        if (locale.country.isEmpty()) DayOfWeek.MONDAY else WeekFields.of(locale).firstDayOfWeek
 }
 
 /// Els set dies de la setmana que conté una data (`CalendarWeek` de l'iPhone).

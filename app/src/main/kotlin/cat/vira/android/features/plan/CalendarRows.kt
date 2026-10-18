@@ -109,8 +109,11 @@ fun CalendarRow(item: PlanItem, onToggle: () -> Unit, modifier: Modifier = Modif
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(ViraSpacing.s),
     ) {
-        TimeLabel(item, ink, Modifier.width(46.dp * scale), zone)
-        ViraPictogram(item.symbolName, Modifier.alpha(iconAlpha).clearAndSetSemantics { }, size = 34.dp * scale)
+        // A lletra gran l'hora puja a sobre del títol i la icona no creix més: si no, el títol
+        // es quedava sense amplada i les paraules es partien per la meitat.
+        val isLarge = LocalViraEnvironment.current.isAccessibilitySize
+        if (!isLarge) TimeLabel(item, ink, Modifier.width(46.dp * scale), zone)
+        ViraPictogram(item.symbolName, Modifier.alpha(iconAlpha).clearAndSetSemantics { }, size = if (isLarge) 40.dp else 34.dp * scale)
         Box(Modifier.weight(1f)) {
             Row(
                 Modifier.alpha(if (phase == null) 1f else 0f)
@@ -118,12 +121,14 @@ fun CalendarRow(item: PlanItem, onToggle: () -> Unit, modifier: Modifier = Modif
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(ViraSpacing.s),
             ) {
-                Text(
-                    item.title,
-                    style = ViraFont.callout.copy(textDecoration = if (isDone) TextDecoration.LineThrough else null),
-                    color = ink,
-                    modifier = Modifier.weight(1f),
-                )
+                Column(Modifier.weight(1f)) {
+                    if (isLarge && item.time != null) TimeLabel(item, ink, Modifier, zone)
+                    Text(
+                        item.title,
+                        style = ViraFont.callout.copy(textDecoration = if (isDone) TextDecoration.LineThrough else null),
+                        color = ink,
+                    )
+                }
                 ViraCompletionCheck(isDone, Modifier.clearAndSetSemantics { }, ink = ink)
             }
             if (phase != null) ViraInlineCompletion(phase, ink, onUndo = { undo(id) })
