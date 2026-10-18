@@ -1,0 +1,15 @@
+# Gradle i Android
+.gradle/
+build/
+local.properties
+.kotlin/
+captures/
+*.apk
+*.aab
+!app/release/*.aab
+
+# Eines
+.idea/
+*.iml
+.DS_Store
+.cxx/

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Vira</string>
+    <string name="tab_today">Today</string>
+    <string name="tab_plan">Organization</string>
+    <string name="tab_emotions">Emotions</string>
+    <string name="tab_viri">Viri</string>
+    <string name="skeleton_pending">This tab has not been copied from the iPhone yet.</string>
+</resources>

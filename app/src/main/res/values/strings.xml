@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Idioma de partida: català, com el catàleg de l'iPhone. Els textos surten de
+     Localizable.xcstrings amb scripts/export-strings.py; no se n'escriu cap a mà. -->
+<resources>
+    <string name="app_name">Vira</string>
+    <string name="tab_today">Avui</string>
+    <string name="tab_plan">Organització</string>
+    <string name="tab_emotions">Emocions</string>
+    <string name="tab_viri">Viri</string>
+    <string name="skeleton_pending">Aquesta pestanya encara no s\'ha calcat de l\'iPhone.</string>
+</resources>

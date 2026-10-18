@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Vira</string>
+    <string name="tab_today">Hoy</string>
+    <string name="tab_plan">Organización</string>
+    <string name="tab_emotions">Emociones</string>
+    <string name="tab_viri">Viri</string>
+    <string name="skeleton_pending">Esta pestaña aún no se ha calcado del iPhone.</string>
+</resources>
