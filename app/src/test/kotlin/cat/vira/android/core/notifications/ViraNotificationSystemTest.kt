@@ -391,10 +391,13 @@ class ViraNotificationSystemTest {
     @Test
     fun unaPresaJaRespostaNoLaCanviaUnBotoVell() = runBlocking {
         val n = planned("med-a", actions = ViraActionSet.MEDICATION)
+        app.notificationDatabase.medications().upsertRaw(
+            listOf(cat.vira.android.core.data.model.Medication(id = UUID.fromString(n.medicationId!!))),
+        )
         app.notificationDatabase.medicationIntakes().upsertRaw(
             listOf(
                 cat.vira.android.core.data.model.MedicationIntake(
-                    medicationId = UUID.fromString(n.medicationId), scheduledAt = Instant.ofEpochMilli(n.scheduledAtMillis!!),
+                    medicationId = UUID.fromString(n.medicationId!!), scheduledAt = Instant.ofEpochMilli(n.scheduledAtMillis!!),
                     statusRaw = IntakeStatus.TAKEN.raw,
                 ),
             ),
