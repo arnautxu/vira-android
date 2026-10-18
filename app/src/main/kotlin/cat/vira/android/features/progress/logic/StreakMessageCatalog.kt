@@ -49,9 +49,14 @@ class StreakMessageCatalog(
     /// La frase actual, sense rotar.
     @StringRes
     fun message(state: State): Int {
+        return currentLine(state).text
+    }
+
+    /// La que es veu ara: la desada o, si encara no n'hi ha cap, la primera.
+    private fun currentLine(state: State): Line {
         val all = lines(state)
         val stored = storage.get(storageKey(state))
-        return (all.firstOrNull { it.key == stored } ?: all.first()).text
+        return all.firstOrNull { it.key == stored } ?: all.first()
     }
 
     /// Passa a una frase nova i la torna. Mai la que hi havia, i mai una que encara no sigui certa.
@@ -61,7 +66,7 @@ class StreakMessageCatalog(
     @StringRes
     fun advance(state: State, days: Int = 1, hasRecordAhead: Boolean = false): Int {
         val candidates = pool(state, days, hasRecordAhead)
-        val current = storage.get(storageKey(state))
+        val current = currentLine(state).key
         val choices = if (candidates.size > 1) candidates.filter { it.key != current } else candidates
         val line = choices.random(random)
         storage.set(storageKey(state), line.key)
