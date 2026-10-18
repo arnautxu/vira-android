@@ -112,7 +112,7 @@ internal class CelebrationQueue(
     /// recordava (la ratxa i l'XP d'abans, el que esperava) és d'una altra persona.
     private var generation = backend.session.dataGeneration
 
-    private fun resetIfAccountChanged() {
+    fun resetIfAccountChanged() {
         val current = backend.session.dataGeneration
         if (current == generation) return
         generation = current
@@ -355,6 +355,9 @@ internal fun ViraCelebrations(queue: CelebrationQueue) {
     queue.celebrationsEnabled = celebrations
     // Sense celebracions o amb el progrés amagat, el nivell no surt (`ViraCelebrationPolicy`).
     queue.allowsLevel = celebrations && progressVisible
+    // Abans de llegir cap diàleg: la cua viu al procés i, si s'ha canviat de compte amb una
+    // celebració oberta, l'altra persona no l'ha de veure ni un instant.
+    queue.resetIfAccountChanged()
 
     // Directament del flux i no d'un estat amb valor inicial: el `null` d'abans de la primera
     // lectura es confondria amb «no n'hi ha cap» i les cartes se sembrarien a mitges.
