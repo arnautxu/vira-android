@@ -231,6 +231,18 @@ class ViraNotificationSystemTest {
     }
 
     @Test
+    fun unaNoticiaSubstituidaNoSurt() = runBlocking {
+        val preferences = ViraPreferences.open(app)
+        ViraStreakNotifications.record(ViraStreakNotifications.Event.Protected, preferences, now)
+        val news = planned("${ViraStreakNotifications.PREFIX}2027-1-15${ViraStreakNotifications.NEWS_SUFFIX}").copy(
+            actions = ViraActionSet.VIRI, scheduledAtMillis = ViraStreakNotifications.pendingEventStamp(preferences),
+        )
+        assertTrue(ViraNotifications.isStillPending(app, news))
+        ViraStreakNotifications.record(ViraStreakNotifications.Event.Milestone(30), preferences, now.plusSeconds(60))
+        assertFalse("n'ha arribat una de més nova", ViraNotifications.isStillPending(app, news))
+    }
+
+    @Test
     fun elsBotonsDiuenPresaIMaiElNomDelFarmac() {
         val medication = planned("med-a", actions = ViraActionSet.MEDICATION).copy(
             channel = ViraNotificationChannel.MEDICATION, body = "Tens un recordatori",

@@ -164,6 +164,16 @@ class ViraNotificationPlannerTest {
     }
 
     @Test
+    fun unHabitAmbLHoraCanviadaJaNoGuardaElSeuAvis() {
+        val habit = Habit(title = "Llegir", reminderTime = at(today, 18))
+        val inputs = ViraNotificationInputs(habits = listOf(habit))
+        val n = plan(inputs).first { it.habitId == habit.id.toString() }
+        assertTrue(ViraNotificationPlanner.isStillPending(n, inputs, zone))
+        val moved = inputs.copy(habits = listOf(habit.copy(reminderTime = at(today, 19))))
+        assertTrue(!ViraNotificationPlanner.isStillPending(n, moved, zone))
+    }
+
+    @Test
     fun unaTascaMogudaOSenseHoraJaNoGuardaElSeuAvis() {
         val day = today.atStartOfDay(zone).toInstant()
         val item = PlanItem(title = "Dentista", day = day, time = at(today, 17))

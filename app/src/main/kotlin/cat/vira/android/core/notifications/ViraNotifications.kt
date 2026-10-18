@@ -154,10 +154,13 @@ object ViraNotifications {
             time = time,
             zone = zone,
             text = text(context),
+            eventStamp = ViraStreakNotifications.pendingEventStamp(preferences),
         )
         // Un avís de Viri endarrerit no surt si el dia ja compta: diria que encara és obert.
         scheduler.replace(streakPrefixes, planned, now) {
-            (state.dayIsOpen || it.id.endsWith(ViraStreakNotifications.NEWS_SUFFIX)) && muted?.contains(it.fireAt) != true
+            val news = it.id.endsWith(ViraStreakNotifications.NEWS_SUFFIX)
+            // Una notícia endarrerida només si encara és la d'ara: una de més nova la substitueix.
+            (if (news) isCurrentNews(preferences, it) else state.dayIsOpen) && muted?.contains(it.fireAt) != true
         }
         // El mateix per al que ja és a la pantalla: un «encara hi ets a temps» d'un dia que ja compta
         // (o d'un dia passat) mentiria. Les notícies es queden: són certes encara que el dia es tanqui.
@@ -203,10 +206,17 @@ object ViraNotifications {
     /// compte, esborrat total) o d'una cosa marcada des d'un altre telèfon no surt. Els de Viri
     /// (`streak-`) no hi passen: no recorden cap fila.
     suspend fun isStillPending(context: Context, notification: ViraPlannedNotification, zone: ZoneId = ZoneId.systemDefault()): Boolean {
+        if (notification.id.endsWith(ViraStreakNotifications.NEWS_SUFFIX)) {
+            return isCurrentNews(ViraPreferences.open(context), notification)
+        }
         if (reminderPrefixes.none { notification.id.startsWith(it) }) return true
         val host = context.notificationHost ?: return false
         return ViraNotificationPlanner.isStillPending(notification, snapshot(host.notificationDatabase), zone)
     }
+
+    private fun isCurrentNews(preferences: android.content.SharedPreferences, notification: ViraPlannedNotification) =
+        notification.scheduledAtMillis != null &&
+            notification.scheduledAtMillis == ViraStreakNotifications.pendingEventStamp(preferences)
 
     /// Les taules que decideixen què cal recordar. Qualsevol canvi —una pantalla, un botó d'avís,
     /// la sincronització que porta el que s'ha fet en un altre telèfon— refà la finestra, perquè

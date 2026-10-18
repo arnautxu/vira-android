@@ -34,6 +34,9 @@ object ViraStreakNotifications {
     const val BUDGET = 5
     const val WINDOW_DAYS = 7
 
+    /// El mateix marge que les alarmes endarrerides (`ViraNotificationScheduler`).
+    private val NEWS_GRACE: java.time.Duration = java.time.Duration.ofMinutes(30)
+
     // MARK: Esdeveniments pendents d'explicar
 
     /// Una cosa que ha passat i que la propera franja ha de dir.
@@ -100,7 +103,9 @@ object ViraStreakNotifications {
         }
         if (silencedUntil != Long.MIN_VALUE) preferences.edit { putLong(EVENT_MUTED_KEY, silencedUntil) }
         if (slot == null || !slot.isAfter(now)) {
-            clearPendingEvent(preferences)
+            // Acabada de passar, l'alarma endarrerida d'aquesta notícia encara pot sonar: es
+            // conserva (sense tornar-la a planificar) fins que sona o passa el marge.
+            if (slot == null || !now.isBefore(slot.plus(NEWS_GRACE))) clearPendingEvent(preferences)
             return null
         }
         return when (raw) {
@@ -110,6 +115,11 @@ object ViraStreakNotifications {
             else -> null
         }
     }
+
+    /// Quina notícia és: la data en què es va apuntar. Viatja amb l'avís perquè una notícia
+    /// endarrerida que una de més nova ha substituït no surti ni esborri la nova.
+    fun pendingEventStamp(preferences: SharedPreferences): Long? =
+        preferences.getLong(EVENT_DATE_KEY, Long.MIN_VALUE).takeIf { preferences.contains(EVENT_KEY) && it != Long.MIN_VALUE }
 
     fun clearPendingEvent(preferences: SharedPreferences) = preferences.edit {
         remove(EVENT_KEY)
@@ -137,6 +147,7 @@ object ViraStreakNotifications {
         time: ViraClock,
         zone: ZoneId,
         text: ViraNotificationText,
+        eventStamp: Long? = null,
     ): List<ViraPlannedNotification> {
         val today = LocalDate.ofInstant(now, zone)
         val planned = mutableListOf<ViraPlannedNotification>()
@@ -160,6 +171,7 @@ object ViraStreakNotifications {
                 channel = ViraNotificationChannel.VIRI,
                 // És la franja del vespre: on estalviar-se obrir l'app val més.
                 actions = ViraActionSet.VIRI,
+                scheduledAtMillis = if (kind is Kind.Nudge) null else eventStamp,
             )
         }
         return planned.take(BUDGET)

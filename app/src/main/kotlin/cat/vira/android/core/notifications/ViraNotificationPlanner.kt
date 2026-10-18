@@ -126,6 +126,7 @@ object ViraNotificationPlanner {
                 actions = ViraActionSet.HABIT,
                 habitId = habit.id.toString(),
                 dayMillis = day.atStartOfDay(zone).toInstant().toEpochMilli(),
+                scheduledAtMillis = fire.toEpochMilli(),
             )
         }
     }
@@ -265,8 +266,14 @@ object ViraNotificationPlanner {
             ViraActionSet.HABIT -> {
                 val habitId = notification.habitId?.toUuidOrNull()
                 val day = notification.dayMillis?.let { LocalDate.ofInstant(Instant.ofEpochMilli(it), zone) }
+                // Amb l'hora del recordatori canviada, un «Més tard» de l'hora d'abans ja no toca.
+                val slot = notification.scheduledAtMillis
                 habitId != null && day != null &&
-                    inputs.habits.any { it.id == habitId && !it.isArchived && it.reminderTime != null && it.isScheduled(day) } &&
+                    inputs.habits.any { h ->
+                        val time = h.reminderTime
+                        h.id == habitId && !h.isArchived && time != null && h.isScheduled(day) &&
+                            (slot == null || at(day, time, zone).toEpochMilli() == slot)
+                    } &&
                     inputs.habitLogs.none { it.habitId == habitId && LocalDate.ofInstant(it.day, zone) == day }
             }
             ViraActionSet.MEDICATION -> {

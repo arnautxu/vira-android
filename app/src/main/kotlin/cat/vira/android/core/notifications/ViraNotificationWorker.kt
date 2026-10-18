@@ -71,7 +71,9 @@ class ViraNotificationBootReceiver : BroadcastReceiver() {
             }
             // L'hora local d'un avís ha canviat d'instant: s'han de recalcular, no només tornar a
             // posar, i **ara**, abans que una alarma calculada amb la zona d'abans soni a deshora.
-            Intent.ACTION_TIME_CHANGED, Intent.ACTION_TIMEZONE_CHANGED -> {
+            // També quan s'acaba de donar l'accés a les alarmes exactes: les que s'havien posat
+            // aproximades es tornen a posar a l'hora justa.
+            Intent.ACTION_TIME_CHANGED, Intent.ACTION_TIMEZONE_CHANGED, EXACT_ALARM_GRANTED -> {
                 val pending = goAsync()
                 scope.launch {
                     try {
@@ -86,5 +88,8 @@ class ViraNotificationBootReceiver : BroadcastReceiver() {
 
     private companion object {
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
+        /// `AlarmManager.ACTION_SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED` (Android 12+).
+        const val EXACT_ALARM_GRANTED = "android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED"
     }
 }
