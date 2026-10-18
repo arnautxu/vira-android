@@ -106,6 +106,23 @@ internal class CelebrationQueue(
     /// La carta de la fita es busca a la base. Mentrestant, la ratxa és qui la posseeix i la cua
     /// general no la pot ensenyar pel seu compte.
     private var streakLookupPending = false
+    /// El nivell més alt ja marcat aquí, per si la fila encara no porta la marca.
+    private var markedLevel = 0
+    /// La cua viu al procés i un canvi de compte no el reinicia: amb un altre compte, tot el que
+    /// recordava (la ratxa i l'XP d'abans, el que esperava) és d'una altra persona.
+    private var generation = backend.session.dataGeneration
+
+    private fun resetIfAccountChanged() {
+        val current = backend.session.dataGeneration
+        if (current == generation) return
+        generation = current
+        streak = null
+        counter = null
+        streakLoaded = false
+        counterLoaded = false
+        markedLevel = 0
+        dropAll(markToday = false)
+    }
 
     private val isDeferred get() = tutorialVisible || deferralCount > 0
 
@@ -119,6 +136,7 @@ internal class CelebrationQueue(
     /// La ratxa ha canviat. Cada dia que avança (també el primer, i un reinici que torna a
     /// començar) es celebra, no només als llindars amb carta.
     fun onStreak(value: Streak?) {
+        resetIfAccountChanged()
         val isFirstLoad = !streakLoaded
         val old = streak?.currentDays
         streak = value
@@ -179,7 +197,9 @@ internal class CelebrationQueue(
             return
         }
         val pending = pendingStreak ?: return
-        if (isDeferred || streakCelebration != null) return
+        if (isDeferred || streakCelebration != null || levelCelebration != null ||
+            badgeCelebration != null || cardCelebration != null
+        ) return
         streakCelebration = pending
         pendingStreak = null
     }
@@ -192,15 +212,13 @@ internal class CelebrationQueue(
             cards.markAsSeen(earned.key)
             badgeCelebration = earned
         } else {
-            presentPendingLevel()
-            presentNextCard()
+            presentAllPending()
         }
     }
 
     fun finishBadge() {
         badgeCelebration = null
-        presentPendingLevel()
-        presentNextCard()
+        presentAllPending()
     }
 
     // Nivell
@@ -208,6 +226,7 @@ internal class CelebrationQueue(
     /// L'XP puja i creua un nivell encara no celebrat. Es marca **abans** d'ensenyar res: si
     /// l'usuari surt a mig confeti, no torna a sortir.
     fun onCounter(value: ProgressCounter?) {
+        resetIfAccountChanged()
         val oldXP = counter?.totalXP
         counter = value
         counterLoaded = true
@@ -220,17 +239,16 @@ internal class CelebrationQueue(
     private fun checkLevel(value: ProgressCounter?, oldXP: Int?) {
         if (value == null || oldXP == null || oldXP >= value.totalXP) return
         val level = ViraLevel.level(value.totalXP)
-        if (!allowsLevel) {
-            if (level > value.lastCelebratedLevel) markLevel(value, level)
-            return
-        }
-        if (level <= value.lastCelebratedLevel || levelCelebration != null || pendingLevel != null) return
+        if (level <= maxOf(value.lastCelebratedLevel, markedLevel)) return
         markLevel(value, level)
+        if (!allowsLevel) return
+        // Si n'hi ha un d'esperant o a la pantalla, el nou el substitueix a la cua: surt en tancar.
         pendingLevel = level
         presentPendingLevel()
     }
 
     private fun markLevel(counter: ProgressCounter, level: Int) {
+        markedLevel = level
         val marked = counter.copy(lastCelebratedLevel = level)
         this.counter = marked
         // Sobre la fila d'ara i no la de la foto: una concessió o una baixada entremig no es pot trepitjar.
@@ -260,7 +278,7 @@ internal class CelebrationQueue(
 
     fun finishLevel() {
         levelCelebration = null
-        presentNextCard()
+        presentAllPending()
     }
 
     // Cartes
@@ -284,9 +302,8 @@ internal class CelebrationQueue(
 
     fun finishCard() {
         cardCelebration = null
-        presentPendingLevel()
         // Encadenades i no alhora: si un moment n'ha desbloquejat dues, la segona surt ara.
-        presentNextCard()
+        presentAllPending()
     }
 
     val ownedCards: Int get() = maxOf(1, CardItem.unlocked(counter, streak).size)
