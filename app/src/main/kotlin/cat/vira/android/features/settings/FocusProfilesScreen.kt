@@ -279,8 +279,18 @@ private fun FocusBuiltInModesList() {
                     horizontalArrangement = Arrangement.spacedBy(ViraSpacing.s),
                 ) {
                     ViraPictogram(mode.pictogram, size = 32.dp, isScene = mode.isScene, scalesWithText = true)
-                    Text(stringResource(mode.label), style = ViraFont.body, color = ViraColor.textPrimary, modifier = Modifier.weight(1f))
-                    Text(stringResource(R.string.focus_minutes, mode.minutes), style = ViraFont.body, color = ViraColor.textSecondary)
+                    val label = stringResource(mode.label)
+                    val minutes = stringResource(R.string.focus_minutes, mode.minutes)
+                    if (isLarge) {
+                        // A lletra gran, en fila el nom es partia a mitja paraula («Concentrac-ió»).
+                        Column(Modifier.weight(1f)) {
+                            Text(label, style = ViraFont.body, color = ViraColor.textPrimary)
+                            Text(minutes, style = ViraFont.body, color = ViraColor.textSecondary)
+                        }
+                    } else {
+                        Text(label, style = ViraFont.body, color = ViraColor.textPrimary, modifier = Modifier.weight(1f))
+                        Text(minutes, style = ViraFont.body, color = ViraColor.textSecondary)
+                    }
                 }
             }
         }
