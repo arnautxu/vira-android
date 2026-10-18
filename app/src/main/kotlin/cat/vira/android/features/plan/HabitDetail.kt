@@ -40,6 +40,7 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import cat.vira.android.core.design.viraLocale
 import cat.vira.android.R
 import cat.vira.android.core.data.model.Habit
 import cat.vira.android.core.design.LocalViraEnvironment
@@ -245,7 +246,7 @@ private fun ToggleButton(isDone: Boolean, onToggle: () -> Unit) {
 /// passat en blau clar, el futur més tènue i avui amb vora. Cap dia en vermell: només sumem.
 @Composable
 fun HabitMonthCard(habit: Habit, progress: HabitProgress) {
-    val locale = planLocale()
+    val locale = viraLocale()
     val shape = RoundedCornerShape(ViraRadius.l)
     val cellHeight = 40.dp * LocalDensity.current.fontScale.coerceAtMost(2f)
     Column(

@@ -56,6 +56,7 @@ import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.annotation.DrawableRes
+import cat.vira.android.core.design.viraLocale
 import cat.vira.android.R
 import cat.vira.android.core.data.model.PlanItem
 import cat.vira.android.core.data.model.PlanItemStatus
@@ -332,7 +333,7 @@ fun DayStrip(
 
 @Composable
 private fun DayCell(day: LocalDate, isSelected: Boolean, isToday: Boolean, count: Int, modifier: Modifier, onClick: () -> Unit) {
-    val locale = planLocale()
+    val locale = viraLocale()
     val ink by animateColorAsState(
         if (isSelected) ViraColor.onCard(ViraArea.Rewards) else ViraColor.onCard(area),
         ViraMotion.quick(),
@@ -413,13 +414,13 @@ fun PlanSceneCard(
 /// Mes i any, amb la primera lletra en majúscula (`.dateTime.month(.wide).year()`).
 @Composable
 @ReadOnlyComposable
-fun monthYear(date: LocalDate, locale: Locale = planLocale()): String =
+fun monthYear(date: LocalDate, locale: Locale = viraLocale()): String =
     date.format(DateTimeFormatter.ofPattern("LLLL yyyy", locale)).replaceFirstChar { it.titlecase(locale) }
 
 /// "dilluns 5" per a les capçaleres de la setmana.
 @Composable
 @ReadOnlyComposable
-fun weekdayDay(date: LocalDate, locale: Locale = planLocale()): String =
+fun weekdayDay(date: LocalDate, locale: Locale = viraLocale()): String =
     date.format(DateTimeFormatter.ofPattern("EEEE d", locale)).replaceFirstChar { it.titlecase(locale) }
 
 /// Puja el contingut `distance` per sobre del seu lloc i li treu aquella alçada (el `.padding(.top, -x)`

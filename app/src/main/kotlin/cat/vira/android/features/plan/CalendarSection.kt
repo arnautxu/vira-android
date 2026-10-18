@@ -43,6 +43,7 @@ import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import cat.vira.android.core.design.viraLocale
 import cat.vira.android.R
 import cat.vira.android.core.data.model.PlanItem
 import cat.vira.android.core.design.components.viraPressable
@@ -75,7 +76,7 @@ fun CalendarSection(
     var selection by rememberSaveable { mutableStateOf(today) }
     var mode by rememberSaveable { mutableStateOf(initialMode) }
     var editing by remember { mutableStateOf<PlanItem?>(null) }
-    val locale = planLocale()
+    val locale = viraLocale()
     val firstDay = PlanDay.firstDayOfWeek(locale)
     val week = CalendarWeek.containing(selection, firstDay)
     val counts = remember(snapshot.items) { snapshot.countsByDay(zone) }

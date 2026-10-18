@@ -6,6 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import cat.vira.android.core.design.viraLocale
 import cat.vira.android.app.PlanSection
 import cat.vira.android.core.data.model.Habit
 import cat.vira.android.core.data.model.HabitLog
@@ -15,6 +16,7 @@ import cat.vira.android.core.data.model.MedicationForm
 import cat.vira.android.core.data.model.MedicationIntake
 import cat.vira.android.core.data.model.PlanItem
 import cat.vira.android.core.data.model.PlanItemStatus
+import cat.vira.android.core.design.ViraCapture
 import cat.vira.android.core.design.ViraScreenCaptures
 import cat.vira.android.core.design.ViraTheme
 import cat.vira.android.core.design.components.ActiveCompletion
@@ -80,7 +82,7 @@ private fun Screen(
     calendarMode: CalendarMode = CalendarMode.Day,
     content: (@Composable (PlanActions) -> Unit)? = null,
 ) {
-    ViraTheme(reduceMotion = true) {
+    ViraCapture { ViraTheme(reduceMotion = true) {
         val scope = rememberCoroutineScope()
         val actions = remember { PlanActions.preview(scope) }
         ProvideViraCompletions(present = {}, undo = {}, active = active) {
@@ -92,7 +94,7 @@ private fun Screen(
                 }
             }
         }
-    }
+    } }
 }
 
 @PreviewTest @ViraScreenCaptures @Composable
@@ -118,7 +120,7 @@ fun HabitsEmpty() = Screen(PlanSection.Habits, PlanSnapshot())
 
 @PreviewTest @ViraScreenCaptures @Composable
 fun HabitDetailScreen() = Screen(PlanSection.Habits) { actions ->
-    HabitDetail(Sample.reading, HabitProgress(Sample.logs, today, zone, PlanDay.firstDayOfWeek(planLocale())), actions, onEdit = {}, onClose = {}, zone = zone)
+    HabitDetail(Sample.reading, HabitProgress(Sample.logs, today, zone, PlanDay.firstDayOfWeek(viraLocale())), actions, onEdit = {}, onClose = {}, zone = zone)
 }
 
 @PreviewTest @ViraScreenCaptures @Composable

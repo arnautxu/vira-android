@@ -61,6 +61,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import cat.vira.android.core.design.viraLocale
 import cat.vira.android.R
 import cat.vira.android.core.data.model.Habit
 import cat.vira.android.core.design.LocalViraEnvironment
@@ -95,7 +96,7 @@ fun HabitsSection(snapshot: PlanSnapshot, actions: PlanActions, chrome: PlanChro
     var editing by remember { mutableStateOf<Habit?>(null) }
     var detailId by rememberSaveable { mutableStateOf<String?>(null) }
     val habits = snapshot.activeHabits
-    val firstDay = PlanDay.firstDayOfWeek(planLocale())
+    val firstDay = PlanDay.firstDayOfWeek(viraLocale())
     val progress = remember(snapshot.habitLogs, today, firstDay) { HabitProgress(snapshot.habitLogs, today, firstDay = firstDay) }
 
     LaunchedEffect(chrome.adding) {
@@ -268,7 +269,7 @@ fun ProgressRing(done: Int, total: Int, caption: String) {
 
 @Composable
 private fun WeekDots(habits: List<Habit>, progress: HabitProgress) {
-    val locale = planLocale()
+    val locale = viraLocale()
     val track = ViraColor.lightArtworkVeil.copy(alpha = 0.5f)
     val fill = ViraColor.accent(area)
     val onFill = ViraColor.onAccent

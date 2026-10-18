@@ -41,6 +41,7 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
+import cat.vira.android.core.design.viraLocale
 import cat.vira.android.R
 import cat.vira.android.core.data.model.IntakeStatus
 import cat.vira.android.core.data.model.Medication
@@ -323,7 +324,7 @@ private fun IntakeCheck(status: IntakeStatus, onClick: () -> Unit) {
 /// Una pauta (`MedicationScheduleRow`): forma, nom, dosi, quins dies i les hores. Tocar-la l'edita.
 @Composable
 private fun MedicationScheduleRow(medication: Medication, onClick: () -> Unit) {
-    val locale = planLocale()
+    val locale = viraLocale()
     val times = medication.timesInMinutes.sorted().joinToString(" · ") { PlanFormat.minutesIn(it, locale) }
     Row(
         Modifier.fillMaxWidth().background(ViraColor.surfaceElevated, RoundedCornerShape(ViraRadius.m))
