@@ -1,5 +1,7 @@
 package cat.vira.android.features.settings
 
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.NonCancellable
 import android.content.Context
 import android.content.SharedPreferences
 import cat.vira.android.core.backend.ViraBackend
@@ -71,13 +73,26 @@ class ViraSettingsBackend(private val context: Context, private val backend: Vir
 
     override suspend fun signOut() = backend.session.signOut()
 
-    override suspend fun deleteAccount() {
+    // Les dues esborrades no es poden cancel·lar a mig fer: en tancar la sessió, la porta del compte
+    // treu la pantalla que les ha cridat, i amb ella el seu àmbit de corrutines.
+    override suspend fun deleteAccount() = withContext(NonCancellable) {
         backend.session.deleteAccount()
         // Deixar les dades al telèfon després d'esborrar el compte seria una mitja veritat.
         ViraDataEraser.eraseEverything(db, preferences)
+        eraseOwnLeftovers()
     }
 
-    override suspend fun eraseEverything() = backend.engine.eraseEverything()
+    override suspend fun eraseEverything() = withContext(NonCancellable) {
+        backend.engine.eraseEverything()
+        eraseOwnLeftovers()
+    }
+
+    /// El que Ajustos desa fora de les claus que coneix l'esborrat comú: les seves preferències i
+    /// qualsevol exportació que hagi quedat a la memòria cau.
+    private fun eraseOwnLeftovers() {
+        preferences.edit().apply { SettingsKeys.erasable.forEach(::remove) }.apply()
+        exportDirectory().deleteRecursively()
+    }
 
     override suspend fun setStreakVisible(visible: Boolean) {
         // La ratxa es crea sota demanda: l'ajust s'ha de poder apagar abans del primer dia.

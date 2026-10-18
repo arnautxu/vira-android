@@ -97,9 +97,14 @@ object ViraPdfRenderer {
             beginPage()
         }
 
-        private fun layout(text: String, paint: TextPaint, width: Float): StaticLayout =
-            StaticLayout.Builder.obtain(text, 0, text.length, paint, width.toInt())
-                .setAlignment(Layout.Alignment.ALIGN_NORMAL)
+        private fun layout(
+            text: String,
+            paint: TextPaint,
+            width: Float,
+            alignment: Layout.Alignment = Layout.Alignment.ALIGN_NORMAL,
+        ): StaticLayout =
+            StaticLayout.Builder.obtain(text, 0, text.length, paint, width.toInt().coerceAtLeast(1))
+                .setAlignment(alignment)
                 .setIncludePad(false)
                 .build()
 
@@ -139,18 +144,27 @@ object ViraPdfRenderer {
         }
 
         /// Etiqueta a l'esquerra, valor a la dreta. Si l'etiqueta és llarga, s'embolica a la seva
-        /// columna en comptes de trepitjar el valor.
+        /// columna en comptes de trepitjar el valor; un valor llarg (una nota) també s'embolica, a la
+        /// seva, que mai passa de la meitat de l'amplada.
         private fun drawRow(row: ViraPdfDocument.Row) {
-            val valueWidth = row.value?.let { ceil(value.measureText(it)) } ?: 0f
+            val text = row.value?.takeIf { it.isNotEmpty() }
+            val valueWidth = text?.let { ceil(value.measureText(it)).coerceAtMost(CONTENT_WIDTH / 2) } ?: 0f
             val labelWidth = CONTENT_WIDTH - if (valueWidth > 0) valueWidth + 12f else 0f
             val label = layout(row.label, body, labelWidth)
-            ensureRoom(label.height + 4f)
+            val valueLayout = text?.let { layout(it, value, valueWidth, Layout.Alignment.ALIGN_OPPOSITE) }
+            val height = maxOf(label.height, valueLayout?.height ?: 0).toFloat()
+            ensureRoom(height + 4f)
             canvas.save()
             canvas.translate(MARGIN, y)
             label.draw(canvas)
             canvas.restore()
-            row.value?.let { canvas.drawText(it, MARGIN + CONTENT_WIDTH - valueWidth, y - value.fontMetrics.ascent, value) }
-            y += label.height + 2f
+            if (valueLayout != null) {
+                canvas.save()
+                canvas.translate(MARGIN + CONTENT_WIDTH - valueWidth, y)
+                valueLayout.draw(canvas)
+                canvas.restore()
+            }
+            y += height + 2f
             val detail = row.detail?.takeIf { it.isNotEmpty() }
             if (detail != null) draw(detail, small, spacingAfter = 3f) else y += 1f
         }

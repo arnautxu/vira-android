@@ -75,8 +75,13 @@ fun SettingsDataSection(onErased: () -> Unit) {
             error = attempt {
                 val file = make()
                 withContext(Dispatchers.IO) {
-                    context.contentResolver.openOutputStream(target)?.use { out -> file.inputStream().use { it.copyTo(out) } }
-                        ?: throw IllegalStateException()
+                    try {
+                        context.contentResolver.openOutputStream(target)?.use { out -> file.inputStream().use { it.copyTo(out) } }
+                            ?: throw IllegalStateException()
+                    } finally {
+                        // La còpia de treball porta emocions i medicació: no es queda a la memòria cau.
+                        file.parentFile?.takeIf { it.name.startsWith("export-") }?.deleteRecursively() ?: file.delete()
+                    }
                 }
             }
         }
