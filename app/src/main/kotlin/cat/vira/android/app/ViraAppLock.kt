@@ -26,19 +26,18 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.isTraversalGroup
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
@@ -107,22 +106,24 @@ fun ViraAppLock(content: @Composable () -> Unit) {
         onDispose { lifecycle.removeObserver(observer) }
     }
 
+    val saveableState = rememberSaveableStateHolder()
     Box(Modifier.fillMaxSize()) {
-        // Tapat no vol dir només amagat: TalkBack tampoc pot llegir ni tocar el que hi ha a sota.
-        Box(if (locked) Modifier.clearAndSetSemantics {} else Modifier) { content() }
+        // Tapat no vol dir només amagat: mentre és tancat, l'app no hi és. Si quedés composta a sota,
+        // TalkBack la podria llegir i un menú o un diàleg obert (que és una finestra a part) sortiria
+        // per sobre del bloqueig. L'estat desable (pestanya, pila de navegació) es guarda i torna.
+        if (!locked) saveableState.SaveableStateProvider(ROOT_KEY) { content() }
         // Tancar és instantani (la captura del canviador es fa just ara); només obrir té fos.
         AnimatedVisibility(
             visible = locked,
             enter = EnterTransition.None,
             exit = fadeOut(ViraMotion.quick()),
         ) {
-            // Els tocs fora del botó s'acaben aquí i no arriben a la pantalla de sota.
-            Box(Modifier.pointerInput(Unit) { awaitPointerEventScope { while (true) awaitPointerEvent() } }) {
-                ViraLockScreen(onUnlock = prompt::show)
-            }
+            ViraLockScreen(onUnlock = prompt::show)
         }
     }
 }
+
+private const val ROOT_KEY = "vira.root"
 
 /// La demanda al sistema. Si el telèfon no té empremta, cara ni codi, no es pot deixar ningú tancat
 /// fora de la seva pròpia app: es desbloqueja sense preguntar.
