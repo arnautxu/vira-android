@@ -165,6 +165,14 @@ internal fun ParentProgress(modifier: Modifier = Modifier) {
     }
 }
 
+/// Indicador petit dins d'una fila, mentre la llista encara no ha arribat.
+@Composable
+internal fun ParentProgressInline() {
+    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        CircularProgressIndicator(color = ViraColor.brandAccent, modifier = Modifier.size(ViraTouch.minimum / 2))
+    }
+}
+
 /// El text de cada error, del catàleg (`backend.error.*`).
 @StringRes
 internal fun ViraBackendError.message(): Int = when (this) {

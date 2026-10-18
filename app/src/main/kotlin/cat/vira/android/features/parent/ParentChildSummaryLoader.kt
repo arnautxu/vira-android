@@ -34,7 +34,7 @@ class ParentChildSummaryLoader(
             // recompte d'emocions, que és de l'àmbit d'emocions (`20261018122414`).
             val xp = count("parent_child_total_xp", child, accessToken)
             val streaks = rows("streaks", child, accessToken, "current_days")
-            val sessions = rows("focus_sessions", child, accessToken, "started_at,completed")
+            val sessions = rows("focus_sessions", child, accessToken, "started_at,completed", Param("started_at", "gt.${ViraTime.format(weekAgo)}"))
             summary = summary.copy(
                 displayName = profiles.firstOrNull()?.string("display_name"),
                 totalXP = xp,
@@ -46,8 +46,8 @@ class ParentChildSummaryLoader(
         }
 
         if (link.scopeHabits) {
-            val logs = rows("habit_logs", child, accessToken, "day")
-            val items = rows("plan_items", child, accessToken, "status")
+            val logs = rows("habit_logs", child, accessToken, "day", Param("day", "gt.${ViraTime.format(weekAgo)}"))
+            val items = rows("plan_items", child, accessToken, "status", Param("status", "eq.pending"))
             summary = summary.copy(
                 habitsDoneLastWeek = logs.count { it.instant("day")?.isAfter(weekAgo) ?: false },
                 tasksPending = items.count { it.string("status") == "pending" },
@@ -95,8 +95,9 @@ class ParentChildSummaryLoader(
 
     /// Només les columnes que fan falta per comptar: el títol o les notes d'una tasca no han de
     /// baixar mai al telèfon del pare o la mare, encara que la política del servidor les deixi.
-    private suspend fun rows(table: String, child: UUID, token: String, columns: String): List<JsonObject> =
-        rest.select(table, listOf(Param("user_id", "eq.$child"), Param("select", columns)), token)
+    /// El filtre de la setmana o de l'estat va al servidor: l'historial sencer no baixa mai.
+    private suspend fun rows(table: String, child: UUID, token: String, columns: String, vararg filters: Param): List<JsonObject> =
+        rest.select(table, listOf(Param("user_id", "eq.$child"), Param("select", columns)) + filters, token)
             .mapNotNull { it as? JsonObject }
 
     private fun JsonObject.string(key: String) = (this[key] as? JsonPrimitive)?.contentOrNull

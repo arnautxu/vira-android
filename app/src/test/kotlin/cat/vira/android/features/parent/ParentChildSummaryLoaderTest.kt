@@ -28,6 +28,7 @@ class ParentChildSummaryLoaderTest {
     private val server = MockWebServer()
     private val paths: MutableList<String> = Collections.synchronizedList(mutableListOf())
     private val selects: MutableMap<String, String?> = Collections.synchronizedMap(mutableMapOf())
+    private val urls: MutableMap<String, okhttp3.HttpUrl> = Collections.synchronizedMap(mutableMapOf())
     /// Què torna cada camí. El que no hi és torna `[]`.
     private val responses = mutableMapOf<String, String>()
     private lateinit var loader: ParentChildSummaryLoader
@@ -39,6 +40,7 @@ class ParentChildSummaryLoaderTest {
                 val path = request.requestUrl!!.encodedPath
                 paths += path
                 selects[path] = request.requestUrl!!.queryParameter("select")
+                urls[path] = request.requestUrl!!
                 return MockResponse().setBody(responses[path] ?: "[]")
             }
         }
@@ -60,6 +62,15 @@ class ParentChildSummaryLoaderTest {
         assertEquals("status", selects["/rest/v1/plan_items"])
         assertEquals("day", selects["/rest/v1/habit_logs"])
         assertFalse(selects.filterKeys { !it.contains("/rpc/") }.values.any { it == null || it == "*" })
+    }
+
+    /// La setmana i l'estat es filtren al servidor: l'historial sencer no baixa mai.
+    @Test
+    fun elsFiltresVanAlServidor() = runBlocking {
+        loader.load(link(usage = true, habits = true), "token")
+        assertEquals("eq.pending", urls["/rest/v1/plan_items"]!!.queryParameter("status"))
+        assertTrue(urls["/rest/v1/habit_logs"]!!.queryParameter("day")!!.startsWith("gt.2026-10-11"))
+        assertTrue(urls["/rest/v1/focus_sessions"]!!.queryParameter("started_at")!!.startsWith("gt.2026-10-11"))
     }
 
     @Test

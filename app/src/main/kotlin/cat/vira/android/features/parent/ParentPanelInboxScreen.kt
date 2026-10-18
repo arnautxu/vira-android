@@ -48,6 +48,7 @@ internal fun ParentPanelInboxScreen(deps: ParentDeps, onBack: () -> Unit) {
     var reminders by remember { mutableStateOf<List<ParentReminder>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var isRefreshing by remember { mutableStateOf(false) }
+    var resolving by remember { mutableStateOf<java.util.UUID?>(null) }
     var error by remember { mutableStateOf<ViraBackendError?>(null) }
     val scope = rememberCoroutineScope()
 
@@ -76,7 +77,10 @@ internal fun ParentPanelInboxScreen(deps: ParentDeps, onBack: () -> Unit) {
                 messages = messages,
                 reminders = reminders,
                 error = error?.takeIf { it != ViraBackendError.CANCELLED }?.let { stringResource(it.message()) },
-                onResolve = { reminder, accepted ->
+                onResolve = resolve@{ reminder, accepted ->
+                    // Un recordatori a la vegada: dos tocs ràpids a «Accepta» no han de crear dues tasques.
+                    if (resolving != null) return@resolve
+                    resolving = reminder.id
                     scope.launch {
                         // Acceptar-lo el converteix en una tasca teva, igual que si l'haguessis
                         // apuntat tu. A partir d'aquí ja no és de ningú altre.
@@ -88,6 +92,7 @@ internal fun ParentPanelInboxScreen(deps: ParentDeps, onBack: () -> Unit) {
                             deps.store.create(deps.store.db.planItems(), PlanItem(title = reminder.title, day = day))
                         }
                         load()
+                        resolving = null
                     }
                 },
             )

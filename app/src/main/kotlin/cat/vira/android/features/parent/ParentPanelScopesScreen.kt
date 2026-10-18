@@ -45,6 +45,7 @@ import kotlinx.coroutines.sync.withLock
 @Composable
 internal fun ParentPanelScopesScreen(link: ParentLink, deps: ParentDeps, onBack: () -> Unit, onChange: () -> Unit) {
     var draft by remember(link.id) { mutableStateOf(link) }
+    var persisted by remember(link.id) { mutableStateOf(link) }
     var isWorking by remember { mutableStateOf(false) }
     var confirming by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<ViraBackendError?>(null) }
@@ -61,7 +62,10 @@ internal fun ParentPanelScopesScreen(link: ParentLink, deps: ParentDeps, onBack:
         scope.launch {
             saving.withLock {
                 val latest = draft
-                parentAttempt({ error = it }) { deps.client.updateScopes(latest, deps.session.accessToken()) }?.let { onChange() }
+                val saved = parentAttempt({ error = it }) { deps.client.updateScopes(latest, deps.session.accessToken()) }
+                // Si no s'ha desat, l'interruptor torna a com és al servidor: ensenyar un àmbit
+                // tancat que encara és obert faria creure que la porta ja és tancada.
+                if (saved != null) { persisted = latest; onChange() } else if (draft == latest) draft = persisted
             }
         }
     }

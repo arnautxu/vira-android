@@ -55,6 +55,7 @@ import kotlinx.coroutines.launch
 fun ParentPanelScreen(onClose: () -> Unit) {
     val deps = rememberParentDeps()
     var links by remember { mutableStateOf<List<ParentLink>>(emptyList()) }
+    var loaded by remember { mutableStateOf(false) }
     var code by rememberSaveable { mutableStateOf<String?>(null) }
     var isWorking by remember { mutableStateOf(false) }
     var isRefreshing by remember { mutableStateOf(false) }
@@ -65,7 +66,7 @@ fun ParentPanelScreen(onClose: () -> Unit) {
 
     suspend fun load() {
         error = null
-        parentAttempt({ error = it }) { links = deps.client.links(deps.session.accessToken()) }
+        parentAttempt({ error = it }) { links = deps.client.links(deps.session.accessToken()); loaded = true }
     }
     LaunchedEffect(Unit) { load() }
 
@@ -88,7 +89,7 @@ fun ParentPanelScreen(onClose: () -> Unit) {
                 modifier = Modifier.weight(1f),
             ) {
                 ParentPanelContent(
-                    links = links, code = code, isWorking = isWorking,
+                    links = links, loaded = loaded, code = code, isWorking = isWorking,
                     error = error?.takeIf { it != ViraBackendError.CANCELLED }?.let { stringResource(it.message()) },
                     onCreateCode = {
                         error = null
@@ -117,6 +118,7 @@ internal fun ParentPanelContent(
     onCreateCode: () -> Unit,
     onOpenLink: (ParentLink) -> Unit,
     onOpenInbox: () -> Unit,
+    loaded: Boolean = true,
 ) {
     val active = links.filter { it.isActive }
     Column(
@@ -150,8 +152,11 @@ internal fun ParentPanelContent(
         ParentGroup(
             header = stringResource(R.string.parent_links_section),
             rows = {
+                // «Ningú» només quan el servidor ho ha dit: amb la llista sense carregar o amb un
+                // error, dir-ho faria creure que no hi ha cap porta oberta.
                 if (active.isEmpty()) {
-                    row { Text(stringResource(R.string.parent_links_empty), style = ViraFont.footnote, color = ViraColor.textSecondary) }
+                    if (loaded) row { Text(stringResource(R.string.parent_links_empty), style = ViraFont.footnote, color = ViraColor.textSecondary) }
+                    else row { ParentProgressInline() }
                 } else {
                     active.forEach { link -> row { NavigationRow(stringResource(R.string.parent_links_row), withIcon = true) { onOpenLink(link) } } }
                 }

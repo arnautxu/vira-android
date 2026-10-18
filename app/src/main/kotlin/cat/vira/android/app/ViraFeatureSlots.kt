@@ -35,6 +35,7 @@ import cat.vira.android.features.focus.FocusScreen
 import cat.vira.android.features.focus.FocusStartRequest
 import cat.vira.android.features.help.HelpBreatheScreen
 import cat.vira.android.features.help.HelpScreen
+import cat.vira.android.features.settings.AccountSettingsScreen
 import cat.vira.android.features.settings.SettingsScreen
 import java.util.UUID
 
@@ -84,14 +85,14 @@ internal object ViraFeatureSlots {
                 ParentLinkUrl.code(uri.toString())?.also { incoming.consume(uri) }
             }
         }
-        ParentRootScreen(account = { onClose -> Settings(onClose) }, linkCodes = codes)
+        ParentRootScreen(account = { onClose -> AccountSettingsScreen(onClose) }, linkCodes = codes)
     }
 
     /// Fil Panell de pares: el que veu un pare o mare a les builds sense panell (Google Play).
     @Composable
     fun ParentReleasePlaceholder() {
         var showingAccount by rememberSaveable { mutableStateOf(false) }
-        if (showingAccount) Settings(onClose = { showingAccount = false })
+        if (showingAccount) AccountSettingsScreen(onClose = { showingAccount = false })
         else ParentPanelPlaceholder(onAccount = { showingAccount = true })
     }
 
