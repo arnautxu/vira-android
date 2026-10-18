@@ -17,6 +17,7 @@ import cat.vira.android.core.notifications.ViraNotificationHost
 import cat.vira.android.core.notifications.ViraNotificationWorker
 import cat.vira.android.core.notifications.ViraNotifications
 import cat.vira.android.features.emotions.ViraEmotionCheckIn
+import cat.vira.android.features.plan.PlanNotificationEffects
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -39,6 +40,10 @@ class ViraApp : Application(), ViraNotificationHost {
     override var notificationEffects = ViraNotificationEffects(
         // El mateix registre que el check-in d'Emocions, sense intensitat ni nota.
         logEmotion = { ViraEmotionCheckIn.record(ViraStore(backend.db), it) },
+        // Pla: el mateix camí que la pantalla, sense «Desfer». La medicació no dona res.
+        completeHabit = { id, day -> PlanNotificationEffects(ViraStore(backend.db)).completeHabit(id, day) },
+        completePlanItem = { PlanNotificationEffects(ViraStore(backend.db)).completePlanItem(it) },
+        recordIntake = { id, at, status -> PlanNotificationEffects(ViraStore(backend.db)).recordIntake(id, at, status) },
     )
 
     /// La finestra de «Desfer» i la recompensa que ve després (`ViraCompletionQueue`). És del
