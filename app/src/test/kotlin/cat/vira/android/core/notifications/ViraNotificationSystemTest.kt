@@ -96,10 +96,10 @@ class ViraNotificationSystemTest {
 
     @Test
     fun unaAlarmaEndarreridaNoEsTreuEnReferLaFinestra() {
-        scheduler.replace(listOf("habit-"), listOf(planned("habit-late", minutes = -5), planned("habit-old", minutes = -90)), now)
+        scheduler.replace(listOf("habit-"), listOf(planned("habit-late", minutes = -5), planned("habit-old", minutes = -180)), now)
         scheduler.replace(listOf("habit-"), emptyList(), now)
         assertEquals(
-            "la de fa cinc minuts encara pot sonar tard; la de fa hora i mitja ja no",
+            "la de fa cinc minuts encara pot sonar tard; la de fa tres hores ja no",
             listOf("habit-late"), scheduler.armed().map { it.id },
         )
     }
@@ -160,6 +160,7 @@ class ViraNotificationSystemTest {
 
     @Test
     fun lAlarmaNoPublicaUnAvisDUnaFilaQueJaNoHiEs() = runBlocking {
+        app.streak = ViraStreakState(isVisible = true, dayIsOpen = true)
         // Un hàbit que no és a la base de dades: un compte esborrat, o un altre compte.
         assertFalse(ViraNotifications.isStillPending(app, planned("habit-a")))
         val viri = planned("${ViraStreakNotifications.PREFIX}2027-1-15").copy(actions = ViraActionSet.VIRI)
@@ -187,12 +188,12 @@ class ViraNotificationSystemTest {
     fun enArrencarElTelefonNomesTornenLesQueHanDeSonar() {
         scheduler.replace(
             listOf("habit-"),
-            listOf(planned("habit-old", minutes = -90), planned("habit-late", minutes = -5), planned("habit-future")),
+            listOf(planned("habit-old", minutes = -180), planned("habit-late", minutes = -5), planned("habit-future")),
             now.minusSeconds(3 * 3600),
         )
         scheduler.rearm(now)
         assertEquals(
-            "la de fa cinc minuts encara sona; la de fa hora i mitja ja no",
+            "la de fa cinc minuts encara sona; la de fa tres hores ja no",
             listOf("habit-late", "habit-future"), scheduler.armed().map { it.id },
         )
     }
@@ -234,6 +235,7 @@ class ViraNotificationSystemTest {
 
     @Test
     fun unaConcentracioQueSilenciaViriAturaLAlarmaQueJaEraArmada() = runBlocking {
+        app.streak = ViraStreakState(isVisible = true, dayIsOpen = true)
         val viri = planned("${ViraStreakNotifications.PREFIX}2027-1-15").copy(actions = ViraActionSet.VIRI)
         assertTrue(ViraNotifications.isStillPending(app, viri, now = now))
         app.notificationDatabase.focusSessions().upsertRaw(
@@ -243,7 +245,31 @@ class ViraNotificationSystemTest {
     }
 
     @Test
+    fun unRecordatoriDeViriArmatNoSurtSiElDiaJaCompta() = runBlocking {
+        val viri = planned("${ViraStreakNotifications.PREFIX}2027-1-15").copy(actions = ViraActionSet.VIRI)
+        app.streak = ViraStreakState(isVisible = true, dayIsOpen = false)
+        assertFalse(ViraNotifications.isStillPending(app, viri, now = now))
+        app.streak = ViraStreakState(isVisible = false, dayIsOpen = true)
+        assertFalse("ratxa amagada", ViraNotifications.isStillPending(app, viri, now = now))
+    }
+
+    @Test
+    fun unaNoticiaApuntadaJustAbansDeLaFrancaPassaALaSeguent() {
+        val zone = ZoneId.of("UTC")
+        val preferences = ViraPreferences.open(app)
+        val time = ViraClock(20, 30)
+        val slot = ViraStreakNotifications.slots(now, time, zone).first()
+        ViraStreakNotifications.record(ViraStreakNotifications.Event.Reset, preferences, slot.minusSeconds(60))
+        // La passada arriba un minut tard i cap alarma porta la notícia.
+        assertEquals(
+            ViraStreakNotifications.Event.Reset,
+            ViraStreakNotifications.pendingEvent(preferences, time, slot.plusSeconds(60), zone) { false },
+        )
+    }
+
+    @Test
     fun unaNoticiaSubstituidaNoSurt() = runBlocking {
+        app.streak = ViraStreakState(isVisible = true, dayIsOpen = false)
         val preferences = ViraPreferences.open(app)
         ViraStreakNotifications.record(ViraStreakNotifications.Event.Protected, preferences, now)
         val news = planned("${ViraStreakNotifications.PREFIX}2027-1-15${ViraStreakNotifications.NEWS_SUFFIX}").copy(

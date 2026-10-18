@@ -148,7 +148,9 @@ object ViraNotifications {
         val muted = ViraNotificationPlanner.muteWindow(host.notificationDatabase.focusSessions().all(), now)
         val planned = ViraStreakNotifications.requests(
             now = now,
-            event = ViraStreakNotifications.pendingEvent(preferences, time, now, zone, muted),
+            event = ViraStreakNotifications.pendingEvent(preferences, time, now, zone, muted) { stamp ->
+                scheduler.armed().any { it.id.endsWith(ViraStreakNotifications.NEWS_SUFFIX) && it.scheduledAtMillis == stamp }
+            },
             dayIsOpen = state.dayIsOpen,
             muted = muted,
             time = time,
@@ -218,8 +220,15 @@ object ViraNotifications {
         val inputs = snapshot(host.notificationDatabase)
         // Una concentració que silencia Vira, començada després de l'última passada: tampoc.
         if (ViraNotificationPlanner.muteWindow(inputs.focusSessions, now)?.contains(now) == true) return false
-        if (notification.id.endsWith(ViraStreakNotifications.NEWS_SUFFIX)) {
-            return isCurrentNews(ViraPreferences.open(context), notification)
+        if (notification.id.startsWith(ViraStreakNotifications.PREFIX)) {
+            // Amagar la ratxa se n'emporta els avisos; un recordatori d'un dia que ja compta, fora.
+            val state = host.notificationEffects.streakState(now)
+            if (state == null || !state.isVisible) return false
+            return if (notification.id.endsWith(ViraStreakNotifications.NEWS_SUFFIX)) {
+                isCurrentNews(ViraPreferences.open(context), notification)
+            } else {
+                state.dayIsOpen
+            }
         }
         if (reminderPrefixes.none { notification.id.startsWith(it) }) return true
         return ViraNotificationPlanner.isStillPending(notification, inputs, zone, now)

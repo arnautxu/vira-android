@@ -3,6 +3,8 @@ package cat.vira.android.core.notifications
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.ExistingWorkPolicy
@@ -26,7 +28,9 @@ class ViraNotificationWorker(context: Context, params: WorkerParameters) : Corou
 
     override suspend fun doWork(): Result {
         val now = Instant.now()
-        if (inputData.getBoolean(KEY_RECONCILE, true)) ViraNotifications.reconcileInBackground(applicationContext, now)
+        // Amb l'app a la vista, la targeta d'Inici ja ho diu: no s'apunta cap notícia per a Viri.
+        val visible = ProcessLifecycleOwner.get().lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)
+        if (inputData.getBoolean(KEY_RECONCILE, true) && !visible) ViraNotifications.reconcileInBackground(applicationContext, now)
         ViraNotifications.reschedule(applicationContext, now)
         return Result.success()
     }

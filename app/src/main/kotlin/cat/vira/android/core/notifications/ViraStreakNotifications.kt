@@ -34,8 +34,8 @@ object ViraStreakNotifications {
     const val BUDGET = 5
     const val WINDOW_DAYS = 7
 
-    /// El mateix marge que les alarmes endarrerides (`ViraNotificationScheduler`).
-    private val NEWS_GRACE: java.time.Duration = java.time.Duration.ofMinutes(30)
+    /// El mateix marge que les alarmes endarrerides.
+    private val NEWS_GRACE: java.time.Duration get() = ViraNotificationScheduler.OVERDUE_GRACE
 
     // MARK: Esdeveniments pendents d'explicar
 
@@ -86,6 +86,7 @@ object ViraStreakNotifications {
         now: Instant,
         zone: ZoneId,
         muted: ClosedOpenRange? = null,
+        isArmed: (stamp: Long) -> Boolean = { true },
     ): Event? {
         val raw = preferences.getString(EVENT_KEY, null) ?: return null
         val recorded = Instant.ofEpochMilli(preferences.getLong(EVENT_DATE_KEY, 0))
@@ -102,11 +103,22 @@ object ViraStreakNotifications {
             }
         }
         if (silencedUntil != Long.MIN_VALUE) preferences.edit { putLong(EVENT_MUTED_KEY, silencedUntil) }
-        if (slot == null || !slot.isAfter(now)) {
+        if (slot == null) {
+            clearPendingEvent(preferences)
+            return null
+        }
+        if (!slot.isAfter(now)) {
+            if (!now.isBefore(slot.plus(NEWS_GRACE))) {
+                clearPendingEvent(preferences)
+                return null
+            }
             // Acabada de passar, l'alarma endarrerida d'aquesta notícia encara pot sonar: es
             // conserva (sense tornar-la a planificar) fins que sona o passa el marge.
-            if (slot == null || !now.isBefore(slot.plus(NEWS_GRACE))) clearPendingEvent(preferences)
-            return null
+            if (isArmed(recorded.toEpochMilli())) return null
+            // Cap alarma la portava (s'ha apuntat just abans de la franja i la passada ha arribat
+            // tard): passa a la franja següent. La data nova és també la marca nova de la notícia.
+            preferences.edit { putLong(EVENT_DATE_KEY, slot.toEpochMilli()) }
+            return pendingEvent(preferences, time, now, zone, muted, isArmed)
         }
         return when (raw) {
             "protected" -> Event.Protected

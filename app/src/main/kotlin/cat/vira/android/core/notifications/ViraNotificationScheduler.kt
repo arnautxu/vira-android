@@ -123,8 +123,11 @@ class ViraNotificationScheduler(private val context: Context) {
         const val FILE = "vira.notifications"
         private const val KEY = "armed"
         const val SNOOZE_SUFFIX = "-snooze"
-        /// Quant d'endarreriment es tolera a una alarma inexacta abans de donar-la per perduda.
-        private val OVERDUE_GRACE: java.time.Duration = java.time.Duration.ofMinutes(30)
+        /// Quant d'endarreriment es tolera a una alarma inexacta abans de donar-la per perduda. Dues
+        /// hores: Android en garanteix una sense restriccions i en dona més amb estalvi de bateria.
+        /// Tolerar-ne més és segur perquè l'alarma torna a mirar, abans de publicar, que allò encara
+        /// estigui per fer (`ViraNotifications.isStillPending`).
+        internal val OVERDUE_GRACE: java.time.Duration = java.time.Duration.ofHours(2)
         private val LOCK = Any()
         private val json = Json { ignoreUnknownKeys = true }
         private val LIST = kotlinx.serialization.builtins.ListSerializer(ViraPlannedNotification.serializer())
