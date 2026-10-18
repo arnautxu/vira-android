@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Generat per scripts/export-strings.py des de Localizable.xcstrings de l'iPhone (commit 81a2707). No es toca a mà. -->
+<!-- Generat per scripts/export-strings.py des de Localizable.xcstrings, EmotionIntensity.xcstrings de l'iPhone (commit 2a74e5d). No es toca a mà. -->
 <resources>
     <string name="a11y_error">Error: %1$s</string>
     <plurals name="a11y_items_count">
@@ -591,6 +591,10 @@
     <string name="emotion_confused">Confused</string>
     <string name="emotion_content">Happy</string>
     <string name="emotion_euphoric">Euphoric</string>
+    <string name="emotion_intensity_clear">Clear selection</string>
+    <string name="emotion_intensity_note_label">Optional note</string>
+    <string name="emotion_intensity_optional">Optional intensity</string>
+    <string name="emotion_intensity_selection_hint">Select this level. Tap again to clear it.</string>
     <string name="emotion_lonely">Lonely</string>
     <string name="emotion_low_energy">Low energy</string>
     <string name="emotion_sad">Sad</string>
@@ -1467,6 +1471,7 @@
     <string name="progress_pending_title">Not here yet</string>
     <string name="progress_xp">Progress points</string>
     <string name="release_pending_message">This feature isn\'t available yet.</string>
+    <string name="reward_coins_short">+%1$d</string>
     <string name="rewards_personal_archive">Archive</string>
     <string name="rewards_personal_archive_hint">Touch and hold a reward to archive it.</string>
     <string name="rewards_personal_balance">ViriCoins to spend</string>
