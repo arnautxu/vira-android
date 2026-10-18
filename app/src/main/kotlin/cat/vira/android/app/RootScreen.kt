@@ -70,6 +70,9 @@ fun RootScreen() {
             }
             composable(ViraModal.Breathe.route) { ViraFeatureSlots.Breathe(onClose = close) }
             composable(ViraModal.Settings.route) { ViraFeatureSlots.Settings(onClose = close) }
+            composable(ViraModal.FocusProfileEditor.route) {
+                ViraFeatureSlots.FocusProfileEditor(profileId = navigator.editingFocusProfileId, onClose = close)
+            }
         }
     }
 }
