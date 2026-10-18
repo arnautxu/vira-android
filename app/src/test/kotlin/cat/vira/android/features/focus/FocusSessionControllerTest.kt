@@ -10,6 +10,7 @@ import cat.vira.android.core.data.model.FocusSession
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -128,7 +129,7 @@ class FocusSessionControllerTest {
 
     @Test fun duesCridesSeguidesNoCreenDuesSessions() = runBlocking {
         val controller = controller()
-        val a = kotlinx.coroutines.async(Dispatchers.Unconfined) { controller.start() }
+        val a = scope.async { controller.start() }
         controller.start()
         a.await()
         assertEquals(1, db.focusSessions().all().size)
