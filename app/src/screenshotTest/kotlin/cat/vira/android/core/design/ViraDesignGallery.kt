@@ -268,7 +268,7 @@ fun CaptureEnvironment() = Gallery {
     ) {
         item {
             val date = LocalDate.of(2026, 10, 18)
-            Text(date.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL)), style = ViraFont.headline, color = ViraColor.textPrimary)
+            Text(date.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL).withLocale(viraLocale())), style = ViraFont.headline, color = ViraColor.textPrimary)
         }
         items(3) { index ->
             ViraTag(stringResource(R.string.level_title, index + 1))

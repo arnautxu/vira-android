@@ -2,10 +2,8 @@ package cat.vira.android.core.design
 
 import android.os.Build
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalConfiguration
 import java.lang.reflect.Field
 import java.lang.reflect.Modifier
-import java.util.Locale
 
 /// L'entorn que han de tenir totes les captures, abans de dibuixar res. **Tota prova de captura
 /// l'ha de fer servir** (dins o fora de `ViraTheme`, és igual):
@@ -15,20 +13,20 @@ import java.util.Locale
 /// fun Today() = ViraCapture { ViraTheme(reduceMotion = true) { … } }
 /// ```
 ///
-/// Arregla dues coses de layoutlib (el renderitzador de les captures) que no passen al mòbil:
-///
-/// - **Les llistes «lazy» sortien en blanc.** Layoutlib deixa `Build.FINGERPRINT` a `null`, i
+/// Arregla una cosa de layoutlib (el renderitzador de les captures) que no passa al mòbil:
+/// **les llistes «lazy» sortien en blanc.** Layoutlib deixa `Build.FINGERPRINT` a `null`, i
 ///   Compose el llegeix en carregar el planificador de les llistes (`PrefetchScheduler`): peta
 ///   la càrrega de la classe i, des d'aleshores, cap `LazyColumn`/`LazyRow`/`LazyVerticalGrid`
 ///   d'aquella execució es pot dibuixar —i la CI passava igualment, amb imatges buides. Com que
 ///   la classe només es carrega un cop per execució, n'hi ha prou que **una** captura sense
 ///   aquest entorn arribi primer a una llista perquè totes les altres surtin buides.
-/// - **Les dates i els números sortien en anglès.** El `locale` de `@Preview` canvia els textos
-///   però no `Locale.getDefault()`, que és el que fan servir els formats de data i número.
+///
+/// Les dates i els números en anglès no s'arreglen aquí: el codi ha de formatar amb
+/// `viraLocale()`, mai amb `Locale.getDefault()`. Canviar el `Locale` per defecte des d'aquí
+/// deixava d'un sol píxel totes les captures sense alçada fixa.
 @Composable
 fun ViraCapture(content: @Composable () -> Unit) {
     ViraCaptureFixes.ensureFingerprint()
-    // PROVA: sense canviar el locale, per saber quina de les dues peces deixa les captures d'1 px.
     content()
 }
 
