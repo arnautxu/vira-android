@@ -13,3 +13,4 @@ captures/
 *.iml
 .DS_Store
 .cxx/
+.venv/
