@@ -1,0 +1,418 @@
+package cat.vira.android.core.backend.sync
+
+import android.content.SharedPreferences
+import android.util.Log
+import androidx.room.withTransaction
+import cat.vira.android.core.backend.ViraBackendError
+import cat.vira.android.core.backend.ViraBackendException
+import cat.vira.android.core.backend.ViraRestClient
+import cat.vira.android.core.backend.ViraRestClient.Param
+import cat.vira.android.core.backend.ViraSession
+import cat.vira.android.core.data.ViraDataEraser
+import cat.vira.android.core.data.ViraDatabase
+import cat.vira.android.core.data.ViraStore
+import cat.vira.android.core.data.ViraTime
+import cat.vira.android.core.data.model.SyncTombstone
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.jsonObject
+import java.time.Duration
+import java.time.Instant
+import java.util.UUID
+import java.util.concurrent.atomic.AtomicLong
+
+/// Puja el que s'ha fet al telèfon i baixa el que s'ha fet als altres (`ViraSyncEngine` de l'iPhone).
+///
+/// **El protocol és el de l'iPhone byte a byte** —mateixes files, cursors, làpides, marge de cinc
+/// minuts i «l'últim escriu»—, perquè els dos mòbils escriuen a les mateixes taules i un que ho fes
+/// una mica diferent trepitjaria l'altre.
+///
+/// No bloqueja res: sense xarxa, l'app funciona igual i el següent intent recupera el retard.
+class ViraSyncEngine(
+    private val session: ViraSession,
+    private val db: ViraDatabase,
+    private val preferences: SharedPreferences,
+    private val rest: ViraRestClient = ViraRestClient(),
+    private val store: ViraStore = ViraStore(db),
+    private val clock: () -> Instant = ViraTime::now,
+    /// El que arriba del compte ja es va guanyar en un altre telèfon: el fil de la Botiga hi connecta
+    /// `ViraCardCelebrations.absorb` perquè no es celebri dues vegades.
+    private val afterProgressApplied: suspend (ViraDatabase) -> Unit = {},
+) {
+
+    sealed interface State {
+        data object Idle : State
+        data object Syncing : State
+        data class Succeeded(val at: Instant) : State
+        data class Failed(val error: ViraBackendError) : State
+    }
+
+    private val _state = MutableStateFlow<State>(State.Idle)
+    val state: StateFlow<State> = _state.asStateFlow()
+
+    private val isRunning = MutableStateFlow(false)
+    private val requested = AtomicLong(0)
+    private val served = MutableStateFlow(0L)
+    @Volatile private var identity: Identity? = null
+    private val cursors = ViraSyncCursors(preferences)
+
+    /// L'ordre importa: els pares abans que els fills. Un registre d'hàbit que arriba abans que el
+    /// seu hàbit es descartaria.
+    val tables: List<ViraSyncTable<*>> = listOf(
+        ProfileSyncTable { store },
+        PlanItemSyncTable,
+        PlanAssistanceSyncTable,
+        PlanAssistanceLinkSyncTable,
+        HabitSyncTable,
+        HabitLogSyncTable,
+        FocusProfileSyncTable,
+        FocusSessionSyncTable,
+        ProgressCounterSyncTable({ store }, afterProgressApplied),
+        StreakSyncTable({ store }, afterProgressApplied),
+        CoinTransactionSyncTable { store },
+        PersonalRewardSyncTable,
+        SkinOwnershipSyncTable,
+        AccessoryOwnershipSyncTable,
+        ChallengeClaimSyncTable,
+        EmotionEntrySyncTable,
+        MedicationSyncTable,
+        MedicationIntakeSyncTable,
+    )
+
+    /// Sincronitza només si fa prou estona de l'última que va anar bé: en tornar a primer pla, la
+    /// passada periòdica i el canvi d'estat en demanarien dues alhora.
+    suspend fun syncIfStale() {
+        val last = (state.value as? State.Succeeded)?.at
+        // Un rellotge que ha anat enrere dona una estona negativa: compta com a vella, o no se
+        // sincronitzaria fins que l'hora tornés a passar per l'última.
+        val elapsed = last?.let { Duration.between(it, clock()) }
+        if (elapsed != null && !elapsed.isNegative && elapsed < AUTOMATIC_INTERVAL) return
+        sync()
+    }
+
+    /// Sincronitza si té sentit fer-ho. Silenciosa: no interromp res ni demana res.
+    ///
+    /// Si ja n'hi ha una en marxa, se'n demana una altra en acabar: si entremig ha entrat un altre
+    /// compte, la que corria s'atura i el compte nou no ha d'esperar cinc minuts.
+    ///
+    /// No torna fins que la passada demanada s'ha fet, la faci qui la faci: el treball en segon pla
+    /// s'hi espera, i si tornés abans Android podria tancar el procés a mitja passada.
+    suspend fun sync() {
+        if (!session.requiresAccount) return
+        // Cada petició té un número; una passada serveix totes les que ja existien quan va començar.
+        val ticket = requested.incrementAndGet()
+        while (served.value < ticket) {
+            if (isRunning.compareAndSet(false, true)) {
+                try {
+                    while (served.value < requested.get()) {
+                        val upTo = requested.get()
+                        pass()
+                        served.value = upTo
+                    }
+                } finally {
+                    isRunning.value = false
+                }
+            } else {
+                // Qui la té en marxa ens servirà; si plega abans (un esborrat, una cancel·lació), la fem nosaltres.
+                combine(served, isRunning) { done, running -> done >= ticket || !running }.first { it }
+            }
+        }
+    }
+
+    private suspend fun pass() {
+        val user = session.user ?: return
+        identity = Identity(user.id, session.dataGeneration)
+        _state.value = State.Syncing
+        try {
+            run()
+            requireCurrentAccount()
+            _state.value = State.Succeeded(clock())
+        } catch (_: AccountChanged) {
+            _state.value = State.Idle
+        } catch (error: ViraBackendException) {
+            log("Sincronització fallida: ${error.error}")
+            _state.value = State.Failed(error.error)
+        } catch (error: CancellationException) {
+            _state.value = State.Idle
+            // La sessió avisa d'un canvi de compte amb una cancel·lació; només la que ve de fora es propaga.
+            currentCoroutineContext().ensureActive()
+        } catch (error: Exception) {
+            log("Sincronització fallida: ${error.javaClass.simpleName}")
+            _state.value = State.Failed(ViraBackendError.UNAVAILABLE)
+        } finally {
+            identity = null
+        }
+    }
+
+    /// **Cada taula és independent**: una que falli no atura les següents (2026-08-12, una columna
+    /// que el servidor no tenia va deixar catorze taules sense sincronitzar durant dies). El primer
+    /// error es guarda i es llança al final, perquè Ajustos pugui dir per què.
+    private suspend fun run() {
+        // Primer el testimoni renovat i després l'abast: un permís retirat en un altre telèfon ha de
+        // pesar en aquesta mateixa passada, no quan caduqui el testimoni.
+        val token = session.accessToken(refresh = true)
+        requireCurrentAccount()
+        // El permís del tutor es pregunta al servidor a cada passada: un «sí» del tutor arriba sense
+        // reiniciar l'app, i sense resposta les capes sensibles no s'obren.
+        session.refreshConsent()
+        requireCurrentAccount()
+        val scope = ViraSyncScope.current(session, preferences)
+
+        var firstFailure: Exception? = null
+        val failed = mutableSetOf<String>()
+        suspend fun attempt(name: String, work: suspend () -> Unit) {
+            try {
+                work()
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                val reason = (error as? ViraBackendException)?.error
+                log("Sincronització de $name fallida: ${reason ?: error.javaClass.simpleName}")
+                // El servidor no reconeix la sessió: cap taula més anirà bé, i la interfície ho ha de saber.
+                if (reason == ViraBackendError.SESSION_EXPIRED) {
+                    identity?.let { session.invalidate(onlyIf = it.generation) }
+                    throw error
+                }
+                failed += name
+                // Un error que es pot tornar a provar passa al davant: si no, el treball en segon pla
+                // no ho tornaria a intentar per culpa d'una altra taula que el servidor rebutja sempre.
+                if (firstFailure == null || (!firstFailure.isRetryable() && error.isRetryable())) firstFailure = error
+            }
+        }
+
+        // Cada tros pel seu compte: un que el servidor rebutgi sempre no ha de deixar els de les
+        // altres taules sense esborrar.
+        // Les làpides surten sempre, també les d'una capa tancada: esborrar el que és teu no demana el
+        // permís del tutor (`own_delete` només mira `user_id`), i guardar-les deixaria al servidor el
+        // que l'usuari ja ha esborrat (`PRIVACY_AND_SAFETY.md` §5).
+        for (group in tombstoneGroups()) attempt("tombstones ${group.first().table}") { flushTombstones(group, token) }
+        for (table in tables) {
+            // Sense el pare, els fills que arribessin es descartarien i el cursor ja els hauria passat.
+            if (PARENTS[table.table] in failed) {
+                failed += table.table
+                continue
+            }
+            attempt(table.table) { sync(table, scope, token) }
+        }
+
+        requireCurrentAccount()
+        firstFailure?.let { throw it }
+    }
+
+    private suspend fun <R : ViraSyncRow> sync(table: ViraSyncTable<R>, scope: ViraSyncScope, token: String) {
+        requireCurrentAccount()
+        if (!scope.allows(table.layer) || !allowsNow(table)) return
+        // La primera passada d'aquest compte en aquest telèfon mira el servidor **abans** d'enviar-hi
+        // res: el que hi hagi aquí acabat de néixer no ha de trepitjar la història del compte.
+        // I les taules que s'uneixen en baixar (la ratxa) també: si pugés primer, podria trepitjar al
+        // servidor una fila que portava dies que aquest telèfon encara no ha vist.
+        if (cursors.get("pull.${table.table}") == null || table.mergesOnPull) {
+            pull(table, token)
+            push(table, token)
+        } else {
+            push(table, token)
+            pull(table, token)
+        }
+    }
+
+    // Pujada
+
+    private suspend fun <R : ViraSyncRow> push(table: ViraSyncTable<R>, token: String) {
+        requireCurrentAccount()
+        val scope = ViraSyncScope.current(session, preferences)
+        if (!scope.allows(table.layer)) return
+        // Una taula que s'ha guardat files (`withholds`) ho torna a pujar tot el primer cop que ja no
+        // se les guarda: el cursor les havia deixat enrere.
+        val withholding = table.withholds(scope)
+        if (withholding) cursors.setWithheld(table.table, true)
+        val since = if (!withholding && cursors.isWithheld(table.table)) null else cursors.get("push.${table.table}")
+        val startedAt = clock()
+        val outgoing = table.preparedForUpload(outgoing(table.local(db), since), scope)
+        for (chunk in outgoing.chunked(PAGE_SIZE)) {
+            requireCurrentAccount()
+            // L'interruptor o el permís poden canviar a mitja pujada: si ara cal guardar-se files que
+            // abans no, o al revés, aquest lot ja no és vàlid i es para aquí.
+            val current = ViraSyncScope.current(session, preferences)
+            if (!current.allows(table.layer) || table.withholds(current) != withholding) return
+            rest.upsert(
+                table.table, chunk.map(table::encode), token,
+                onConflict = table.conflictTarget,
+                nullColumns = ViraSyncNullColumns.forTable(table.table),
+            )
+            requireCurrentAccount()
+        }
+        if (!cursors.setIfCurrent("push.${table.table}", startedAt, ::isCurrentAccount)) throw AccountChanged()
+        if (!withholding) cursors.setWithheld(table.table, false)
+    }
+
+    // Baixada
+
+    private suspend fun <R : ViraSyncRow> pull(table: ViraSyncTable<R>, token: String) {
+        requireCurrentAccount()
+        val identity = identity ?: throw AccountChanged()
+        val since = cursors.get("pull.${table.table}")
+        var boundary: Param? = null
+        var newest: Instant? = null
+
+        while (true) {
+            requireCurrentAccount()
+            val query = buildList {
+                add(Param("user_id", "eq.${identity.userId}"))
+                add(Param("order", table.order))
+                add(Param("limit", PAGE_SIZE.toString()))
+                // Sense cursor és la primera vegada: es baixa tot, sense filtre de data.
+                if (since != null) add(Param("updated_at", "gt.${ViraTime.format(since)}"))
+                boundary?.let(::add)
+            }
+            val page = rest.select(table.table, query, token).map { it.jsonObject }
+            requireCurrentAccount()
+            if (!allowsNow(table)) return
+            val batchNewest = page.map(table::decode).maxOfOrNull { it.updatedAt } ?: break
+            // Res d'això és un canvi local: s'escriu en cru, sense segellar. Si es datés amb l'hora
+            // d'ara, es tornaria a enviar tot seguit i la pilota no pararia mai.
+            // Dins de la transacció: si entremig ha entrat un altre compte, el seu esborrat ja ha passat
+            // o s'espera que acabem, i les files del compte vell no hi poden entrar.
+            db.withTransaction {
+                requireCurrentAccount()
+                // Si l'esborrat d'aquest telèfon encara no ha arribat al servidor (ha fallat, o s'acaba
+                // de fer), la fila torna a baixar: no s'ha de ressuscitar.
+                val buried: Set<UUID?> = db.tombstones().recordIDs(table.table).toSet()
+                val rows = page.filter { it.recordID() !in buried }.map(table::decode)
+            table.apply(table.preparedAfterDownload(rows, ViraSyncScope.current(session, preferences)), db)
+            }
+
+            newest = maxOf(newest ?: batchNewest, batchNewest)
+            if (page.size < PAGE_SIZE) break
+            boundary = ViraSyncPage.after(ViraSyncPage.boundary(page.last(), table.tieColumns))
+        }
+        requireCurrentAccount()
+        table.afterPull(db)
+        requireCurrentAccount()
+        newest?.let { if (!cursors.setIfCurrent("pull.${table.table}", it, ::isCurrentAccount)) throw AccountChanged() }
+    }
+
+    // Esborrats
+
+    /// Els esborrats van primer: no té sentit baixar-se una fila que aquest telèfon acaba de treure.
+    /// A trossos: tots els ids van a l'adreça, i una de massa llarga no passaria mai.
+    private suspend fun tombstoneGroups() =
+        db.tombstones().all().groupBy { it.table }.values.flatMap { it.chunked(TOMBSTONE_CHUNK) }
+
+    private suspend fun flushTombstones(group: List<SyncTombstone>, token: String) {
+        requireCurrentAccount()
+        val identity = identity ?: throw AccountChanged()
+        rest.delete(
+            group.first().table,
+            listOf(
+                Param("user_id", "eq.${identity.userId}"),
+                Param("id", "in.(${group.joinToString(",") { it.recordID.toString() }})"),
+            ),
+            token,
+        )
+        requireCurrentAccount()
+        db.tombstones().deleteRaw(group)
+    }
+
+    /// «Esborrar-ho tot», telèfon **i** compte (2026-08-12).
+    ///
+    /// **Primer el servidor**: si falla, no s'esborra res del telèfon i l'error puja a la pantalla.
+    /// Val més no haver esborrat que dir que sí i veure-ho tornar demà. L'àmbit no hi pinta res:
+    /// governa què **puja**, no què s'esborra.
+    suspend fun eraseEverything(alsoErase: suspend () -> Unit = {}) {
+        if (!isRunning.compareAndSet(false, true)) throw ViraBackendException(ViraBackendError.UNAVAILABLE)
+        try {
+            val user = session.user
+            if (session.requiresAccount && user != null) {
+                identity = Identity(user.id, session.dataGeneration)
+                val token = session.accessToken()
+                requireCurrentAccount()
+                try {
+                    for (table in syncedTables) {
+                        rest.delete(table, listOf(Param("user_id", "eq.${user.id}")), token)
+                        requireCurrentAccount()
+                    }
+                } finally {
+                    // Si s'ha quedat a mitges, el telèfon encara ho té tot: sense cursors, la passada
+                    // següent ho torna a pujar sencer i el compte no es queda mig buit.
+                    cursors.reset()
+                }
+                _state.value = State.Succeeded(clock())
+            }
+            ViraDataEraser.eraseEverything(db, preferences, alsoErase)
+        } finally {
+            identity = null
+            isRunning.value = false
+        }
+    }
+
+    /// Les taules d'aquest compte al servidor, fills abans que pares: l'ordre de pujada al revés.
+    val syncedTables: List<String> = tables.map { it.table }.reversed()
+
+    // Identitat de la passada
+
+    /// La identitat de la passada, no la del moment en què acaba una petició: si entremig s'ha
+    /// tancat la sessió o ha entrat un altre compte, el que arriba no és d'aquest telèfon.
+    private data class Identity(val userId: UUID, val generation: UUID)
+
+    /// Un error que no és de Vira acaba com a `UNAVAILABLE`, que sí que es torna a provar.
+    private fun Exception?.isRetryable() = (this as? ViraBackendException)?.error?.isRetryable ?: true
+
+    private class AccountChanged : CancellationException("Ha canviat el compte")
+
+    private fun requireCurrentAccount() {
+        if (!isCurrentAccount()) throw AccountChanged()
+    }
+
+    private fun isCurrentAccount(): Boolean {
+        val identity = identity ?: return false
+        return session.user?.id == identity.userId && session.dataGeneration == identity.generation
+    }
+
+    /// Torna a mirar l'àmbit en cada pas: apagar l'interruptor a mitja passada atura la pujada.
+    private fun allowsNow(table: ViraSyncTable<*>) =
+        ViraSyncScope.current(session, preferences).allows(table.layer)
+
+    private fun JsonObject.recordID(): UUID? =
+        (get("id") as? JsonPrimitive)?.contentOrNull?.let { runCatching { UUID.fromString(it) }.getOrNull() }
+
+    private fun log(line: String) {
+        try {
+            Log.w("ViraSync", line)
+        } catch (_: RuntimeException) {
+            // Proves de JVM sense Android a sota.
+        }
+    }
+
+    companion object {
+        /// Files per pàgina. PostgREST en torna 1.000 com a màxim.
+        const val PAGE_SIZE = 500
+
+        /// Taules que depenen d'una altra: si el pare falla en una passada, el fill s'hi espera.
+        val PARENTS = mapOf(
+            "plan_assistance_details" to "plan_items",
+            "plan_assistance_links" to "plan_items",
+            "habit_logs" to "habits",
+            "medication_intakes" to "medications",
+        )
+
+        /// Ids per esborrat: prou curt perquè l'adreça no passi de 8 kB.
+        const val TOMBSTONE_CHUNK = 100
+
+        /// Cada quant es torna a sincronitzar sola: cinc minuts, com a l'iPhone.
+        val AUTOMATIC_INTERVAL: Duration = Duration.ofMinutes(5)
+
+        /// Què surt en una pujada. Els singletons que ningú ha tocat aquí no surten mai: enviar un
+        /// comptador buit seria esborrar la història del compte des d'un telèfon que no en sap res.
+        fun <R : ViraSyncRow> outgoing(rows: List<R>, since: Instant?): List<R> =
+            rows.filter { !it.isPlaceholder }.filter { since == null || it.updatedAt > since }
+    }
+}
