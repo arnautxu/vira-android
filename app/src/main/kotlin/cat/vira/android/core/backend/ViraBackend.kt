@@ -5,6 +5,7 @@ import android.net.Uri
 import cat.vira.android.core.backend.sync.ViraSyncEngine
 import cat.vira.android.core.data.ViraDatabase
 import cat.vira.android.core.data.ViraPreferences
+import cat.vira.android.core.notifications.ViraNotifications
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
@@ -19,12 +20,16 @@ import java.util.concurrent.ConcurrentHashMap
 /// per procés, dins de `ViraApp`; les pantalles i el treball en segon pla la demanen allà.
 class ViraBackend(context: Context) {
 
+    private val appContext: Context = context.applicationContext
+
     val db: ViraDatabase = ViraDatabase.open(context)
     val preferences = ViraPreferences.open(context)
     val session = ViraSession(
         auth = ViraBackendConfig.current?.let { ViraSupabaseAuth(context, it) },
         db = db,
         preferences = preferences,
+        // Cap avís del compte d'abans: s'han programat amb les seves dades.
+        alsoEraseOnAccountSwitch = { ViraNotifications.cancelEverything(appContext) },
     )
     val engine = ViraSyncEngine(session, db, preferences)
 
