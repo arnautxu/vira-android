@@ -13,6 +13,8 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.JsonObject
 import java.util.UUID
 
@@ -57,6 +59,7 @@ class ViraSession(
         private set
 
     private var stored: ViraStoredSession? = null
+    private val transitions = Mutex()
 
     private val guardianConsent = ViraGuardianConsent(rest)
 
@@ -79,38 +82,41 @@ class ViraSession(
     /// En arrencar. Si el testimoni ha caducat amb l'app tancada, el renova en silenci.
     suspend fun restore() {
         val auth = auth ?: run { _state.value = State.Unconfigured; return }
-        val saved = auth.storedSession() ?: run {
-            setRecovering(false)
-            _state.value = State.SignedOut
-            return
-        }
-        stored = saved
-        claimLocalData(saved.user, isNewSignIn = false)
-        // Si Android va tancar l'app entre l'enllaç i la contrasenya nova, la pantalla torna a sortir.
-        _isRecoveringPassword.value = preferences.getBoolean(PASSWORD_RECOVERY_IN_PROGRESS, false)
-        _state.value = State.SignedIn(saved.user)
+        val saved = transition {
+            val saved = auth.storedSession() ?: run {
+                setRecovering(false)
+                _state.value = State.SignedOut
+                return@transition null
+            }
+            stored = saved
+            withContext(NonCancellable) { claimLocalData(saved.user, isNewSignIn = false) }
+            // Si Android va tancar l'app entre l'enllaç i la contrasenya nova, la pantalla torna a sortir.
+            _isRecoveringPassword.value = preferences.getBoolean(PASSWORD_RECOVERY_IN_PROGRESS, false)
+            _state.value = State.SignedIn(saved.user)
+            saved
+        } ?: return
         if (saved.expiresAtEpochSeconds - clock() / 1000 < 60) {
             runCatching { accessToken() }
         }
     }
 
-    suspend fun signIn(email: String, password: String) = attempt {
+    suspend fun signIn(email: String, password: String) = attempt { transition {
         val session = requireAuth().signIn(email, password)
         // Només si ha entrat: provar la contrasenya vella mentre s'espera el correu no ha d'esborrar
         // la marca que farà reconèixer l'enllaç com a recuperació.
         forgetRecoveryRequest()
         adopt(session)
-    }
+    } }
 
     /// Alta amb correu. Torna `false` quan cal confirmar el correu abans d'entrar.
     suspend fun signUp(email: String, password: String, role: ViraAccountRole, consent: ViraConsentStatus): Boolean =
-        attempt {
+        attempt { transition {
             val session = requireAuth().signUp(email, password, ViraUserMetadata(role, consent))
             // La tornada de la confirmació no és una recuperació, encara que n'hi hagi una de demanada.
             forgetRecoveryRequest()
             if (session != null) adopt(session)
             session != null
-        } ?: false
+        } } ?: false
 
     suspend fun startOAuth(provider: ViraOAuthProvider) = attempt {
         forgetRecoveryRequest()
@@ -126,7 +132,7 @@ class ViraSession(
         }
         when (val result = ViraGoogleSignIn(clientId).request(activity)) {
             is ViraGoogleSignIn.Result.Token ->
-                attempt { adopt(requireAuth().signInWithGoogleIdToken(result.idToken, result.rawNonce)) }
+                attempt { transition { adopt(requireAuth().signInWithGoogleIdToken(result.idToken, result.rawNonce)) } }
             ViraGoogleSignIn.Result.Cancelled -> Unit
             ViraGoogleSignIn.Result.Unavailable -> startOAuth(ViraOAuthProvider.GOOGLE)
         }
@@ -146,10 +152,10 @@ class ViraSession(
     suspend fun handleCallback(uri: Uri): Boolean {
         if (uri.scheme != ViraBackendConfig.CALLBACK_SCHEME || uri.host != ViraBackendConfig.CALLBACK_HOST) return false
         val isRecovery = uri.getQueryParameter("type") == "recovery" || hasPendingRecoveryRequest()
-        val adopted = attempt {
+        val adopted = attempt { transition {
             adopt(requireAuth().session(fromCallback = uri))
             if (isRecovery) setRecovering(true)
-        }
+        } }
         // Només si ha anat bé: un reintent sense xarxa sovint torna sense `type=recovery`.
         if (adopted != null) forgetRecoveryRequest()
         return adopted != null
@@ -165,7 +171,7 @@ class ViraSession(
         forgetRecoveryRequest()
     }
 
-    suspend fun signOut() {
+    suspend fun signOut() = transition {
         runCatching { auth?.signOut() }
         runCatching { auth?.forgetSession() }
         clearLocalSession()
@@ -177,8 +183,10 @@ class ViraSession(
         val token = accessToken()
         rest.rpc("delete_current_user", JsonObject(emptyMap()), token)
         // El compte ja no existeix: la sessió desada tampoc, o tornaria en reobrir l'app.
-        runCatching { auth?.forgetSession() }
-        clearLocalSession()
+        transition {
+            runCatching { auth?.forgetSession() }
+            clearLocalSession()
+        }
     }
 
     /// Testimoni vàlid per a qualsevol crida. Si el refresc falla de debò, la sessió ja no existeix
@@ -204,7 +212,7 @@ class ViraSession(
             // Sense xarxa o amb el servidor caigut un moment, la sessió segueix sent bona: només es
             // tanca quan el servidor diu que no.
             if (error.error.isRetryable) throw error
-            invalidate()
+            invalidate(onlyIf = generation)
             throw ViraBackendException(ViraBackendError.SESSION_EXPIRED, error)
         }
     }
@@ -252,12 +260,21 @@ class ViraSession(
     }
 
     /// Sessió invalidada des de fora (testimoni revocat, compte esborrat en un altre telèfon).
-    suspend fun invalidate() {
+    ///
+    /// Amb `onlyIf`, només si la sessió segueix sent la d'aquella generació: mentre s'esperava el
+    /// torn pot haver entrat un altre compte, i aquest no ha fet res per perdre la sessió.
+    suspend fun invalidate(onlyIf: UUID? = null) = transition {
+        if (onlyIf != null && onlyIf != dataGeneration) return@transition
         // També la desada: si no, en reobrir l'app la sessió rebutjada tornaria a semblar bona.
         runCatching { auth?.forgetSession() }
         clearLocalSession()
         _lastError.value = ViraBackendError.SESSION_EXPIRED
     }
+
+    /// Obrir, canviar i tancar sessió van d'un en un: dues alhora podrien deixar la interfície amb un
+    /// compte, i el backend d'autenticació i les dades del telèfon amb un altre. **No és reentrant**:
+    /// res de dins pot cridar `accessToken`, que pot acabar a `invalidate`.
+    private suspend fun <T> transition(work: suspend () -> T): T = transitions.withLock { work() }
 
     // Privat
 
@@ -280,6 +297,7 @@ class ViraSession(
         _state.value = State.SignedIn(updated)
     }
 
+    /// Sempre dins de `transition`.
     private suspend fun adopt(session: ViraStoredSession) {
         // Una sessió nova no és una recuperació; si ho és, `handleCallback` ho torna a dir just després.
         setRecovering(false)

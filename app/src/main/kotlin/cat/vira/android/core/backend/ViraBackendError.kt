@@ -55,6 +55,8 @@ enum class ViraBackendError(val messageKey: String) {
             status == 401 -> SESSION_EXPIRED
             status == 403 -> NOT_ALLOWED
             status == 429 -> TOO_MANY_ATTEMPTS
+            // Temps esgotat: no és la fila, és el camí. Es torna a provar.
+            status == 408 -> UNAVAILABLE
             status in 400..499 -> REJECTED
             else -> UNAVAILABLE
         }
