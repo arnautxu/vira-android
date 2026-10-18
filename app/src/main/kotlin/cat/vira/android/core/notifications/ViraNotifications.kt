@@ -216,6 +216,8 @@ object ViraNotifications {
         zone: ZoneId = ZoneId.systemDefault(),
         now: Instant = Instant.now(),
     ): Boolean {
+        // Endarrerida més enllà del marge (Doze, estalvi de bateria): ja no recorda res a temps.
+        if (now.isAfter(notification.fireAt.plus(ViraNotificationScheduler.OVERDUE_GRACE))) return false
         val host = context.notificationHost ?: return false
         val inputs = snapshot(host.notificationDatabase)
         // Una concentració que silencia Vira, començada després de l'última passada: tampoc.

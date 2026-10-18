@@ -268,6 +268,13 @@ class ViraNotificationSystemTest {
     }
 
     @Test
+    fun unaAlarmaQueArribaHoresTardNoSurt() = runBlocking {
+        app.streak = ViraStreakState(isVisible = true, dayIsOpen = true)
+        val viri = planned("${ViraStreakNotifications.PREFIX}2027-1-15").copy(actions = ViraActionSet.VIRI)
+        assertFalse(ViraNotifications.isStillPending(app, viri, now = viri.fireAt.plusSeconds(3 * 3600)))
+    }
+
+    @Test
     fun unaNoticiaSubstituidaNoSurt() = runBlocking {
         app.streak = ViraStreakState(isVisible = true, dayIsOpen = false)
         val preferences = ViraPreferences.open(app)

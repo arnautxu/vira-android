@@ -51,8 +51,12 @@ class ViraNotificationScheduler(private val context: Context) {
         }
         stale.forEach { cancelAlarm(it.id) }
         val fresh = planned.distinctBy { it.id }
-        fresh.forEach(::arm)
-        write(kept.filter { k -> fresh.none { it.id == k.id } } + fresh)
+        val rest = kept.filter { k -> fresh.none { it.id == k.id } }
+        // També les que es conserven: si Android ha retirat l'accés a les alarmes exactes, ha
+        // esborrat totes les que hi havia, i la llista diria que encara hi són. Tornar a posar una
+        // alarma que ja hi és només la substitueix.
+        (rest + fresh).forEach(::arm)
+        write(rest + fresh)
     }
 
     /// Treu-ho **tot**, «Més tard» inclosos (permís retirat, interruptor apagat, esborrat total,
