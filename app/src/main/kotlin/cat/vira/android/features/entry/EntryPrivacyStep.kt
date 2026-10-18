@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import cat.vira.android.R
+import cat.vira.android.core.design.LocalViraEnvironment
 import cat.vira.android.core.design.tokens.ViraArea
 import cat.vira.android.core.design.tokens.ViraColor
 import cat.vira.android.core.design.tokens.ViraFont
@@ -31,6 +32,7 @@ import cat.vira.android.core.design.tokens.ViraTouch
 @Composable
 fun EntryPrivacyStep(prefs: EntryPreferences, canLockApp: Boolean, onContinue: () -> Unit) {
     val ink = ViraColor.onCard(ViraArea.Rewards)
+    val stacked = LocalViraEnvironment.current.isAccessibilitySize
     val lock = prefs.boolean(EntryPreferenceKeys.BIOMETRIC_LOCK_ENABLED, false)
     LaunchedEffect(canLockApp) { if (!canLockApp) lock.value = false }
 
@@ -58,8 +60,17 @@ fun EntryPrivacyStep(prefs: EntryPreferences, canLockApp: Boolean, onContinue: (
                         .semantics(mergeDescendants = true) { },
                 ) {
                     EntryGlyphIcon(glyph, ink)
-                    Text(stringResource(title), style = ViraFont.footnote, color = ink, modifier = Modifier.weight(1f))
-                    Text(stringResource(R.string.legal_not_published), style = ViraFont.footnote, color = ink)
+                    // A mides d'accessibilitat l'estat baixa sota el títol: de costat, el títol
+                    // es partia lletra a lletra.
+                    if (stacked) {
+                        Column(Modifier.weight(1f)) {
+                            Text(stringResource(title), style = ViraFont.footnote, color = ink)
+                            Text(stringResource(R.string.legal_not_published), style = ViraFont.footnote, color = ink)
+                        }
+                    } else {
+                        Text(stringResource(title), style = ViraFont.footnote, color = ink, modifier = Modifier.weight(1f))
+                        Text(stringResource(R.string.legal_not_published), style = ViraFont.footnote, color = ink)
+                    }
                 }
             }
         }
