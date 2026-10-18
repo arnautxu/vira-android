@@ -1,0 +1,156 @@
+{
+ "id": "getReady",
+ "language": "en",
+ "duration": 94.2,
+ "steps": 3,
+ "segments": [
+  {
+   "start": 0.6,
+   "end": 4.59,
+   "kind": "line",
+   "step": null,
+   "stepTitle": null,
+   "text": "mindfulness.getReady.line1"
+  },
+  {
+   "start": 4.59,
+   "end": 23.8,
+   "kind": "line",
+   "step": 0,
+   "stepTitle": "mindfulness.getReady.step1",
+   "text": "mindfulness.getReady.line2"
+  },
+  {
+   "start": 23.8,
+   "end": 46.15,
+   "kind": "line",
+   "step": 1,
+   "stepTitle": "mindfulness.getReady.step2",
+   "text": "mindfulness.getReady.line3"
+  },
+  {
+   "start": 46.15,
+   "end": 50.04,
+   "kind": "line",
+   "step": 2,
+   "stepTitle": "mindfulness.getReady.step3",
+   "text": "mindfulness.getReady.line4"
+  },
+  {
+   "start": 50.04,
+   "end": 54.04,
+   "kind": "breath",
+   "step": 2,
+   "stepTitle": "mindfulness.getReady.step3",
+   "phase": "inhale",
+   "text": "help.breathe.inhale"
+  },
+  {
+   "start": 54.04,
+   "end": 56.04,
+   "kind": "breath",
+   "step": 2,
+   "stepTitle": "mindfulness.getReady.step3",
+   "phase": "hold",
+   "text": "help.breathe.hold"
+  },
+  {
+   "start": 56.04,
+   "end": 60.04,
+   "kind": "breath",
+   "step": 2,
+   "stepTitle": "mindfulness.getReady.step3",
+   "phase": "exhale",
+   "text": "help.breathe.exhale"
+  },
+  {
+   "start": 60.04,
+   "end": 64.04,
+   "kind": "breath",
+   "step": 2,
+   "stepTitle": "mindfulness.getReady.step3",
+   "phase": "inhale",
+   "text": "help.breathe.inhale"
+  },
+  {
+   "start": 64.04,
+   "end": 66.04,
+   "kind": "breath",
+   "step": 2,
+   "stepTitle": "mindfulness.getReady.step3",
+   "phase": "hold",
+   "text": "help.breathe.hold"
+  },
+  {
+   "start": 66.04,
+   "end": 70.04,
+   "kind": "breath",
+   "step": 2,
+   "stepTitle": "mindfulness.getReady.step3",
+   "phase": "exhale",
+   "text": "help.breathe.exhale"
+  },
+  {
+   "start": 70.04,
+   "end": 74.04,
+   "kind": "breath",
+   "step": 2,
+   "stepTitle": "mindfulness.getReady.step3",
+   "phase": "inhale",
+   "text": "help.breathe.inhale"
+  },
+  {
+   "start": 74.04,
+   "end": 76.04,
+   "kind": "breath",
+   "step": 2,
+   "stepTitle": "mindfulness.getReady.step3",
+   "phase": "hold",
+   "text": "help.breathe.hold"
+  },
+  {
+   "start": 76.04,
+   "end": 80.04,
+   "kind": "breath",
+   "step": 2,
+   "stepTitle": "mindfulness.getReady.step3",
+   "phase": "exhale",
+   "text": "help.breathe.exhale"
+  },
+  {
+   "start": 80.04,
+   "end": 84.04,
+   "kind": "breath",
+   "step": 2,
+   "stepTitle": "mindfulness.getReady.step3",
+   "phase": "inhale",
+   "text": "help.breathe.inhale"
+  },
+  {
+   "start": 84.04,
+   "end": 86.04,
+   "kind": "breath",
+   "step": 2,
+   "stepTitle": "mindfulness.getReady.step3",
+   "phase": "hold",
+   "text": "help.breathe.hold"
+  },
+  {
+   "start": 86.04,
+   "end": 90.04,
+   "kind": "breath",
+   "step": 2,
+   "stepTitle": "mindfulness.getReady.step3",
+   "phase": "exhale",
+   "text": "help.breathe.exhale"
+  },
+  {
+   "start": 90.04,
+   "end": 94.11,
+   "kind": "line",
+   "step": 2,
+   "stepTitle": "mindfulness.getReady.step3",
+   "text": "mindfulness.getReady.line5"
+  }
+ ]
+}

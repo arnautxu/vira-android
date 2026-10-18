@@ -1,0 +1,40 @@
+{
+ "id": "oneSound",
+ "language": "es",
+ "duration": 62.4,
+ "steps": 0,
+ "segments": [
+  {
+   "start": 0.6,
+   "end": 4.53,
+   "kind": "line",
+   "step": null,
+   "stepTitle": null,
+   "text": "mindfulness.oneSound.line1"
+  },
+  {
+   "start": 4.53,
+   "end": 29.86,
+   "kind": "line",
+   "step": null,
+   "stepTitle": null,
+   "text": "mindfulness.oneSound.line2"
+  },
+  {
+   "start": 29.86,
+   "end": 58.69,
+   "kind": "line",
+   "step": null,
+   "stepTitle": null,
+   "text": "mindfulness.oneSound.line3"
+  },
+  {
+   "start": 58.69,
+   "end": 62.33,
+   "kind": "line",
+   "step": null,
+   "stepTitle": null,
+   "text": "mindfulness.oneSound.line4"
+  }
+ ]
+}

@@ -2,4 +2,4 @@
 <!-- Recursos que es busquen pel nom en temps d'execució (getIdentifier): el reductor de recursos
      no veu cap R.… que els faci servir i, sense aquesta llista, els esborraria. -->
 <resources xmlns:tools="http://schemas.android.com/tools"
-    tools:keep="@string/emotion_*,@string/skin_*,@string/intensity_*,@string/medication_form_*,@drawable/viri_skin_*" />
+    tools:keep="@string/emotion_*,@string/skin_*,@string/intensity_*,@string/medication_form_*,@drawable/viri_skin_*,@raw/mindfulness_*,@string/mindfulness_*,@string/help_breathe_*" />

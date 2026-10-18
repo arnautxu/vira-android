@@ -1,0 +1,48 @@
+{
+ "id": "countTen",
+ "language": "es",
+ "duration": 124.1,
+ "steps": 0,
+ "segments": [
+  {
+   "start": 0.6,
+   "end": 7.44,
+   "kind": "line",
+   "step": null,
+   "stepTitle": null,
+   "text": "mindfulness.countTen.line1"
+  },
+  {
+   "start": 7.44,
+   "end": 45.45,
+   "kind": "line",
+   "step": null,
+   "stepTitle": null,
+   "text": "mindfulness.countTen.line2"
+  },
+  {
+   "start": 45.45,
+   "end": 84.26,
+   "kind": "line",
+   "step": null,
+   "stepTitle": null,
+   "text": "mindfulness.countTen.line3"
+  },
+  {
+   "start": 84.26,
+   "end": 118.94,
+   "kind": "line",
+   "step": null,
+   "stepTitle": null,
+   "text": "mindfulness.countTen.line4"
+  },
+  {
+   "start": 118.94,
+   "end": 124.01,
+   "kind": "line",
+   "step": null,
+   "stepTitle": null,
+   "text": "mindfulness.countTen.line5"
+  }
+ ]
+}
