@@ -4,8 +4,8 @@ package cat.vira.android.core.backend.sync
 
 import cat.vira.android.core.backend.InstantSerializer
 import cat.vira.android.core.backend.UuidSerializer
-import androidx.room.withTransaction
 import cat.vira.android.core.data.ViraDatabase
+import cat.vira.android.core.data.ViraRewards
 import cat.vira.android.core.data.ViraStore
 import cat.vira.android.core.data.model.AccessoryOwnership
 import cat.vira.android.core.data.model.ChallengeClaim
@@ -47,30 +47,11 @@ class CoinTransactionSyncTable(private val store: (ViraDatabase) -> ViraStore) :
         })
     }
 
-    /// Amb el llibre sencer, no pàgina a pàgina: la reparació només suma, i una pàgina de guanys
+    /// El saldo viu al comptador, una altra taula que durant un temps no es va pujar mai. Es quadra
+    /// amb el llibre sencer, no pàgina a pàgina: la reparació només suma, i una pàgina de guanys
     /// sense la de despeses deixaria el saldo enfilat per sempre.
     override suspend fun afterPull(db: ViraDatabase) {
-        db.withTransaction { reconcileBalanceWithLedger(db, store(db)) }
-    }
-
-    companion object {
-        /// El saldo viu al comptador, una altra taula que durant un temps no es va pujar mai: un
-        /// telèfon nou es baixava totes les transaccions i es quedava el número a zero
-        /// (`ViraRewards.reconcileBalanceWithLedger`). **Només suma**: una reparació automàtica no pot
-        /// treure monedes a ningú.
-        suspend fun reconcileBalanceWithLedger(db: ViraDatabase, store: ViraStore) {
-            val ledger = db.coinTransactions().all()
-            if (ledger.isEmpty()) return
-            val balance = ledger.sumOf { it.amount }
-            val earned = ledger.sumOf { maxOf(0, it.amount) }
-            val counter = store.counter()
-            val repaired = counter.copy(
-                coinBalance = maxOf(counter.coinBalance, balance),
-                coinsEarnedTotal = maxOf(counter.coinsEarnedTotal, earned),
-            )
-            // Sense segellar, com a l'iPhone: passa dins de la baixada, amb el segellador en pausa.
-            if (repaired != counter) db.progressCounters().upsertRaw(listOf(repaired))
-        }
+        ViraRewards(store(db)).reconcileBalanceWithLedger()
     }
 }
 

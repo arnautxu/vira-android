@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Generat per scripts/export-strings.py des de Localizable.xcstrings de l'iPhone (commit 81a2707). No es toca a mà. -->
+<!-- Generat per scripts/export-strings.py des de Localizable.xcstrings, EmotionIntensity.xcstrings de l'iPhone (commit 2a74e5d) + android-strings.xcstrings. No es toca a mà. -->
 <resources>
     <string name="a11y_error">Error: %1$s</string>
     <plurals name="a11y_items_count">
@@ -591,6 +591,10 @@
     <string name="emotion_confused">Confused</string>
     <string name="emotion_content">Happy</string>
     <string name="emotion_euphoric">Euphoric</string>
+    <string name="emotion_intensity_clear">Clear selection</string>
+    <string name="emotion_intensity_note_label">Optional note</string>
+    <string name="emotion_intensity_optional">Optional intensity</string>
+    <string name="emotion_intensity_selection_hint">Select this level. Tap again to clear it.</string>
     <string name="emotion_lonely">Lonely</string>
     <string name="emotion_low_energy">Low energy</string>
     <string name="emotion_sad">Sad</string>
@@ -911,7 +915,7 @@
     <string name="habits_new">New habit</string>
     <string name="habits_notes_placeholder">Description (optional)</string>
     <string name="habits_reminder">Reminder</string>
-    <string name="habits_reminder_denied">Notifications are turned off in iOS Settings.</string>
+    <string name="habits_reminder_denied">Notifications are turned off in your phone\'s settings.</string>
     <string name="habits_reminder_on">Remind me</string>
     <string name="habits_row_done_today">Done today.</string>
     <string name="habits_streak_days">%1$d days in a row</string>
@@ -1416,6 +1420,8 @@
     <string name="plan_pending_title">Not here yet</string>
     <string name="plan_reorder">Reorder</string>
     <string name="plan_reorder_hint">Drag to change the order of your day.</string>
+    <string name="plan_reorder_move_down">Move down</string>
+    <string name="plan_reorder_move_up">Move up</string>
     <string name="plan_repeat">Repeat</string>
     <string name="plan_repeat_daily_until_month_end">Every day until month end</string>
     <string name="plan_repeat_daily_until_week_end">Every day until the weekend ends</string>
@@ -1467,6 +1473,7 @@
     <string name="progress_pending_title">Not here yet</string>
     <string name="progress_xp">Progress points</string>
     <string name="release_pending_message">This feature isn\'t available yet.</string>
+    <string name="reward_coins_short">+%1$d</string>
     <string name="rewards_personal_archive">Archive</string>
     <string name="rewards_personal_archive_hint">Touch and hold a reward to archive it.</string>
     <string name="rewards_personal_balance">ViriCoins to spend</string>
@@ -1581,16 +1588,17 @@
     <string name="settings_parent_panel_section">Family</string>
     <string name="settings_parent_panel_title">Parent panel</string>
     <string name="settings_pending_title">Settings</string>
-    <string name="settings_privacy_lock">Lock with Face ID or passcode</string>
+    <string name="settings_privacy_lock">Lock with fingerprint, face or PIN</string>
     <string name="settings_privacy_lock_button">Unlock</string>
     <string name="settings_privacy_lock_reason">Unlock Vira</string>
     <string name="settings_privacy_lock_title">Vira is locked</string>
-    <string name="settings_privacy_lock_unavailable">Turn on Face ID or a passcode on this device to use it</string>
+    <string name="settings_privacy_lock_unavailable">Turn on fingerprint, face or a screen lock on this phone to use it</string>
     <string name="settings_privacy_section">Privacy</string>
     <string name="settings_privacy_viri">I keep an eye on who can see your stuff.</string>
     <string name="settings_reminders_denied">You need to allow access in the phone Settings.</string>
     <string name="settings_reminders_footer">Reminders with a date come in as your tasks. Ticking one here ticks it there too.</string>
     <string name="settings_reminders_title">iPhone Reminders</string>
+    <string name="settings_search_empty">No settings match these words</string>
     <string name="settings_search_keywords_about">about vira, version, notice, medical, information</string>
     <string name="settings_search_keywords_account">account, email, sign in, password, sync, family, parents, guardian, panel</string>
     <string name="settings_search_keywords_app">how vira looks, modules, habits, medication, mindfulness, calendar, reminders, focus modes, concentration</string>
@@ -1929,8 +1937,8 @@
     <string name="tutorial_emotions_message">Log how you feel and see how the week went.</string>
     <string name="tutorial_emotions_title">How you are</string>
     <string name="tutorial_integrations_message">Vira can work with what you already use.</string>
-    <string name="tutorial_integrations_outside">You can also ask Siri and find your plan with search.</string>
-    <string name="tutorial_integrations_title">Vira on your iPhone</string>
+    <string name="tutorial_integrations_outside">You can also add Vira to your home screen and to the quick settings tiles.</string>
+    <string name="tutorial_integrations_title">Vira on your phone</string>
     <string name="tutorial_plan_message">Calendar, habits and medication. Everything with a time lives here.</string>
     <string name="tutorial_plan_title">Your plan</string>
     <string name="tutorial_profile_message">Your streak, rewards and shop. Nothing gets lost along the way.</string>

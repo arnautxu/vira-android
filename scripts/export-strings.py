@@ -6,9 +6,17 @@ Els textos de Vira no s'escriuen a mà: la font de veritat és el catàleg de l'
 els tres idiomes i escriu `strings_vira.xml` a `values/` (català, l'idioma de partida),
 `values-es/` i `values-en/`. Els fitxers generats no es toquen a mà: es tornen a generar.
 
-    python3 scripts/export-strings.py ../VIRA-APP-I-WEB/Vira/Resources/Localizable.xcstrings
+    python3 scripts/export-strings.py ../VIRA-APP-I-WEB/Vira/Resources/Localizable.xcstrings \
+        ../VIRA-APP-I-WEB/Vira/Features/Emotions/EmotionIntensity.xcstrings
 
 Com es converteix cada cosa:
+- Taules: `Localizable` és la de per defecte i les seves claus no porten prefix. Les altres
+  (`EmotionIntensity.xcstrings`, la taula pròpia d'una pantalla) porten el nom de la taula
+  davant: `noteLabel` → `emotion_intensity_note_label`.
+- Textos propis d'Android: `scripts/android-strings.xcstrings` (mateix format) es llegeix sempre i
+  va per sobre de `Localizable`. Una clau que ja és a l'iPhone hi canvia el text (on l'iPhone diu
+  Face ID o iOS); una de nova és un text que només té Android. Cada entrada porta un `comment`
+  amb el perquè. Així el que és d'Android sobreviu a cada exportació.
 - Clau: `account.email.signIn.title` → `account_email_sign_in_title`. Els marcadors de format
   de la clau (`a11y.items_count %lld`) cauen del nom.
 - Format: `%@` → `%1$s`, `%lld`/`%d` → `%1$d`, sempre amb posició perquè Android ho demana
@@ -99,18 +107,28 @@ def localized(entry: dict, language: str):
     raise ValueError(f"variació no suportada: {list(localization.get('variations', {}))}")
 
 
-def export(catalog: dict, source_label: str) -> dict:
-    strings = catalog["strings"]
+DEFAULT_TABLE = "Localizable"
+ANDROID_STRINGS = Path(__file__).resolve().parent / "android-strings.xcstrings"
+
+
+def export(catalogs: dict[str, dict], source_label: str) -> dict:
+    """`catalogs` és taula → catàleg; només la taula per defecte exporta les claus sense prefix."""
+    strings: dict[str, dict] = {}
     names: dict[str, str] = {}
-    for key, entry in strings.items():
-        if not entry.get("localizations"):
-            continue
-        name = resource_name(key)
-        if not name:
-            raise ValueError(f"la clau {key!r} no dona cap nom de recurs")
-        if name in names:
-            raise ValueError(f"{key!r} i {names[name]!r} donen el mateix nom: {name}")
-        names[name] = key
+    for table, catalog in catalogs.items():
+        prefix = "" if table == DEFAULT_TABLE else resource_name(table) + "_"
+        for key, entry in catalog["strings"].items():
+            if not entry.get("localizations"):
+                continue
+            stem = resource_name(key)
+            if not stem:
+                raise ValueError(f"la clau {key!r} de {table} no dona cap nom de recurs")
+            name = resource_name(prefix + stem)
+            label = f"{table}:{key}"
+            if name in names:
+                raise ValueError(f"{label!r} i {names[name]!r} donen el mateix nom: {name}")
+            names[name] = label
+            strings[label] = entry
 
     files = {}
     for language, folder in LANGUAGES.items():
@@ -141,30 +159,51 @@ def export(catalog: dict, source_label: str) -> dict:
     return files
 
 
-def source_label(catalog_path: Path) -> str:
+def source_label(catalog_paths: list[Path]) -> str:
     try:
         commit = subprocess.run(
-            ["git", "-C", str(catalog_path.parent), "log", "-1", "--format=%h", "--", catalog_path.name],
+            ["git", "-C", str(catalog_paths[0].parent), "log", "-1", "--format=%h", "--",
+             *(str(path.resolve()) for path in catalog_paths)],
             capture_output=True, text=True, check=True,
         ).stdout.strip()
     except (OSError, subprocess.CalledProcessError):
         commit = ""
-    return f"Localizable.xcstrings de l'iPhone{f' (commit {commit})' if commit else ''}"
+    tables = ", ".join(path.name for path in catalog_paths)
+    return f"{tables} de l'iPhone{f' (commit {commit})' if commit else ''}"
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("catalog", type=Path, help="camí a Localizable.xcstrings de l'iPhone")
+    parser.add_argument("catalogs", type=Path, nargs="+",
+                        help="camins als .xcstrings de l'iPhone (Localizable i les taules pròpies)")
     parser.add_argument("--res", type=Path, default=Path(__file__).resolve().parent.parent / "app/src/main/res")
     parser.add_argument("--check", action="store_true", help="no escriu res; falla si els fitxers no estan al dia")
     args = parser.parse_args()
 
-    catalog = json.loads(args.catalog.read_text(encoding="utf-8"))
-    if catalog.get("sourceLanguage") != SOURCE_LANGUAGE:
-        print(f"L'idioma de partida del catàleg no és el català: {catalog.get('sourceLanguage')}", file=sys.stderr)
+    catalogs = {}
+    for path in args.catalogs:
+        catalog = json.loads(path.read_text(encoding="utf-8"))
+        if catalog.get("sourceLanguage") != SOURCE_LANGUAGE:
+            print(f"L'idioma de partida de {path.name} no és el català: {catalog.get('sourceLanguage')}", file=sys.stderr)
+            return 1
+        if path.stem in catalogs:
+            print(f"Dues taules amb el mateix nom: {path.stem}", file=sys.stderr)
+            return 1
+        catalogs[path.stem] = catalog
+    if DEFAULT_TABLE not in catalogs:
+        print(f"Falta {DEFAULT_TABLE}.xcstrings, la taula per defecte", file=sys.stderr)
         return 1
 
-    files = export(catalog, source_label(args.catalog))
+    overrides = json.loads(ANDROID_STRINGS.read_text(encoding="utf-8"))["strings"]
+    for key, entry in overrides.items():
+        missing = [language for language in LANGUAGES if language not in entry.get("localizations", {})]
+        if missing or not entry.get("comment"):
+            print(f"{ANDROID_STRINGS.name}: {key!r} necessita ca, es, en i un comment", file=sys.stderr)
+            return 1
+    catalogs[DEFAULT_TABLE] = {**catalogs[DEFAULT_TABLE],
+                               "strings": {**catalogs[DEFAULT_TABLE]["strings"], **overrides}}
+
+    files = export(catalogs, source_label(args.catalogs) + f" + {ANDROID_STRINGS.name}")
     stale = []
     for folder, content in files.items():
         path = args.res / folder / OUTPUT_NAME
