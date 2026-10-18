@@ -62,6 +62,9 @@ fun EmotionsScreen() {
     val preferences = LocalViraBackend.current.preferences
     val mindfulnessEnabled by rememberPreference(preferences, MODULE_MINDFULNESS_ENABLED, true)
     val section = navigator.emotionsSection
+    val available = EmotionsSection.entries.filter { it != EmotionsSection.Mindfulness || mindfulnessEnabled }
+    val resolved = if (section in available) section else EmotionsSection.CheckIn
+
     var category by rememberSaveable { mutableStateOf<MindfulnessCategory?>(null) }
     var exercise by rememberSaveable { mutableStateOf<MindfulnessExercise?>(null) }
 
