@@ -160,7 +160,10 @@ class EntryNavigator(
 
     fun advance() {
         val following = steps.dropWhile { it != step }.drop(1)
-        val next = following.firstOrNull(::applies) ?: return finish()
+        // Una primera acció ja feta no es repeteix en tornar a avançar des d'abans (Enrere fins a
+        // la privacitat i Continuar): sortiria una segona tasca i una segona celebració.
+        val next = following.firstOrNull { applies(it) && !(outcome != null && step != EntryStep.FIRST_ACTION && (it == EntryStep.FIRST_ACTION || it == EntryStep.DONE)) }
+            ?: return finish()
         go(next)
     }
 
@@ -235,7 +238,9 @@ class EntryNavigator(
 
     /// Contrasenya nova escrita: es torna al pas d'abans i s'hi avança com si s'acabés d'entrar.
     fun finishRecovery() {
-        moveTo(stepBeforeRecovery ?: EntryStep.ACCOUNT)
+        // Des de "No recordes la contrasenya?" el pas d'abans és la recuperació, que és una branca
+        // del compte: es torna al compte i el flux continua (permís, nom…) en lloc d'acabar.
+        moveTo(stepBeforeRecovery?.takeUnless { it == EntryStep.PASSWORD_RESET } ?: EntryStep.ACCOUNT)
         stepBeforeRecovery = null
         if (step !in steps) return finish()
         advance()

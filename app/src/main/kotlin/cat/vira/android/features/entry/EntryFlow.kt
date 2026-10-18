@@ -40,6 +40,7 @@ import androidx.compose.ui.semantics.traversalIndex
 import androidx.compose.ui.unit.dp
 import cat.vira.android.R
 import cat.vira.android.ViraApp
+import cat.vira.android.core.backend.ViraAccountRole
 import cat.vira.android.core.backend.ViraSession
 import cat.vira.android.core.design.LocalViraEnvironment
 import cat.vira.android.core.design.tokens.ViraMotion
@@ -110,7 +111,10 @@ fun EntryFlow(
     // Entrar no torna cap valor al pas: el que canvia és la sessió, i el flux continua tot sol.
     LaunchedEffect(state, isRecovering) {
         if (isRecovering) nav.startRecovery()
-        else if (state is ViraSession.State.SignedIn) nav.onSignedIn(isRecoveringPassword = false)
+        else if (state is ViraSession.State.SignedIn) {
+            if (nav.step == EntryStep.ACCOUNT && nav.role == ViraAccountRole.PARENT) services.adoptParentRole()
+            nav.onSignedIn(isRecoveringPassword = false)
+        }
     }
     BackHandler(enabled = nav.canGoBack || nav.step == EntryStep.PASSWORD_RESET) {
         if (nav.step == EntryStep.PASSWORD_RESET) nav.backFromPasswordReset() else nav.goBack()

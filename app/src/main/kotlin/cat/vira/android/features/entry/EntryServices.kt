@@ -12,6 +12,7 @@ import cat.vira.android.core.backend.ViraUser
 import cat.vira.android.core.data.ViraStore
 import cat.vira.android.core.data.ViraTime
 import cat.vira.android.core.data.model.PlanItem
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import java.time.Instant
@@ -41,6 +42,9 @@ interface EntryServices {
     /// Torna `true` si la sessió s'ha obert; `false` si cal confirmar el correu o hi ha error.
     suspend fun signUp(email: String, password: String, role: ViraAccountRole): Boolean
     suspend fun signInWithGoogle(activity: Activity)
+    /// Un compte nou de Google (o del navegador) no porta cap rol a les metadades i neix jove: qui
+    /// ha triat "Sóc pare o mare" el posa aquí. Mai treu el rol de pare a ningú.
+    suspend fun adoptParentRole()
     suspend fun sendPasswordReset(email: String)
     /// Llança `ViraBackendException` si no es pot.
     suspend fun updatePassword(password: String)
@@ -84,6 +88,16 @@ private class LiveEntryServices(context: Context, private val backend: ViraBacke
     override suspend fun signUp(email: String, password: String, role: ViraAccountRole) =
         session.signUp(email, password, role, ViraConsentStatus.MISSING)
     override suspend fun signInWithGoogle(activity: Activity) { session.signInWithGoogle(activity) }
+    override suspend fun adoptParentRole() {
+        if (session.user?.role == ViraAccountRole.PARENT) return
+        try {
+            session.updateRole(ViraAccountRole.PARENT)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Exception) {
+            // Es queda jove; la porta del compte no se salta per això.
+        }
+    }
     override suspend fun sendPasswordReset(email: String) { session.sendPasswordReset(email) }
     override suspend fun updatePassword(password: String) { session.updatePassword(password) }
     override suspend fun declareConsent(status: ViraConsentStatus, guardianEmail: String?) {
@@ -135,6 +149,7 @@ private class PreviewEntryServices(
     override suspend fun signIn(email: String, password: String) = Unit
     override suspend fun signUp(email: String, password: String, role: ViraAccountRole) = false
     override suspend fun signInWithGoogle(activity: Activity) = Unit
+    override suspend fun adoptParentRole() = Unit
     override suspend fun sendPasswordReset(email: String) = Unit
     override suspend fun updatePassword(password: String) = Unit
     override suspend fun declareConsent(status: ViraConsentStatus, guardianEmail: String?) = Unit

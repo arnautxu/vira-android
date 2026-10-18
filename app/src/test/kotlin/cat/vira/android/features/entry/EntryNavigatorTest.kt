@@ -37,6 +37,19 @@ class EntryNavigatorTest {
         // Enrere des del compte no torna a una primera acció ja feta ni a la celebració.
         assertTrue(nav.canGoBack)
         nav.goBack(); assertEquals(EntryStep.PRIVACY, nav.step)
+        // I tornant a continuar, la primera acció feta no es repeteix.
+        nav.advance(); assertEquals(EntryStep.ACCOUNT, nav.step)
+    }
+
+    @Test
+    fun `la recuperacio des del compte torna al compte i continua`() {
+        val nav = navigator(start = EntryStep.ACCOUNT)
+        nav.go(EntryStep.PASSWORD_RESET)
+        nav.startRecovery(); assertEquals(EntryStep.NEW_PASSWORD, nav.step)
+        user = ViraUser(UUID.randomUUID(), "algu@exemple.test", ViraAccountRole.TEEN, ViraConsentStatus.MISSING)
+        nav.finishRecovery()
+        assertEquals(0, finished)
+        assertEquals(EntryStep.CONSENT, nav.step)
     }
 
     @Test
