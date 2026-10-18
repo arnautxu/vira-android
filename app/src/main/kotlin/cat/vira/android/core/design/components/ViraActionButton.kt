@@ -18,6 +18,7 @@ import cat.vira.android.core.design.tokens.ViraFont
 import cat.vira.android.core.design.tokens.ViraRadius
 import cat.vira.android.core.design.tokens.ViraSpacing
 import cat.vira.android.core.design.tokens.ViraTouch
+import androidx.compose.ui.text.TextStyle
 
 /// Jerarquia d'una acció (`ViraActionHierarchy`).
 enum class ViraActionHierarchy { Primary, Secondary, Textual }
@@ -36,6 +37,9 @@ fun ViraActionButton(
     hierarchy: ViraActionHierarchy = ViraActionHierarchy.Primary,
     area: ViraArea = ViraArea.Today,
     enabled: Boolean = true,
+    /// L'etiqueta va en `callout`; l'iPhone en passa una altra en pocs llocs (p. ex. `headline` al
+    /// bloqueig de l'app, `ViraAppLockContainer`).
+    textStyle: TextStyle = ViraFont.callout,
 ) {
     val shape = RoundedCornerShape(ViraRadius.s)
     val (fill, ink) = when {
@@ -58,6 +62,6 @@ fun ViraActionButton(
             .viraPressable(enabled = enabled, onClick = onClick)
             .padding(horizontal = ViraSpacing.m, vertical = ViraSpacing.xs),
     ) {
-        Text(text = text, style = ViraFont.callout, color = ink, textAlign = TextAlign.Center)
+        Text(text = text, style = textStyle, color = ink, textAlign = TextAlign.Center)
     }
 }
