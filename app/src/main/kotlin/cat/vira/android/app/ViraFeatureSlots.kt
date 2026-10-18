@@ -19,11 +19,13 @@ import cat.vira.android.core.design.PendingScreen
 import cat.vira.android.core.design.components.ViraActionButton
 import cat.vira.android.core.design.components.ViraActionHierarchy
 import cat.vira.android.core.design.tokens.ViraSpacing
+import cat.vira.android.features.entry.EntryRequest
 import cat.vira.android.features.focus.FocusProfileEditorScreen
 import cat.vira.android.features.focus.FocusScreen
 import cat.vira.android.features.focus.FocusStartRequest
 import cat.vira.android.features.help.HelpBreatheScreen
 import cat.vira.android.features.help.HelpScreen
+import cat.vira.android.features.settings.SettingsScreen
 import java.util.UUID
 
 /// Quin tros del flux d'entrada demana l'arrel (`EntryFlowView(steps:)` a l'iPhone).
@@ -45,12 +47,20 @@ internal object ViraFeatureSlots {
 
     /// Fil Entrada: posa-ho a `true` quan `Entry` cridi el flux de debò. Mentre és `false`, les
     /// portes deixen passar (sense flux no hi hauria manera d'entrar a l'app de proves).
-    const val ENTRY_READY = false
+    const val ENTRY_READY = true
 
     /// Fil Entrada (`features/entry`). En acabar, el flux marca la seva preferència i crida
     /// `onFinish`.
     @Composable
-    fun Entry(request: ViraEntryRequest, onFinish: () -> Unit) = PendingScreen()
+    fun Entry(request: ViraEntryRequest, onFinish: () -> Unit) = cat.vira.android.features.entry.Entry(
+        request = when (request) {
+            ViraEntryRequest.Full -> EntryRequest.FULL
+            ViraEntryRequest.Account -> EntryRequest.ACCOUNT
+            ViraEntryRequest.Consent -> EntryRequest.CONSENT
+            ViraEntryRequest.NewPassword -> EntryRequest.NEW_PASSWORD
+        },
+        onFinish = onFinish,
+    )
 
     /// Fil Panell de pares (`features/parent`): l'arrel d'un compte de pare o mare. Els enllaços de
     /// vinculació arriben per `LocalViraIncomingLinks.current.pending`; un cop fet servir,
@@ -106,7 +116,10 @@ internal object ViraFeatureSlots {
     /// Fil Ajustos i compte (`features/settings`). Per editar un mode de Concentra't,
     /// `LocalViraNavigator.current.editFocusProfile(id)`.
     @Composable
-    fun Settings(onClose: () -> Unit) = PendingModal(onClose)
+    fun Settings(onClose: () -> Unit) {
+        val navigator = LocalViraNavigator.current
+        SettingsScreen(onClose, onEditFocusProfile = { navigator.editFocusProfile(it?.id) })
+    }
 }
 
 /// El marcador de l'esquelet amb una manera de tornar enrere a més del gest.
