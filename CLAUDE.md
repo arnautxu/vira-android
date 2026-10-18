@@ -65,7 +65,11 @@ i només hi escriu allà**; un canvi al que és comú es demana al fil amo, mai 
 - Concentra't: servei en primer pla amb avís fix i cronòmetre, Pausa i Acaba com a accions.
 - Vídeos i sons amb Media3; els `.mov` a MP4 H.264 i els `.caf` a OGG, convertits per script.
 - Captures amb les proves de captura de Compose: cada pantalla en clar, fosc i lletra al 200 %.
-  Serveixen per a l'aprovació de l'Arnau i com a prova de regressió.
+  Serveixen per a l'aprovació de l'Arnau i com a prova de regressió. Com que cap fil pot executar
+  Gradle (el contenidor no arriba a `dl.google.com`), les fa la CI: a cada push d'una branca les
+  publica a `captures/<branca>`, el fil les revisa i, aprovades, les copia a
+  `app/src/screenshotTestDebug/reference`; des d'aleshores la CI falla si una captura canvia.
+  La galeria del sistema de disseny és a `app/src/screenshotTest/…/core/design/`.
 - Privacitat: testimonis al Keystore, `allowBackup=false`, cap analítica, medicació i emocions
   mai als widgets ni a cap superfície fora de l'app.
 - Widgets amb Glance; botons del panell ràpid (Concentra't, Respira); accessos de la icona.

@@ -2,6 +2,8 @@ name: Android
 
 on:
   push:
+    # Les branques de captures només guarden imatges.
+    branches-ignore: ['captures/**']
   pull_request:
 
 permissions:
@@ -36,6 +38,45 @@ jobs:
         with:
           name: ${{ steps.artefacte.outputs.nom }}
           path: app/build/outputs/apk/debug/app-debug.apk
+
+      # Captures (clar, fosc i lletra gran) de les proves de `src/screenshotTest`. Primer es
+      # comparen amb les aprovades que hi ha al repositori: si una pantalla canvia sense voler,
+      # aquest pas falla. Després es tornen a fer i es publiquen a la branca
+      # `captures/<branca>`, d'on el fil les agafa per posar-les al costat de les de l'iPhone.
+      - name: Compara les captures amb les aprovades
+        id: compara
+        continue-on-error: true
+        run: |
+          if find app/src -type d -name reference -path '*creenshot*' | grep -q .; then
+            ./gradlew validateDebugScreenshotTest --no-daemon --no-configuration-cache
+          fi
+
+      - name: Fa les captures de la branca
+        if: github.event_name == 'push' && github.ref != 'refs/heads/main'
+        run: ./gradlew updateDebugScreenshotTest --no-daemon --no-configuration-cache
+
+      - name: Publica les captures a captures/<branca>
+        if: github.event_name == 'push' && github.ref != 'refs/heads/main'
+        run: |
+          set -e
+          src=$(find app/src -type d -name reference -path '*creenshot*' | head -1)
+          [ -n "$src" ] || exit 0
+          echo "Captures a $src"
+          dest=$(mktemp -d)
+          cp -R "$src"/. "$dest"/
+          cd "$dest"
+          git init -q
+          git config user.name "github-actions[bot]"
+          git config user.email "41898613+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -qm "Captures de ${GITHUB_REF_NAME} (${GITHUB_SHA::7})"
+          git push -fq "https://x-access-token:${{ github.token }}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:refs/heads/captures/${GITHUB_REF_NAME}"
+
+      - name: Atura si alguna captura ha canviat sense voler
+        if: steps.compara.outcome == 'failure'
+        run: |
+          echo "Alguna captura no coincideix amb l'aprovada (app/src/…/reference)."
+          exit 1
 
       - name: Publica l'APK de main com a release
         if: github.ref == 'refs/heads/main'
