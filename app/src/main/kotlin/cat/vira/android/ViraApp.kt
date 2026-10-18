@@ -41,6 +41,7 @@ class ViraApp : Application(), ViraNotificationHost {
         ViraSyncWorker.schedule(this)
         ViraNotificationChannel.register(this)
         ViraNotificationWorker.schedule(this)
+        ViraNotifications.watch(this, backend.db)
     }
 
     /// En tornar a primer pla, una passada; mentre s'hi està, una cada cinc minuts.

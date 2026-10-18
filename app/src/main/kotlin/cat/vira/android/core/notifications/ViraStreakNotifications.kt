@@ -49,6 +49,7 @@ object ViraStreakNotifications {
     private const val EVENT_KEY = "streak.pendingEvent"
     private const val EVENT_DAYS_KEY = "streak.pendingEventDays"
     private const val EVENT_DATE_KEY = "streak.pendingEventAt"
+    private const val EVENT_MUTED_KEY = "streak.pendingEventMutedUntil"
 
     /// Deixa constància que la propera franja ha de dir això. L'últim guanya: si el mateix dia es
     /// salva la ratxa i després arriba una fita, es diu la fita — és la notícia.
@@ -63,6 +64,7 @@ object ViraStreakNotifications {
                 },
             )
             putLong(EVENT_DATE_KEY, now.toEpochMilli())
+            remove(EVENT_MUTED_KEY)
             if (event is Event.Milestone) putInt(EVENT_DAYS_KEY, event.days)
         }
     }
@@ -71,9 +73,10 @@ object ViraStreakNotifications {
     /// caducat s'esborra: no ha d'aparèixer una setmana més tard fora de context.
     ///
     /// La franja que el porta és la primera **que no silencia una concentració**: si la de l'endemà
-    /// cau a mig mode silenciós, la notícia passa a la següent. L'ajornament es desa (la data de
-    /// l'esdeveniment avança fins a la franja silenciada), perquè quan la concentració s'acabi ja no
-    /// se sap que aquella franja era muda i la notícia es donaria per caducada sense haver sonat.
+    /// cau a mig mode silenciós, la notícia passa a la següent. Es desa fins on arriba el silenci,
+    /// perquè quan la concentració s'acabi ja no se sap que aquella franja era muda i la notícia es
+    /// donaria per caducada sense haver sonat. La data de l'esdeveniment no es toca: si la
+    /// concentració s'acaba abans de la franja, la franja torna a ser bona.
     fun pendingEvent(
         preferences: SharedPreferences,
         time: ViraClock,
@@ -82,14 +85,20 @@ object ViraStreakNotifications {
         muted: ClosedOpenRange? = null,
     ): Event? {
         val raw = preferences.getString(EVENT_KEY, null) ?: return null
-        var recorded = Instant.ofEpochMilli(preferences.getLong(EVENT_DATE_KEY, 0))
-        var slot = slots(recorded, time, zone).firstOrNull()
-        while (slot != null && muted?.contains(slot) == true) {
-            val silenced: Instant = slot
-            recorded = silenced
-            preferences.edit { putLong(EVENT_DATE_KEY, silenced.toEpochMilli()) }
-            slot = slots(recorded, time, zone).firstOrNull()
+        val recorded = Instant.ofEpochMilli(preferences.getLong(EVENT_DATE_KEY, 0))
+        var silencedUntil = preferences.getLong(EVENT_MUTED_KEY, Long.MIN_VALUE)
+        val slot = slots(recorded, time, zone).firstOrNull { candidate ->
+            when {
+                muted?.contains(candidate) == true -> {
+                    silencedUntil = maxOf(silencedUntil, candidate.toEpochMilli())
+                    false
+                }
+                // Ja ha passat i en planificar-la era muda: no ha sonat.
+                !candidate.isAfter(now) && candidate.toEpochMilli() <= silencedUntil -> false
+                else -> true
+            }
         }
+        if (silencedUntil != Long.MIN_VALUE) preferences.edit { putLong(EVENT_MUTED_KEY, silencedUntil) }
         if (slot == null || !slot.isAfter(now)) {
             clearPendingEvent(preferences)
             return null
@@ -106,6 +115,7 @@ object ViraStreakNotifications {
         remove(EVENT_KEY)
         remove(EVENT_DAYS_KEY)
         remove(EVENT_DATE_KEY)
+        remove(EVENT_MUTED_KEY)
     }
 
     // MARK: Càlcul de la finestra

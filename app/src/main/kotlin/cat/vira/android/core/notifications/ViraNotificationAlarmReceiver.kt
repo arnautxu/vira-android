@@ -16,6 +16,10 @@ import androidx.core.app.RemoteInput
 import androidx.core.content.ContextCompat
 import cat.vira.android.R
 import cat.vira.android.core.data.ViraPreferences
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 
 /// L'alarma ha sonat: publica l'avís amb els seus botons.
@@ -31,13 +35,25 @@ class ViraNotificationAlarmReceiver : BroadcastReceiver() {
             Json.decodeFromString(ViraPlannedNotification.serializer(), raw)
         }.getOrNull() ?: return
         ViraNotificationScheduler(context).forget(notification.id)
-        // Una notícia de Viri ja dita no es torna a programar si després es canvia l'hora de Viri.
-        if (post(context, notification) && notification.id.endsWith(ViraStreakNotifications.NEWS_SUFFIX)) {
-            ViraStreakNotifications.clearPendingEvent(ViraPreferences.open(context))
+        val pending = goAsync()
+        scope.launch {
+            try {
+                // Mai recorda una cosa que ja no està per fer, encara que la passada no hagi arribat
+                // a treure l'alarma (o que la fila sigui d'un compte que ja no hi és).
+                if (!ViraNotifications.isStillPending(context.applicationContext, notification)) return@launch
+                // Una notícia de Viri ja dita no es torna a programar si després es canvia l'hora de Viri.
+                if (post(context, notification) && notification.id.endsWith(ViraStreakNotifications.NEWS_SUFFIX)) {
+                    ViraStreakNotifications.clearPendingEvent(ViraPreferences.open(context))
+                }
+            } finally {
+                pending.finish()
+            }
         }
     }
 
     companion object {
+        private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
         const val EXTRA_PAYLOAD = "cat.vira.notification.payload"
 
         /// Publica l'avís. Sense permís (Android 13+) no es publica res i no passa res més: el

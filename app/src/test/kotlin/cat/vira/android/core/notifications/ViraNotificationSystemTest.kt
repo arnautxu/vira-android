@@ -157,6 +157,14 @@ class ViraNotificationSystemTest {
     }
 
     @Test
+    fun lAlarmaNoPublicaUnAvisDUnaFilaQueJaNoHiEs() = runBlocking {
+        // Un hàbit que no és a la base de dades: un compte esborrat, o un altre compte.
+        assertFalse(ViraNotifications.isStillPending(app, planned("habit-a")))
+        val viri = planned("${ViraStreakNotifications.PREFIX}2027-1-15").copy(actions = ViraActionSet.VIRI)
+        assertTrue("els de Viri no recorden cap fila", ViraNotifications.isStillPending(app, viri))
+    }
+
+    @Test
     fun apagarElDetallTreuElNomDelFarmacDUnAvisJaProgramat() {
         val medication = planned("med-a", actions = ViraActionSet.MEDICATION).copy(
             channel = ViraNotificationChannel.MEDICATION, body = "Concerta",

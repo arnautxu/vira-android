@@ -11,6 +11,7 @@ import android.os.Build
 import android.provider.Settings
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import androidx.room.InvalidationTracker
 import cat.vira.android.R
 import cat.vira.android.core.data.ViraDatabase
 import cat.vira.android.core.data.ViraPreferences
@@ -196,6 +197,33 @@ object ViraNotifications {
         // quedar.
         refreshShown(context, prefixes) { true }
     }
+
+    /// Si un avís de recordatori encara té sentit **ara**, contra la base de dades d'ara: el que
+    /// comprova l'alarma just abans de publicar. Un avís d'un compte que ja no hi és (canvi de
+    /// compte, esborrat total) o d'una cosa marcada des d'un altre telèfon no surt. Els de Viri
+    /// (`streak-`) no hi passen: no recorden cap fila.
+    suspend fun isStillPending(context: Context, notification: ViraPlannedNotification, zone: ZoneId = ZoneId.systemDefault()): Boolean {
+        if (reminderPrefixes.none { notification.id.startsWith(it) }) return true
+        val host = context.notificationHost ?: return false
+        return ViraNotificationPlanner.isStillPending(notification, snapshot(host.notificationDatabase), zone)
+    }
+
+    /// Les taules que decideixen què cal recordar. Qualsevol canvi —una pantalla, un botó d'avís,
+    /// la sincronització que porta el que s'ha fet en un altre telèfon— refà la finestra, perquè
+    /// cap avís recordi una cosa ja feta. `request` ajunta les ràfegues en una sola passada.
+    fun watch(context: Context, db: ViraDatabase) {
+        val appContext = context.applicationContext
+        db.invalidationTracker.addObserver(
+            object : InvalidationTracker.Observer(WATCHED_TABLES) {
+                override fun onInvalidated(tables: Set<String>) = ViraNotificationWorker.request(appContext)
+            },
+        )
+    }
+
+    private val WATCHED_TABLES = arrayOf(
+        "Habit", "HabitLog", "Medication", "MedicationIntake", "PlanItem", "EmotionEntry", "FocusSession",
+        "Streak", "ProgressCounter",
+    )
 
     /// Posa al dia els avisos propis que ja són a la pantalla: treu els que compleixen `doomed` i
     /// torna a publicar, en silenci, els que diuen més del que el detall d'ara permet (el nom del
