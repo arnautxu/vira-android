@@ -34,9 +34,9 @@ fun ViraCapture(content: @Composable () -> Unit) {
 }
 
 private object ViraCaptureFixes {
-    /// El valor que fa servir Robolectric: Compose el reconeix i hi posa un planificador sense
-    /// fotogrames, que és el que convé a una imatge fixa.
-    private const val FINGERPRINT = "robolectric"
+    /// Qualsevol valor no buit. **Mai `"robolectric"`**: Compose el reconeix i canvia més coses que
+    /// el planificador, i les captures sense alçada fixa sortien d'un sol píxel.
+    private const val FINGERPRINT = "layoutlib"
 
     @Volatile private var done = false
 
@@ -48,11 +48,14 @@ private object ViraCaptureFixes {
             @Suppress("SENSELESS_COMPARISON")
             if (Build.FINGERPRINT != null) return
             val field = Build::class.java.getDeclaredField("FINGERPRINT")
-            if (!Modifier.isFinal(field.modifiers)) {
-                field.isAccessible = true
-                field.set(null, FINGERPRINT)
-            } else {
-                writeStaticFinal(field, FINGERPRINT)
+            // Si no es pot, millor una llista buida que cap captura.
+            runCatching {
+                if (!Modifier.isFinal(field.modifiers)) {
+                    field.isAccessible = true
+                    field.set(null, FINGERPRINT)
+                } else {
+                    writeStaticFinal(field, FINGERPRINT)
+                }
             }
         }
     }
