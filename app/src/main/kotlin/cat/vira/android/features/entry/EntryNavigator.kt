@@ -297,6 +297,8 @@ class EntryNavigator(
         stepBeforeRecovery = null
         if (step !in steps) return finish()
         advance()
+        // La recuperació obre sessió, com entrar: ja no es torna enrere cap a abans del compte.
+        history = emptyList()
     }
 
     fun finish() {

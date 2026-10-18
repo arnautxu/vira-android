@@ -63,13 +63,16 @@ class EntryNavigatorTest {
 
     @Test
     fun `la recuperacio des del compte torna al compte i continua`() {
-        val nav = navigator(start = EntryStep.ACCOUNT)
+        val nav = navigator()
+        nav.signInFromWelcome()
         nav.go(EntryStep.PASSWORD_RESET)
         nav.startRecovery(); assertEquals(EntryStep.NEW_PASSWORD, nav.step)
         user = ViraUser(UUID.randomUUID(), "algu@exemple.test", ViraAccountRole.TEEN, ViraConsentStatus.MISSING)
         nav.finishRecovery()
         assertEquals(0, finished)
         assertEquals(EntryStep.CONSENT, nav.step)
+        // Amb la sessió oberta, Enrere ja no torna a la benvinguda.
+        assertFalse(nav.canGoBack)
     }
 
     @Test
