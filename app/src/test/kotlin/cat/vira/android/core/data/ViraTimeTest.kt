@@ -9,7 +9,7 @@ class ViraTimeTest {
 
     @Test
     fun elFormatDeXarxaPortaMilisegonsIUtc() {
-        assertEquals("2026-10-18T09:05:03.120Z", ViraTime.format(Instant.parse("2026-10-18T09:05:03.120456Z")))
+        assertEquals("2026-10-18T09:05:03.120456Z", ViraTime.format(Instant.parse("2026-10-18T09:05:03.120456Z")))
     }
 
     @Test

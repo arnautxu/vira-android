@@ -42,6 +42,14 @@ class ViraStore(
         return stamped
     }
 
+    /// Un canvi que **només** toca camps que no viatgen (`lastCelebratedLevel`, `pinnedBadgeKeys`,
+    /// `systemReminderID`): no es data. Datat, pujaria la resta de la fila com si fos nova i podria
+    /// trepitjar un canvi més nou d'un altre telèfon (un saldo, per exemple).
+    suspend fun <T : ViraSyncable<T>> saveDeviceOnly(dao: ViraRowDao<T>, model: T): T {
+        dao.upsertRaw(listOf(model))
+        return model
+    }
+
     // Singletons
 
     /// El perfil. Si no n'hi ha, en crea un amb el sentinella: no ha de trepitjar el del compte.

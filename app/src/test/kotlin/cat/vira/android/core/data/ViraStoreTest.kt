@@ -36,6 +36,14 @@ class ViraStoreTest {
     }
 
     @Test
+    fun unCanviNomesDelTelefonNoEsData() = runBlocking {
+        val counter = store.counter()
+        val celebrated = store.saveDeviceOnly(db.progressCounters(), counter.copy(lastCelebratedLevel = 3))
+        assertEquals(ViraTime.distantPast, celebrated.updatedAt)
+        assertEquals(3, store.counter().lastCelebratedLevel)
+    }
+
+    @Test
     fun elsSingletonsNeixenAmbElSentinella() = runBlocking {
         assertEquals(ViraTime.distantPast, store.counter().updatedAt)
         assertEquals(ViraTime.distantPast, store.streak().updatedAt)

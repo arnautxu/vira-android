@@ -11,9 +11,9 @@ import java.time.temporal.ChronoUnit
 /// Tres decisions que no s'han de tocar sense tocar també l'iPhone:
 /// - **`distantPast`** és el `Date.distantPast` de Swift (`0001-01-01T00:00:00Z`): el sentinella
 ///   dels singletons que ningú ha tocat (`ViraSyncRow.isPlaceholder`).
-/// - **Al JSON** les dates van en UTC amb tres decimals i `Z`, com `ISO8601FormatStyle
-///   (includingFractionalSeconds: true)`. Un `+00:00` portaria un `+` a les consultes, que en una
-///   URL vol dir espai.
+/// - **Al JSON** les dates van en UTC amb `Z`, com `ISO8601FormatStyle`. Un `+00:00` portaria un
+///   `+` a les consultes, que en una URL vol dir espai. Amb **sis decimals**, no tres: dues edicions
+///   dins del mateix mil·lisegon arribarien iguals i el servidor rebutjaria la més nova.
 /// - **A la base de dades** van en **microsegons** des de 1970: Postgres desa `timestamptz` amb
 ///   sis decimals, i comparar «l'últim escriu» amb mil·lisegons faria que dues files iguals
 ///   semblessin diferents.
@@ -22,7 +22,7 @@ object ViraTime {
     val distantPast: Instant = Instant.parse("0001-01-01T00:00:00Z")
 
     private val wire: DateTimeFormatter =
-        DateTimeFormatter.ofPattern("uuuu-MM-dd'T'HH:mm:ss.SSS'Z'").withZone(ZoneOffset.UTC)
+        DateTimeFormatter.ofPattern("uuuu-MM-dd'T'HH:mm:ss.SSSSSS'Z'").withZone(ZoneOffset.UTC)
 
     /// Ara, retallat a microsegons: és la precisió que el servidor guarda.
     fun now(): Instant = Instant.now().truncatedTo(ChronoUnit.MICROS)

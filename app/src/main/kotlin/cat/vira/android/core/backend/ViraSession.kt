@@ -80,6 +80,8 @@ class ViraSession(
         val saved = auth.storedSession() ?: run { _state.value = State.SignedOut; return }
         stored = saved
         claimLocalData(saved.user, isNewSignIn = false)
+        // Si Android va tancar l'app entre l'enllaç i la contrasenya nova, la pantalla torna a sortir.
+        _isRecoveringPassword.value = preferences.getBoolean(PASSWORD_RECOVERY_IN_PROGRESS, false)
         _state.value = State.SignedIn(saved.user)
         if (saved.expiresAtEpochSeconds - clock() / 1000 < 60) {
             runCatching { accessToken() }
@@ -137,7 +139,7 @@ class ViraSession(
         val isRecovery = uri.getQueryParameter("type") == "recovery" || hasPendingRecoveryRequest()
         val adopted = attempt {
             adopt(requireAuth().session(fromCallback = uri))
-            if (isRecovery) _isRecoveringPassword.value = true
+            if (isRecovery) setRecovering(true)
         }
         // Només si ha anat bé: un reintent sense xarxa sovint torna sense `type=recovery`.
         if (adopted != null) forgetRecoveryRequest()
@@ -146,11 +148,11 @@ class ViraSession(
 
     suspend fun updatePassword(password: String) {
         requireAuth().updatePassword(password)
-        _isRecoveringPassword.value = false
+        setRecovering(false)
     }
 
     fun cancelPasswordRecovery() {
-        _isRecoveringPassword.value = false
+        setRecovering(false)
         forgetRecoveryRequest()
     }
 
@@ -300,7 +302,7 @@ class ViraSession(
         dataGeneration = UUID.randomUUID()
         stored = null
         verifiedConsent = null
-        _isRecoveringPassword.value = false
+        setRecovering(false)
         _state.value = if (auth != null) State.SignedOut else State.Unconfigured
     }
 
@@ -314,6 +316,11 @@ class ViraSession(
     } catch (error: ViraBackendException) {
         _lastError.value = error.error
         null
+    }
+
+    private fun setRecovering(recovering: Boolean) {
+        preferences.edit().putBoolean(PASSWORD_RECOVERY_IN_PROGRESS, recovering).commit()
+        _isRecoveringPassword.value = recovering
     }
 
     private fun forgetRecoveryRequest() {
@@ -332,5 +339,6 @@ class ViraSession(
 
     companion object {
         const val PASSWORD_RECOVERY_REQUESTED_AT = "account.passwordRecoveryRequestedAt"
+        const val PASSWORD_RECOVERY_IN_PROGRESS = "account.passwordRecoveryInProgress"
     }
 }
