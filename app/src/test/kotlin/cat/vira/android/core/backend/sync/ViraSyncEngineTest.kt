@@ -384,6 +384,26 @@ class ViraSyncEngineTest {
     }
 
     @Test
+    fun unTelefonNouQueGuanyaXpAbansDEntrarNoEsMenjaLaDelCompte() = runBlocking {
+        // L'acció del flux d'entrada, abans del pas del compte: més nova que la fila del servidor.
+        db.progressCounters().upsertRaw(listOf(store.counter().copy(
+            totalXP = 10, coinBalance = 10, coinsEarnedTotal = 10, emotionCheckinsCount = 1,
+            updatedAt = Instant.parse("2026-10-17T12:00:00Z"),
+        )))
+        serverRows["progress_counters"] = """[{"total_xp":900,"coin_balance":300,"coins_earned_total":800,
+            "emotion_checkins_count":40,"focus_sessions_count":12,"habits_completed_count":55,"days_active_count":30,
+            "updated_at":"2026-10-11T10:00:00+00:00","user_id":"$userId"}]"""
+        engine(ViraConsentStatus.GRANTED).sync()
+        val counter = store.counter()
+        assertEquals(900, counter.totalXP)
+        assertEquals(800, counter.coinsEarnedTotal)
+        assertEquals(40, counter.emotionCheckinsCount)
+        assertEquals(12, counter.focusSessionsCount)
+        // I puja la suma, no els 10 d'aquí.
+        assertTrue(bodies("progress_counters").single().body.readUtf8().contains("\"total_xp\":900"))
+    }
+
+    @Test
     fun unaRatxaMesNovaNoPerdElsDiesQueNomesSabiaElServidor() = runBlocking {
         val mine = Instant.parse("2026-10-17T00:00:00Z")
         val theirs = Instant.parse("2026-10-10T00:00:00Z")
