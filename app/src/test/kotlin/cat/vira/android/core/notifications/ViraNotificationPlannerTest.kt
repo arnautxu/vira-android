@@ -174,6 +174,14 @@ class ViraNotificationPlannerTest {
     }
 
     @Test
+    fun elRecordatoriEmocionalDAhirJaNoToca() {
+        val n = plan(ViraNotificationInputs(), settings.copy(emotion = true)).first()
+        val inputs = ViraNotificationInputs()
+        assertTrue(ViraNotificationPlanner.isStillPending(n, inputs, zone, n.fireAt))
+        assertTrue(!ViraNotificationPlanner.isStillPending(n, inputs, zone, n.fireAt.plusSeconds(86_400)))
+    }
+
+    @Test
     fun unaTascaMogudaOSenseHoraJaNoGuardaElSeuAvis() {
         val day = today.atStartOfDay(zone).toInstant()
         val item = PlanItem(title = "Dentista", day = day, time = at(today, 17))

@@ -261,7 +261,12 @@ object ViraNotificationPlanner {
     /// Si allò que recorda un avís ja programat encara està per fer. Un «Més tard» o una alarma
     /// endarrerida sobreviuen a la passada, però no si mentrestant s'ha marcat a l'app: seria
     /// recordar una cosa ja feta, i els botons de medicació actuarien sobre una presa resolta.
-    fun isStillPending(notification: ViraPlannedNotification, inputs: ViraNotificationInputs, zone: ZoneId): Boolean =
+    fun isStillPending(
+        notification: ViraPlannedNotification,
+        inputs: ViraNotificationInputs,
+        zone: ZoneId,
+        now: Instant = Instant.now(),
+    ): Boolean =
         when (notification.actions) {
             ViraActionSet.HABIT -> {
                 val habitId = notification.habitId?.toUuidOrNull()
@@ -297,7 +302,9 @@ object ViraNotificationPlanner {
             }
             ViraActionSet.VIRI -> {
                 val day = LocalDate.ofInstant(notification.fireAt, zone)
-                inputs.emotionEntries.none { LocalDate.ofInstant(it.createdAt, zone) == day }
+                // El d'un dia passat ja no toca: el botó registraria l'emoció a avui, no a aquell dia.
+                !day.isBefore(LocalDate.ofInstant(now, zone)) &&
+                    inputs.emotionEntries.none { LocalDate.ofInstant(it.createdAt, zone) == day }
             }
         }
 

@@ -117,8 +117,10 @@ class ViraNotificationSystemTest {
         ViraNotificationChannel.register(app)
         manager.notify("med-a", 0, ViraNotificationAlarmReceiver.build(app, planned("med-a", actions = ViraActionSet.MEDICATION)))
         manager.notify("focus", 7, ViraNotificationAlarmReceiver.build(app, planned("focus")))
+        ViraPreferences.open(app).edit().putBoolean(ViraNotificationPreferences.REMINDERS_HABITS_ENABLED, false).commit()
         ViraNotifications.cancelEverything(app)
         assertEquals(listOf("focus"), manager.activeNotifications.map { it.tag })
+        assertTrue("els interruptors tornen a fàbrica", ViraNotificationPreferences.habitsEnabled(ViraPreferences.open(app)))
     }
 
     @Test
@@ -228,6 +230,16 @@ class ViraNotificationSystemTest {
             ViraStreakNotifications.pendingEvent(preferences, time, first.plusSeconds(3600), zone),
         )
         assertNull(ViraStreakNotifications.pendingEvent(preferences, time, first.plusSeconds(86_400 + 60), zone))
+    }
+
+    @Test
+    fun unaConcentracioQueSilenciaViriAturaLAlarmaQueJaEraArmada() = runBlocking {
+        val viri = planned("${ViraStreakNotifications.PREFIX}2027-1-15").copy(actions = ViraActionSet.VIRI)
+        assertTrue(ViraNotifications.isStillPending(app, viri, now = now))
+        app.notificationDatabase.focusSessions().upsertRaw(
+            listOf(cat.vira.android.core.data.model.FocusSession(startedAt = now.minusSeconds(60), mutesNotifications = true)),
+        )
+        assertFalse(ViraNotifications.isStillPending(app, viri, now = now))
     }
 
     @Test

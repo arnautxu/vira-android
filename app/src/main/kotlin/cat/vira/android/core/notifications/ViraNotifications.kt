@@ -122,12 +122,12 @@ object ViraNotifications {
         // fer i no cauen dins d'una concentració que silencia Vira.
         val muted = ViraNotificationPlanner.muteWindow(inputs.focusSessions, now)
         scheduler.replace(reminderPrefixes, planned, now) {
-            ViraNotificationPlanner.isStillPending(it, inputs, zone) && muted?.contains(it.fireAt) != true
+            ViraNotificationPlanner.isStillPending(it, inputs, zone, now) && muted?.contains(it.fireAt) != true
         }
         // Els que ja són a la pantalla d'una cosa que s'ha marcat a l'app, o d'una categoria apagada,
         // fora: tenen botons que actuarien sobre una cosa resolta.
         refreshShown(context, reminderPrefixes) {
-            !isWanted(context, it) || !ViraNotificationPlanner.isStillPending(it, inputs, zone)
+            !isWanted(context, it) || !ViraNotificationPlanner.isStillPending(it, inputs, zone, now)
         }
     }
 
@@ -196,6 +196,9 @@ object ViraNotifications {
         val prefixes = reminderPrefixes + streakPrefixes
         ViraNotificationScheduler(context).cancelAll(prefixes)
         ViraStreakNotifications.clearPendingEvent(ViraPreferences.open(context))
+        // Les categories, les hores i el detall tornen a fàbrica: un compte nou o un esborrat total
+        // no hereten els avisos de l'anterior.
+        ViraNotificationPreferences.reset(ViraPreferences.open(context))
         // També els que ja són a la pantalla: un avís de medicació del compte anterior no hi pot
         // quedar.
         refreshShown(context, prefixes) { true }
@@ -205,13 +208,21 @@ object ViraNotifications {
     /// comprova l'alarma just abans de publicar. Un avís d'un compte que ja no hi és (canvi de
     /// compte, esborrat total) o d'una cosa marcada des d'un altre telèfon no surt. Els de Viri
     /// (`streak-`) no hi passen: no recorden cap fila.
-    suspend fun isStillPending(context: Context, notification: ViraPlannedNotification, zone: ZoneId = ZoneId.systemDefault()): Boolean {
+    suspend fun isStillPending(
+        context: Context,
+        notification: ViraPlannedNotification,
+        zone: ZoneId = ZoneId.systemDefault(),
+        now: Instant = Instant.now(),
+    ): Boolean {
+        val host = context.notificationHost ?: return false
+        val inputs = snapshot(host.notificationDatabase)
+        // Una concentració que silencia Vira, començada després de l'última passada: tampoc.
+        if (ViraNotificationPlanner.muteWindow(inputs.focusSessions, now)?.contains(now) == true) return false
         if (notification.id.endsWith(ViraStreakNotifications.NEWS_SUFFIX)) {
             return isCurrentNews(ViraPreferences.open(context), notification)
         }
         if (reminderPrefixes.none { notification.id.startsWith(it) }) return true
-        val host = context.notificationHost ?: return false
-        return ViraNotificationPlanner.isStillPending(notification, snapshot(host.notificationDatabase), zone)
+        return ViraNotificationPlanner.isStillPending(notification, inputs, zone, now)
     }
 
     private fun isCurrentNews(preferences: android.content.SharedPreferences, notification: ViraPlannedNotification) =
