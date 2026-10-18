@@ -63,7 +63,9 @@ import cat.vira.android.core.design.tokens.ViraGradient
 import cat.vira.android.core.design.tokens.ViraRadius
 import cat.vira.android.core.design.tokens.ViraSpacing
 import cat.vira.android.core.design.tokens.ViraTouch
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /// Tota la personalització en un sol lloc (`ProfileCustomizeSheet`): malnom, skin posada i badges
 /// penjats. No ven res: aquí només es tria entre el que ja tens, i el que no tens es veu amb el
@@ -79,7 +81,9 @@ fun ProfileCustomizeSheet(onDismiss: () -> Unit) {
     val skins by data.skins.collectAsStateWithLifecycle(emptyList())
     val badges by data.badges.collectAsStateWithLifecycle(emptyList())
 
-    fun saveNickname(name: String) = scope.launch {
+    // Les escriptures acaben encara que la fulla es tanqui a mig desar (el seu scope es cancel·la).
+    fun write(block: suspend () -> Unit) = scope.launch { withContext(NonCancellable) { block() } }
+    fun saveNickname(name: String) = write {
         val current = data.store.profile()
         val trimmed = name.trim()
         if (current.displayName != trimmed) data.store.save(data.db.profiles(), current.copy(displayName = trimmed))
@@ -100,10 +104,10 @@ fun ProfileCustomizeSheet(onDismiss: () -> Unit) {
                 ownedBadgeKeys = badges.map { it.key }.toSet(),
                 counter = counter,
                 streak = streak,
-                onDone = { name -> saveNickname(name); onDismiss() },
+                onDone = { name -> scope.launch { saveNickname(name).join(); onDismiss() } },
                 onSaveNickname = { saveNickname(it) },
-                onEquip = { key -> scope.launch { data.skinsLogic.equip(key) } },
-                onToggleBadge = { key -> scope.launch { data.badgesLogic.toggle(key) } },
+                onEquip = { key -> write { data.skinsLogic.equip(key) } },
+                onToggleBadge = { key -> write { data.badgesLogic.toggle(key) } },
                 modifier = Modifier.imePadding(),
             )
         }
@@ -232,7 +236,8 @@ private fun SkinChoice(item: SkinItem?, isEquipped: Boolean, onClick: () -> Unit
 }
 
 /// El que pots penjar al banner (`BadgePickerGrid`): tot el que es compra, encara que no sigui teu
-/// (amb el preu), i **només les cartes ja guanyades**. L'estat mai és només la vora: «Penjat» també
+/// (amb el preu), i **només les cartes ja guanyades**, i només amb les cartes obertes
+/// (`ViraReleaseGate.cards`, com `BadgeShopGrid`). L'estat mai és només la vora: «Penjat» també
 /// en text.
 @Composable
 fun BadgePickerGrid(
@@ -242,10 +247,11 @@ fun BadgePickerGrid(
     ownedKeys: Set<String>,
     onToggle: (String) -> Unit,
     modifier: Modifier = Modifier,
+    cardsEnabled: Boolean = rememberCardsEnabled(),
 ) {
     fun available(item: BadgeItem) =
         if (item.isEarned) CardItem.item(item.key)?.isUnlocked(counter, streak) ?: false else item.key in ownedKeys
-    val visible = BadgeItem.catalog.filter { !it.isEarned || available(it) }
+    val visible = BadgeItem.catalog.filter { if (it.isEarned) cardsEnabled && available(it) else true }
     val env = LocalViraEnvironment.current
     val columns = if (env.isAccessibilitySize) 1 else 2
     ShopGrid(visible, columns, modifier, spacing = ViraSpacing.rowGap) { item, cellModifier ->
