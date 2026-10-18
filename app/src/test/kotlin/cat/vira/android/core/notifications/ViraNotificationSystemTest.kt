@@ -110,6 +110,16 @@ class ViraNotificationSystemTest {
     }
 
     @Test
+    fun esborrarHoTotTreuTambeElsAvisosJaPublicats() = runBlocking {
+        val manager = app.getSystemService(android.app.NotificationManager::class.java)
+        ViraNotificationChannel.register(app)
+        manager.notify("med-a", 0, ViraNotificationAlarmReceiver.build(app, planned("med-a", actions = ViraActionSet.MEDICATION)))
+        manager.notify("focus", 7, ViraNotificationAlarmReceiver.build(app, planned("focus")))
+        ViraNotifications.cancelEverything(app)
+        assertEquals(listOf("focus"), manager.activeNotifications.map { it.tag })
+    }
+
+    @Test
     fun apagarElDetallTreuElNomDelFarmacDUnAvisJaProgramat() {
         val medication = planned("med-a", actions = ViraActionSet.MEDICATION).copy(
             channel = ViraNotificationChannel.MEDICATION, body = "Concerta",

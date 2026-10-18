@@ -2,6 +2,7 @@ package cat.vira.android.core.notifications
 
 import android.Manifest
 import android.app.AlarmManager
+import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -113,7 +114,12 @@ object ViraNotifications {
         )
         val inputs = snapshot(db)
         val planned = ViraNotificationPlanner.plan(inputs, settings, now, zone, text(context))
-        scheduler.replace(reminderPrefixes, planned, now) { ViraNotificationPlanner.isStillPending(it, inputs, zone) }
+        // Un «Més tard» o una alarma endarrerida només sobreviuen si el que recorden encara està per
+        // fer i no cauen dins d'una concentració que silencia Vira.
+        val muted = ViraNotificationPlanner.muteWindow(inputs.focusSessions, now)
+        scheduler.replace(reminderPrefixes, planned, now) {
+            ViraNotificationPlanner.isStillPending(it, inputs, zone) && muted?.contains(it.fireAt) != true
+        }
     }
 
     private suspend fun rescheduleStreak(context: Context, host: ViraNotificationHost, now: Instant, zone: ZoneId) {
@@ -129,16 +135,18 @@ object ViraNotifications {
             return
         }
         val time = ViraNotificationPreferences.viriTime(preferences)
+        val muted = ViraNotificationPlanner.muteWindow(host.notificationDatabase.focusSessions().all(), now)
         val planned = ViraStreakNotifications.requests(
             now = now,
             event = ViraStreakNotifications.pendingEvent(preferences, time, now, zone),
             dayIsOpen = state.dayIsOpen,
-            muted = ViraNotificationPlanner.muteWindow(host.notificationDatabase.focusSessions().all(), now),
+            muted = muted,
             time = time,
             zone = zone,
             text = text(context),
         )
-        scheduler.replace(streakPrefixes, planned, now)
+        // Un avís de Viri endarrerit no surt si el dia ja compta: diria que encara és obert.
+        scheduler.replace(streakPrefixes, planned, now) { state.dayIsOpen && muted?.contains(it.fireAt) != true }
     }
 
     /// Posa la ratxa al dia des del segon pla i deixa apuntat el que hagi passat. És l'únic camí
@@ -163,8 +171,15 @@ object ViraNotifications {
     /// cua que les passades: una que ja hagués llegit les dades d'abans no pot tornar a posar-les
     /// després d'esborrar.
     suspend fun cancelEverything(context: Context) = passes.withLock {
-        ViraNotificationScheduler(context).cancelAll(reminderPrefixes + streakPrefixes)
+        val prefixes = reminderPrefixes + streakPrefixes
+        ViraNotificationScheduler(context).cancelAll(prefixes)
         ViraStreakNotifications.clearPendingEvent(ViraPreferences.open(context))
+        // També els que ja són a la pantalla: un avís de medicació del compte anterior no hi pot
+        // quedar. Només els propis (l'etiqueta és l'identificador); l'avís fix de Concentra't no.
+        val manager = context.getSystemService(NotificationManager::class.java) ?: return@withLock
+        manager.activeNotifications
+            .filter { shown -> shown.tag != null && prefixes.any { shown.tag.startsWith(it) } }
+            .forEach { manager.cancel(it.tag, it.id) }
     }
 
     /// El text tal com ha de sortir **ara**. Un «Més tard» o una alarma endarrerida porten el text
