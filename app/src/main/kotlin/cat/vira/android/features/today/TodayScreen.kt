@@ -19,6 +19,7 @@ import cat.vira.android.app.LocalViraBackend
 import cat.vira.android.app.LocalViraNavigator
 import cat.vira.android.app.PlanSection
 import cat.vira.android.app.ViraDestination
+import cat.vira.android.app.ViraFocusLink
 import cat.vira.android.app.rememberPreference
 import cat.vira.android.core.data.ViraStore
 import cat.vira.android.core.data.model.CoinReason
@@ -166,7 +167,7 @@ fun TodayScreen() {
             moved = null
             if (original != null) scope.launch { actions.undoMove(original) }
         },
-        onStartFocus = { navigator.startFocus() },
+        onStartFocus = { item -> navigator.startFocus(ViraFocusLink(item.title, item.id)) },
         onOpenCalendar = { navigator.navigate(ViraDestination.Plan(PlanSection.Calendar)) },
         onOpenHabits = { navigator.navigate(ViraDestination.Plan(PlanSection.Habits)) },
         onOpenCheckIn = { navigator.navigate(ViraDestination.Emotions(EmotionsSection.CheckIn)) },
