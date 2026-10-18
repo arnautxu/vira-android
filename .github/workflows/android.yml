@@ -31,6 +31,9 @@ jobs:
   build:
     name: Compila, prova i deixa l'APK
     runs-on: ubuntu-latest
+    # Un build normal tarda uns 10 minuts. Si alguna cosa es penja, s'atura aquí i no ocupa
+    # la cua hores.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
         with:
@@ -74,18 +77,24 @@ jobs:
       # `captures/<branca>`, d'on el fil les agafa per posar-les al costat de les de l'iPhone.
       - name: Compara les captures amb les aprovades
         id: compara
+        timeout-minutes: 15
         continue-on-error: true
         run: |
           if find app/src -type d -name reference -path '*creenshot*' | grep -q .; then
             ./gradlew validateDebugScreenshotTest --no-daemon --no-configuration-cache
           fi
 
+      # Aquest pas s'ha quedat penjat hores en algunes execucions. Amb el límit, si es penja
+      # el build segueix sent vàlid (APK i proves ja han passat) i només falten les captures.
       - name: Fa les captures de la branca
+        id: captures
         if: github.event_name == 'push' && github.ref != 'refs/heads/main'
+        timeout-minutes: 15
+        continue-on-error: true
         run: ./gradlew updateDebugScreenshotTest --no-daemon --no-configuration-cache
 
       - name: Publica les captures a captures/<branca>
-        if: github.event_name == 'push' && github.ref != 'refs/heads/main'
+        if: github.event_name == 'push' && github.ref != 'refs/heads/main' && steps.captures.outcome == 'success'
         run: |
           set -e
           src=$(find app/src -type d -name reference -path '*creenshot*' | head -1)
