@@ -7,7 +7,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
-import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -34,7 +33,9 @@ class CompletionQueueTest {
         queue.present(PendingCompletion("plan-1", CoinReason.PLAN_ITEM, onUndo = { undone = true }))
         advanceTimeBy(1_000)
         queue.undo("plan-1")
-        advanceUntilIdle()
+        // `advanceUntilIdle` no fa córrer la feina de `backgroundScope`: el temps s'avança a mà.
+        advanceTimeBy(10_000)
+        runCurrent()
         assertTrue(undone)
         assertTrue(committed.isEmpty())
         assertNull(queue.active)
@@ -92,7 +93,9 @@ class CompletionQueueTest {
         queue.present(PendingCompletion("plan-1", CoinReason.PLAN_ITEM, onUndo = {}))
         advanceTimeBy(2_100)
         queue.present(PendingCompletion("habit-1", CoinReason.HABIT, onUndo = {}))
-        advanceUntilIdle()
+        // `advanceUntilIdle` no fa córrer la feina de `backgroundScope`: el temps s'avança a mà.
+        advanceTimeBy(10_000)
+        runCurrent()
         assertEquals(listOf(CoinReason.PLAN_ITEM, CoinReason.HABIT), committed)
         assertNull(queue.active)
     }
