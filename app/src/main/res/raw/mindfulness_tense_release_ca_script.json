@@ -1,0 +1,104 @@
+{
+ "id": "tenseRelease",
+ "language": "ca",
+ "duration": 165.8,
+ "steps": 5,
+ "segments": [
+  {
+   "start": 0.6,
+   "end": 8.59,
+   "kind": "line",
+   "step": null,
+   "stepTitle": null,
+   "text": "mindfulness.tenseRelease.line1"
+  },
+  {
+   "start": 8.59,
+   "end": 15.33,
+   "kind": "line",
+   "step": 0,
+   "stepTitle": "mindfulness.tenseRelease.step1",
+   "text": "mindfulness.tenseRelease.line2"
+  },
+  {
+   "start": 15.33,
+   "end": 40.18,
+   "kind": "line",
+   "step": 0,
+   "stepTitle": "mindfulness.tenseRelease.step1",
+   "text": "mindfulness.tenseRelease.line3"
+  },
+  {
+   "start": 40.18,
+   "end": 47.27,
+   "kind": "line",
+   "step": 1,
+   "stepTitle": "mindfulness.tenseRelease.step2",
+   "text": "mindfulness.tenseRelease.line4"
+  },
+  {
+   "start": 47.27,
+   "end": 70.26,
+   "kind": "line",
+   "step": 1,
+   "stepTitle": "mindfulness.tenseRelease.step2",
+   "text": "mindfulness.tenseRelease.line5"
+  },
+  {
+   "start": 70.26,
+   "end": 77.61,
+   "kind": "line",
+   "step": 2,
+   "stepTitle": "mindfulness.tenseRelease.step3",
+   "text": "mindfulness.tenseRelease.line6"
+  },
+  {
+   "start": 77.61,
+   "end": 100.8,
+   "kind": "line",
+   "step": 2,
+   "stepTitle": "mindfulness.tenseRelease.step3",
+   "text": "mindfulness.tenseRelease.line7"
+  },
+  {
+   "start": 100.8,
+   "end": 107.72,
+   "kind": "line",
+   "step": 3,
+   "stepTitle": "mindfulness.tenseRelease.step4",
+   "text": "mindfulness.tenseRelease.line8"
+  },
+  {
+   "start": 107.72,
+   "end": 130.66,
+   "kind": "line",
+   "step": 3,
+   "stepTitle": "mindfulness.tenseRelease.step4",
+   "text": "mindfulness.tenseRelease.line9"
+  },
+  {
+   "start": 130.66,
+   "end": 138.43,
+   "kind": "line",
+   "step": 4,
+   "stepTitle": "mindfulness.tenseRelease.step5",
+   "text": "mindfulness.tenseRelease.line10"
+  },
+  {
+   "start": 138.43,
+   "end": 161.49,
+   "kind": "line",
+   "step": 4,
+   "stepTitle": "mindfulness.tenseRelease.step5",
+   "text": "mindfulness.tenseRelease.line11"
+  },
+  {
+   "start": 161.49,
+   "end": 165.73,
+   "kind": "line",
+   "step": 4,
+   "stepTitle": "mindfulness.tenseRelease.step5",
+   "text": "mindfulness.tenseRelease.line12"
+  }
+ ]
+}
