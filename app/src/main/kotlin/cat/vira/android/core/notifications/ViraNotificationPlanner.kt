@@ -148,9 +148,11 @@ object ViraNotificationPlanner {
                 if (!medication.hasReminder) continue
                 for (scheduledAt in medicationTimes(medication, day, zone)) {
                     if (!scheduledAt.isAfter(now)) continue
-                    val intake = intakesByMedication[medication.id].orEmpty().firstOrNull { sameMinute(it.scheduledAt, scheduledAt) }
-                    // `pending` vol dir que l'usuari no hi ha dit res.
-                    if ((intake?.status ?: IntakeStatus.PENDING) != IntakeStatus.PENDING) continue
+                    // `pending` vol dir que l'usuari no hi ha dit res. Si la sincronització en deixa
+                    // dues per a la mateixa hora, n'hi ha prou que una estigui resolta.
+                    val resolved = intakesByMedication[medication.id].orEmpty()
+                        .any { sameMinute(it.scheduledAt, scheduledAt) && it.status != IntakeStatus.PENDING }
+                    if (resolved) continue
                     if (muted?.contains(scheduledAt) == true) continue
                     slots += scheduledAt to medication
                 }
@@ -270,7 +272,10 @@ object ViraNotificationPlanner {
                 val medicationId = notification.medicationId?.toUuidOrNull()
                 val at = notification.scheduledAtMillis?.let(Instant::ofEpochMilli)
                 medicationId != null && at != null &&
-                    inputs.medications.any { it.id == medicationId && it.isActive } &&
+                    inputs.medications.any { m ->
+                        m.id == medicationId && m.hasReminder &&
+                            medicationTimes(m, LocalDate.ofInstant(at, zone), zone).any { sameMinute(it, at) }
+                    } &&
                     inputs.intakes.none {
                         it.medicationId == medicationId && sameMinute(it.scheduledAt, at) && it.status != IntakeStatus.PENDING
                     }

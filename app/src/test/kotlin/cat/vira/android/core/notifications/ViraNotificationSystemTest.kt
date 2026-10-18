@@ -120,6 +120,19 @@ class ViraNotificationSystemTest {
     }
 
     @Test
+    fun unAvisJaPublicatDUnaCosaMarcadaALAppEsTreu() = runBlocking {
+        val manager = app.getSystemService(android.app.NotificationManager::class.java)
+        ViraNotificationChannel.register(app)
+        ViraPreferences.open(app).edit().putBoolean(ViraNotificationPreferences.REMINDERS_ENABLED, true).commit()
+        shadowOf(app).grantPermissions(ViraNotifications.PERMISSION)
+        // Un hàbit que ja no existeix: el que recordava ja no està per fer.
+        val stale = planned("habit-a")
+        manager.notify(stale.id, 0, ViraNotificationAlarmReceiver.build(app, stale))
+        ViraNotifications.reschedule(app, now)
+        assertTrue(manager.activeNotifications.none { it.tag == "habit-a" })
+    }
+
+    @Test
     fun apagarElDetallTreuElNomDelFarmacDUnAvisJaProgramat() {
         val medication = planned("med-a", actions = ViraActionSet.MEDICATION).copy(
             channel = ViraNotificationChannel.MEDICATION, body = "Concerta",

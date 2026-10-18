@@ -26,6 +26,9 @@ import java.time.ZoneId
 object ViraStreakNotifications {
 
     const val PREFIX = "streak-"
+    /// Marca la franja que porta una notícia (fita, ratxa salvada o a zero): una notícia endarrerida
+    /// encara s'ha de dir encara que el dia ja compti; un recordatori, no.
+    const val NEWS_SUFFIX = "-news"
 
     /// Cinc, dins del repartiment de 64 (26 + 14 + 8 + 3 + 5 = 56).
     const val BUDGET = 5
@@ -122,7 +125,7 @@ object ViraStreakNotifications {
                 else -> Kind.Nudge
             }
             planned += ViraPlannedNotification(
-                id = "$PREFIX${day.year}-${day.monthValue}-${day.dayOfMonth}",
+                id = "$PREFIX${day.year}-${day.monthValue}-${day.dayOfMonth}" + if (kind is Kind.Nudge) "" else NEWS_SUFFIX,
                 fireAtMillis = fire.toEpochMilli(),
                 title = StreakNotificationCatalog.title(text),
                 body = StreakNotificationCatalog.body(kind, day, text),

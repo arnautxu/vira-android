@@ -9,6 +9,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
+import android.os.Bundle
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.RemoteInput
@@ -61,6 +62,8 @@ class ViraNotificationAlarmReceiver : BroadcastReceiver() {
                 .setShowWhen(true)
                 .setAutoCancel(true)
                 .setContentIntent(openApp(context, notification))
+                // Per poder retirar-lo de la pantalla si mentrestant es marca a l'app.
+                .addExtras(Bundle().apply { putString(EXTRA_PAYLOAD, Json.encodeToString(ViraPlannedNotification.serializer(), notification)) })
             actions(context, notification).forEach { builder.addAction(it) }
             return builder.build()
         }

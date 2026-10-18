@@ -15,6 +15,7 @@ import cat.vira.android.R
 import cat.vira.android.core.data.ViraDatabase
 import cat.vira.android.core.data.ViraPreferences
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.serialization.json.Json
 import kotlinx.coroutines.sync.withLock
 import java.time.Instant
 import java.time.ZoneId
@@ -120,6 +121,9 @@ object ViraNotifications {
         scheduler.replace(reminderPrefixes, planned, now) {
             ViraNotificationPlanner.isStillPending(it, inputs, zone) && muted?.contains(it.fireAt) != true
         }
+        // Els que ja són a la pantalla d'una cosa que s'ha marcat a l'app, fora: tenen botons que
+        // actuarien sobre una cosa resolta.
+        dismissShown(context, reminderPrefixes) { !ViraNotificationPlanner.isStillPending(it, inputs, zone) }
     }
 
     private suspend fun rescheduleStreak(context: Context, host: ViraNotificationHost, now: Instant, zone: ZoneId) {
@@ -146,7 +150,9 @@ object ViraNotifications {
             text = text(context),
         )
         // Un avís de Viri endarrerit no surt si el dia ja compta: diria que encara és obert.
-        scheduler.replace(streakPrefixes, planned, now) { state.dayIsOpen && muted?.contains(it.fireAt) != true }
+        scheduler.replace(streakPrefixes, planned, now) {
+            (state.dayIsOpen || it.id.endsWith(ViraStreakNotifications.NEWS_SUFFIX)) && muted?.contains(it.fireAt) != true
+        }
     }
 
     /// Posa la ratxa al dia des del segon pla i deixa apuntat el que hagi passat. És l'únic camí
@@ -175,11 +181,24 @@ object ViraNotifications {
         ViraNotificationScheduler(context).cancelAll(prefixes)
         ViraStreakNotifications.clearPendingEvent(ViraPreferences.open(context))
         // També els que ja són a la pantalla: un avís de medicació del compte anterior no hi pot
-        // quedar. Només els propis (l'etiqueta és l'identificador); l'avís fix de Concentra't no.
-        val manager = context.getSystemService(NotificationManager::class.java) ?: return@withLock
-        manager.activeNotifications
-            .filter { shown -> shown.tag != null && prefixes.any { shown.tag.startsWith(it) } }
-            .forEach { manager.cancel(it.tag, it.id) }
+        // quedar.
+        dismissShown(context, prefixes) { true }
+    }
+
+    /// Treu de la pantalla els avisos propis publicats que compleixen `doomed`. Només els propis
+    /// (l'etiqueta és l'identificador); l'avís fix de Concentra't no es toca.
+    private fun dismissShown(context: Context, prefixes: List<String>, doomed: (ViraPlannedNotification) -> Boolean) {
+        val manager = context.getSystemService(NotificationManager::class.java) ?: return
+        for (shown in manager.activeNotifications) {
+            val tag = shown.tag ?: continue
+            if (prefixes.none { tag.startsWith(it) }) continue
+            val payload = shown.notification.extras.getString(ViraNotificationAlarmReceiver.EXTRA_PAYLOAD)
+            val notification = payload?.let {
+                runCatching { Json.decodeFromString(ViraPlannedNotification.serializer(), it) }.getOrNull()
+            }
+            // Sense poder llegir què recorda, no es pot dir que encara toqui: fora.
+            if (notification == null || doomed(notification)) manager.cancel(tag, shown.id)
+        }
     }
 
     /// El text tal com ha de sortir **ara**. Un «Més tard» o una alarma endarrerida porten el text
