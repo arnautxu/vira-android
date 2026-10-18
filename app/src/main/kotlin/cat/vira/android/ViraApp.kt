@@ -5,6 +5,7 @@ import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.lifecycle.lifecycleScope
+import cat.vira.android.app.ViraIncomingLinks
 import cat.vira.android.core.backend.ViraBackend
 import cat.vira.android.core.backend.sync.ViraSyncWorker
 import kotlinx.coroutines.Dispatchers
@@ -17,6 +18,9 @@ class ViraApp : Application() {
 
     /// Dades, compte i sincronització. Es crea el primer cop que algú la demana.
     val backend: ViraBackend by lazy { ViraBackend(this) }
+
+    /// Els enllaços que han obert l'app i encara no ha fet servir ningú (`ViraIncomingLinks`).
+    val incomingLinks = ViraIncomingLinks()
 
     override fun onCreate() {
         super.onCreate()

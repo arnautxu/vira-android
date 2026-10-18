@@ -11,6 +11,8 @@
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <!-- Ajuda ara (`features/help`): la vibració que marca la respiració. -->
     <uses-permission android:name="android.permission.VIBRATE" />
+    <!-- Avui (`features/today`): llegeix el calendari del sistema, només si l'interruptor és encès. -->
+    <uses-permission android:name="android.permission.READ_CALENDAR" />
 
     <application
         android:name=".ViraApp"
@@ -36,6 +38,20 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="vira" android:host="auth-callback" />
+            </intent-filter>
+            <!-- Codi de vinculació del panell de pares (`ViraUniversalLink`): omple el camp, mai
+                 l'envia. L'enllaç web és el que s'envia; l'esquema propi, el de reserva. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="vira.cat" android:pathPrefix="/link/" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="vira" android:host="link" />
             </intent-filter>
         </activity>
 

@@ -83,6 +83,17 @@ class ViraRewardsTest {
     }
 
     @Test
+    fun unaConcessioDeDemaNoGastaElSostreDAvui() = runBlocking {
+        // Una fila d'un altre telèfon amb el rellotge avançat.
+        val tomorrow = t0.plus(Duration.ofDays(1))
+        db.coinTransactions().upsertRaw(List(2) {
+            CoinTransaction(amount = 10, reasonRaw = CoinReason.EMOTION.raw, createdAt = tomorrow)
+        })
+        assertEquals(0, rewards.grantsToday(CoinReason.EMOTION, t0))
+        assertEquals(10, rewards.award(CoinReason.EMOTION, t0))
+    }
+
+    @Test
     fun gastarBaixaElSaldoPeroNoLXpNiElTotalGuanyat() = runBlocking {
         repeat(4) { rewards.award(CoinReason.FOCUS, t0) }
         assertEquals(60, store.counter().coinBalance)

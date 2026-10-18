@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Recursos que es busquen pel nom en temps d'execució (getIdentifier): el reductor de recursos
+     no veu cap R.… que els faci servir i, sense aquesta llista, els esborraria. -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@string/emotion_*,@string/skin_*,@string/intensity_*,@string/medication_form_*,@drawable/viri_skin_*" />

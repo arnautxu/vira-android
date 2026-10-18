@@ -13,6 +13,10 @@ Com es converteix cada cosa:
 - Taules: `Localizable` és la de per defecte i les seves claus no porten prefix. Les altres
   (`EmotionIntensity.xcstrings`, la taula pròpia d'una pantalla) porten el nom de la taula
   davant: `noteLabel` → `emotion_intensity_note_label`.
+- Textos propis d'Android: `scripts/android-strings.xcstrings` (mateix format) es llegeix sempre i
+  va per sobre de `Localizable`. Una clau que ja és a l'iPhone hi canvia el text (on l'iPhone diu
+  Face ID o iOS); una de nova és un text que només té Android. Cada entrada porta un `comment`
+  amb el perquè. Així el que és d'Android sobreviu a cada exportació.
 - Clau: `account.email.signIn.title` → `account_email_sign_in_title`. Els marcadors de format
   de la clau (`a11y.items_count %lld`) cauen del nom.
 - Format: `%@` → `%1$s`, `%lld`/`%d` → `%1$d`, sempre amb posició perquè Android ho demana
@@ -104,6 +108,7 @@ def localized(entry: dict, language: str):
 
 
 DEFAULT_TABLE = "Localizable"
+ANDROID_STRINGS = Path(__file__).resolve().parent / "android-strings.xcstrings"
 
 
 def export(catalogs: dict[str, dict], source_label: str) -> dict:
@@ -189,7 +194,16 @@ def main() -> int:
         print(f"Falta {DEFAULT_TABLE}.xcstrings, la taula per defecte", file=sys.stderr)
         return 1
 
-    files = export(catalogs, source_label(args.catalogs))
+    overrides = json.loads(ANDROID_STRINGS.read_text(encoding="utf-8"))["strings"]
+    for key, entry in overrides.items():
+        missing = [language for language in LANGUAGES if language not in entry.get("localizations", {})]
+        if missing or not entry.get("comment"):
+            print(f"{ANDROID_STRINGS.name}: {key!r} necessita ca, es, en i un comment", file=sys.stderr)
+            return 1
+    catalogs[DEFAULT_TABLE] = {**catalogs[DEFAULT_TABLE],
+                               "strings": {**catalogs[DEFAULT_TABLE]["strings"], **overrides}}
+
+    files = export(catalogs, source_label(args.catalogs) + f" + {ANDROID_STRINGS.name}")
     stale = []
     for folder, content in files.items():
         path = args.res / folder / OUTPUT_NAME

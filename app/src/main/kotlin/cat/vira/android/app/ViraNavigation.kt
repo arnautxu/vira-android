@@ -44,6 +44,8 @@ enum class ViraModal(val route: String) {
     /// La respiració directa, sense passar per Ajuda ara (des dels widgets i els accessos).
     Breathe("breathe"),
     Settings("settings"),
+    /// L'editor d'un mode de Concentra't, des d'Ajustos.
+    FocusProfileEditor("focus-profile"),
 }
 
 /// L'estat de la navegació de l'arrel: quina pestanya, quina cara de cada una i el camí dins de
@@ -107,6 +109,15 @@ class ViraNavigator internal constructor(
     fun openBreathe() = presentModal(ViraModal.Breathe)
     fun openSettings() = presentModal(ViraModal.Settings)
 
+    /// El mode que s'edita (`null` és un de nou). El llegeix l'editor de Concentra't.
+    var editingFocusProfileId by mutableStateOf<UUID?>(null)
+        private set
+
+    fun editFocusProfile(profileId: UUID?) {
+        editingFocusProfileId = profileId
+        presentModal(ViraModal.FocusProfileEditor)
+    }
+
     private fun showProgress(destination: ProgressDestination? = null) {
         progressPath.clear()
         destination?.let(progressPath::add)
@@ -114,21 +125,35 @@ class ViraNavigator internal constructor(
     }
 
     internal companion object {
-        /// Sobreviu a un gir de pantalla i a un procés que Android tanca en segon pla.
-        val saver: Saver<ViraNavigator, List<Int>> = Saver(
+        /// Sobreviu a un gir de pantalla i a un procés que Android tanca en segon pla, incloent el
+        /// que porta la finestra oberta (la tasca de Concentra't, el mode que s'edita): la navegació
+        /// de l'arrel restaura la ruta i la pantalla ha de trobar les mateixes dades.
+        val saver: Saver<ViraNavigator, List<String>> = Saver(
             save = { navigator ->
-                listOf(navigator.selectedTab.ordinal, navigator.planSection.ordinal, navigator.emotionsSection.ordinal) +
-                    navigator.progressPath.map { it.ordinal }
+                listOf(
+                    navigator.selectedTab.name,
+                    navigator.planSection.name,
+                    navigator.emotionsSection.name,
+                    navigator.focusLink?.title ?: NONE,
+                    navigator.focusLink?.itemId?.toString() ?: NONE,
+                    navigator.editingFocusProfileId?.toString() ?: NONE,
+                ) + navigator.progressPath.map { it.name }
             },
             restore = { saved ->
                 ViraNavigator(
-                    tab = ViraTab.entries[saved[0]],
-                    plan = PlanSection.entries[saved[1]],
-                    emotions = EmotionsSection.entries[saved[2]],
-                    path = saved.drop(3).map { ProgressDestination.entries[it] },
-                )
+                    tab = ViraTab.valueOf(saved[0]),
+                    plan = PlanSection.valueOf(saved[1]),
+                    emotions = EmotionsSection.valueOf(saved[2]),
+                    path = saved.drop(6).map(ProgressDestination::valueOf),
+                ).apply {
+                    val linkedId = saved[4].takeUnless { it == NONE }?.let(UUID::fromString)
+                    focusLink = linkedId?.let { ViraFocusLink(saved[3], it) }
+                    editingFocusProfileId = saved[5].takeUnless { it == NONE }?.let(UUID::fromString)
+                }
             },
         )
+
+        private const val NONE = "\u0000"
     }
 }
 

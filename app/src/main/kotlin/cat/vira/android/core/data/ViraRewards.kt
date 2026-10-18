@@ -44,8 +44,12 @@ class ViraRewards(
 
     /// Quantes concessions d'aquest motiu ja s'han fet avui.
     suspend fun grantsToday(reason: CoinReason, now: Instant = clock()): Int {
-        val startOfDay = now.atZone(zone()).toLocalDate().atStartOfDay(zone()).toInstant()
-        return db.coinTransactions().grantsSince(reason.raw, startOfDay)
+        val today = now.atZone(zone()).toLocalDate()
+        return db.coinTransactions().grantsBetween(
+            reason.raw,
+            from = today.atStartOfDay(zone()).toInstant(),
+            until = today.plusDays(1).atStartOfDay(zone()).toInstant(),
+        )
     }
 
     /// Concedeix el que toqui per una acció. L'XP puja sempre; les monedes, només si queda sostre
