@@ -51,7 +51,7 @@ object ViraPdfRenderer {
         return file
     }
 
-    private class Fonts(context: Context) {
+    private class Fonts(private val context: Context) {
         private fun load(id: Int, fallback: Typeface) = runCatching { ResourcesCompat.getFont(context, id) }.getOrNull() ?: fallback
         val bold = load(R.font.satoshi_bold, Typeface.DEFAULT_BOLD)
         val medium = load(R.font.satoshi_medium, Typeface.DEFAULT)

@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -234,6 +235,7 @@ fun SettingsBlockedRow(message: String, onOpenSettings: () -> Unit) {
 }
 
 /// Hora triada: es desa com a hora i minut, no com un instant (el que tria l'usuari és «les 20:30»).
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsTimeRow(title: String, hour: Int, minute: Int, onChange: (hour: Int, minute: Int) -> Unit) {
     var isPicking by remember { mutableStateOf(false) }

@@ -300,7 +300,7 @@ private fun SettingsFooterRows(items: List<SettingsCategory>, onOpen: (SettingsC
 private fun SettingsSearchResults(query: String, onOpen: (SettingsCategory) -> Unit) {
     val matches = SettingsCategory.entries.filter { SettingsCategory.matches(query, it.searchKeywords()) }
     if (matches.isEmpty()) {
-        ViraEmptyState(title = query.trim(), message = stringResource(R.string.settings_search_prompt))
+        ViraEmptyState(title = stringResource(R.string.settings_search_empty), message = query.trim())
     } else {
         SettingsFooterRows(matches, onOpen)
     }
