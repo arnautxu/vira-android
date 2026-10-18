@@ -1,6 +1,7 @@
 package cat.vira.android.app
 
 import android.os.Build
+import android.view.WindowManager
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricManager.Authenticators.BIOMETRIC_WEAK
 import androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
@@ -79,9 +80,19 @@ fun ViraAppLock(content: @Composable () -> Unit) {
 
     LaunchedEffect(enabled) { if (!enabled) locked = false }
     DisposableEffect(activity, enabled) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) activity.setRecentsScreenshotEnabled(!enabled)
+        // Abans d'Android 13 no hi ha manera de treure només la miniatura del canviador: la finestra
+        // es marca segura, i de retruc tampoc es poden fer captures de pantalla mentre l'ajust és encès.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            activity.setRecentsScreenshotEnabled(!enabled)
+        } else if (enabled) {
+            activity.window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        }
         onDispose {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) activity.setRecentsScreenshotEnabled(true)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                activity.setRecentsScreenshotEnabled(true)
+            } else {
+                activity.window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+            }
         }
     }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
