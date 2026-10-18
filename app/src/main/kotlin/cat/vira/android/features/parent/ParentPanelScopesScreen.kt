@@ -59,7 +59,7 @@ internal fun ParentPanelScopesScreen(link: ParentLink, deps: ParentDeps, onBack:
     fun change(updated: ParentLink) {
         draft = updated
         error = null
-        scope.launch {
+        parentSaveScope.launch {
             saving.withLock {
                 val latest = draft
                 val saved = parentAttempt({ error = it }) { deps.client.updateScopes(latest, deps.session.accessToken()) }

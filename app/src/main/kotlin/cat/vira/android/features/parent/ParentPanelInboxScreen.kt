@@ -34,6 +34,9 @@ import cat.vira.android.core.design.tokens.ViraArea
 import cat.vira.android.core.design.tokens.ViraColor
 import cat.vira.android.core.design.tokens.ViraFont
 import cat.vira.android.core.design.tokens.ViraSpacing
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 
 /// El que un pare o mare t'ha enviat (`ParentPanelInboxView` de l'iPhone).
@@ -47,6 +50,7 @@ internal fun ParentPanelInboxScreen(deps: ParentDeps, onBack: () -> Unit) {
     var messages by remember { mutableStateOf<List<ParentMessage>>(emptyList()) }
     var reminders by remember { mutableStateOf<List<ParentReminder>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
+    var remindersLoaded by remember { mutableStateOf(false) }
     var isRefreshing by remember { mutableStateOf(false) }
     var resolving by remember { mutableStateOf<java.util.UUID?>(null) }
     var error by remember { mutableStateOf<ViraBackendError?>(null) }
@@ -58,9 +62,16 @@ internal fun ParentPanelInboxScreen(deps: ParentDeps, onBack: () -> Unit) {
             val token = deps.session.accessToken()
             messages = deps.client.messages(token)
             reminders = deps.client.reminders(token)
+            remindersLoaded = true
             // Marcar-los com a llegits en obrir la llista: no hi ha cap acció que ho hagi de fer a
             // mà, i el pare/mare només en veu la data, no si els has obert un per un.
-            messages.filter { it.readAt == null }.forEach { runCatching { deps.client.markRead(it, token) } }
+            // A la vegada i no d'un en un: amb molts sense llegir, la llista no es pot quedar
+            // carregant esperant cada escriptura.
+            coroutineScope {
+                messages.filter { it.readAt == null }
+                    .map { async { runCatching { deps.client.markRead(it, token) } } }
+                    .awaitAll()
+            }
         }
         isLoading = false
     }
@@ -76,6 +87,7 @@ internal fun ParentPanelInboxScreen(deps: ParentDeps, onBack: () -> Unit) {
             ParentPanelInboxContent(
                 messages = messages,
                 reminders = reminders,
+                remindersLoaded = remindersLoaded,
                 error = error?.takeIf { it != ViraBackendError.CANCELLED }?.let { stringResource(it.message()) },
                 onResolve = resolve@{ reminder, accepted ->
                     // Un recordatori a la vegada: dos tocs ràpids a «Accepta» no han de crear dues tasques.
@@ -91,7 +103,8 @@ internal fun ParentPanelInboxScreen(deps: ParentDeps, onBack: () -> Unit) {
                             val day = startOfDay(reminder.day ?: ViraTime.now())
                             deps.store.create(deps.store.db.planItems(), PlanItem(title = reminder.title, day = day))
                         }
-                        load()
+                        // Si ha fallat, l'error es queda a la vista: tornar a carregar l'esborraria.
+                        if (resolved != null) load()
                         resolving = null
                     }
                 },
@@ -108,6 +121,7 @@ internal fun ParentPanelInboxContent(
     reminders: List<ParentReminder>,
     error: String?,
     onResolve: (ParentReminder, Boolean) -> Unit,
+    remindersLoaded: Boolean = true,
 ) {
     val locale = viraLocale()
     val pending = reminders.filter { it.isPending }
@@ -125,7 +139,10 @@ internal fun ParentPanelInboxContent(
         ParentGroup(
             header = stringResource(R.string.parent_inbox_reminders),
             rows = {
-                if (pending.isEmpty()) {
+                // «Cap» només quan el servidor ho ha dit; abans, o amb un error, no se sap.
+                if (pending.isEmpty() && !remindersLoaded) {
+                    row { ParentProgressInline() }
+                } else if (pending.isEmpty()) {
                     row { Text(stringResource(R.string.parent_inbox_reminders_empty), style = ViraFont.footnote, color = ViraColor.textSecondary) }
                 }
                 pending.forEach { reminder ->

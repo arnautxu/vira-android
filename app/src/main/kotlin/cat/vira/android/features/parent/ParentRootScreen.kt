@@ -72,6 +72,7 @@ fun ParentRootScreen(
     var links by remember { mutableStateOf<List<ParentLink>>(emptyList()) }
     var names by remember { mutableStateOf<Map<UUID, String>>(emptyMap()) }
     var isLoading by remember { mutableStateOf(true) }
+    var loaded by remember { mutableStateOf(false) }
     var isRefreshing by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<ViraBackendError?>(null) }
     var isRedeeming by rememberSaveable { mutableStateOf(false) }
@@ -86,6 +87,7 @@ fun ParentRootScreen(
             val fetched = deps.client.links(token)
             links = fetched
             names = deps.loader.displayNames(fetched.filter { it.isActive }, token)
+            loaded = true
         }
         isLoading = false
     }
@@ -109,7 +111,8 @@ fun ParentRootScreen(
                 modifier = Modifier.weight(1f),
             ) {
                 ParentRootContent(
-                    links = links, names = names, isLoading = isLoading,
+                    // «Encara no hi ha ningú» només quan el servidor ho ha dit: amb un error no se sap.
+                    links = links, names = names, isLoading = isLoading || !loaded,
                     error = error?.takeIf { it != ViraBackendError.CANCELLED }?.let { stringResource(it.message()) },
                     onOpenChild = { openChild = it.id.toString() },
                     onLink = { isRedeeming = true },
