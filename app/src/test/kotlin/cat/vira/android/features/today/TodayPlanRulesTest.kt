@@ -60,4 +60,12 @@ class TodayPlanRulesTest {
             assertEquals(listOf(LocalTime.of(8, 0), LocalTime.of(21, 30)), times)
         }
     }
+
+    @Test
+    fun unaHoraQueNoExisteElDiaQueSAvancaPassaALaSeguent() {
+        // El 29 de març les 2:30 no existeixen: com a l'iPhone, la presa és a les 3:30.
+        val pill = Medication(name = "Pastilla", timesInMinutes = listOf(2 * 60 + 30))
+        val at = TodayPlanRules.medicationSlots(listOf(pill), emptyList(), day(3, 29), zone).single().scheduledAt
+        assertEquals(LocalTime.of(3, 30), at.atZone(zone).toLocalTime())
+    }
 }
