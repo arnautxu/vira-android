@@ -21,7 +21,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -31,6 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import cat.vira.android.R
+import cat.vira.android.core.design.viraLocale
 import cat.vira.android.core.data.model.emotion
 import cat.vira.android.core.design.LocalViraEnvironment
 import cat.vira.android.core.design.tokens.ViraArea
@@ -71,7 +71,7 @@ internal fun EmotionHistoryDayGrid(history: EmotionHistory, range: EmotionHistor
 
 @Composable
 private fun DayCell(day: EmotionHistory.Day, range: EmotionHistoryRange, size: Dp, isToday: Boolean) {
-    val locale = LocalConfiguration.current.locales[0]
+    val locale = viraLocale()
     val dayLabel = day.date.format(DateTimeFormatter.ofPattern(if (range == EmotionHistoryRange.WEEK) "EEEEE" else "d", locale))
     val spoken = longDate(day.date, locale)
     // "Content, Trist" o "Sense registres": els noms, no el recompte, que és el que la cara diu.

@@ -8,6 +8,7 @@ import cat.vira.android.R
 import cat.vira.android.app.EmotionsSection
 import cat.vira.android.core.data.model.Emotion
 import cat.vira.android.core.data.model.EmotionEntry
+import cat.vira.android.core.design.ViraCapture
 import cat.vira.android.core.design.ViraScreenCaptures
 import cat.vira.android.core.design.ViraTheme
 import com.android.tools.screenshot.PreviewTest
@@ -35,7 +36,7 @@ private val sample = listOf(
 )
 
 @Composable
-private fun Screen(content: @Composable () -> Unit) = ViraTheme(reduceMotion = true) { content() }
+private fun Screen(content: @Composable () -> Unit) = ViraCapture { ViraTheme(reduceMotion = true) { content() } }
 
 @PreviewTest @ViraScreenCaptures @Composable
 fun CheckIn() = Screen {

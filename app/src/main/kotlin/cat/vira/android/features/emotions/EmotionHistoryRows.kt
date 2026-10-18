@@ -28,7 +28,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -41,6 +40,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import cat.vira.android.R
+import cat.vira.android.core.design.viraLocale
 import cat.vira.android.core.data.model.EmotionEntry
 import cat.vira.android.core.data.model.emotion
 import cat.vira.android.core.design.LocalViraEnvironment
@@ -52,7 +52,6 @@ import cat.vira.android.core.design.tokens.ViraRadius
 import cat.vira.android.core.design.tokens.ViraSpacing
 import cat.vira.android.core.resources.viraPluralString
 import java.time.LocalDate
-import java.util.Date
 
 /// Les emocions del període en fitxes grans (`EmotionHistoryTiles`). L'ordre és per freqüència,
 /// mai per si l'emoció és agradable, i el número va sempre en text: cap barra que sembli un
@@ -110,7 +109,7 @@ private fun DayHeader(day: EmotionHistory.Day, today: LocalDate) {
     val title = when (day.date) {
         today -> stringResource(R.string.a11y_today)
         today.minusDays(1) -> stringResource(R.string.emotions_history_yesterday)
-        else -> longDate(day.date, LocalConfiguration.current.locales[0])
+        else -> longDate(day.date, viraLocale())
     }
     Row(
         Modifier.fillMaxWidth().padding(start = ViraSpacing.m, end = ViraSpacing.m, top = ViraSpacing.m, bottom = ViraSpacing.xxs),
@@ -132,7 +131,12 @@ private fun EntryRow(entry: EmotionEntry, onDelete: (EmotionEntry) -> Unit) {
     val context = LocalContext.current
     val ink = ViraColor.onCard(ViraArea.Emotions)
     val large = LocalViraEnvironment.current.isAccessibilitySize
-    val time = android.text.format.DateFormat.getTimeFormat(context).format(Date.from(entry.createdAt))
+    // L'idioma de l'app i el rellotge de 12 o 24 hores que tingui triat el telèfon.
+    val locale = viraLocale()
+    val skeleton = if (android.text.format.DateFormat.is24HourFormat(context)) "Hm" else "hm"
+    val time = entry.createdAt.atZone(java.time.ZoneId.systemDefault()).format(
+        java.time.format.DateTimeFormatter.ofPattern(android.text.format.DateFormat.getBestDateTimePattern(locale, skeleton), locale),
+    )
     val deleteLabel = stringResource(R.string.emotions_history_delete)
     var menu by remember { mutableStateOf(false) }
     val face = 44.dp * LocalDensity.current.fontScale

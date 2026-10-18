@@ -41,6 +41,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import cat.vira.android.R
+import cat.vira.android.core.design.viraLocale
 import cat.vira.android.core.data.model.EmotionEntry
 import cat.vira.android.core.design.LocalViraEnvironment
 import cat.vira.android.core.design.ViraTheme
@@ -183,8 +184,9 @@ private fun HeroSummary(history: EmotionHistory, range: EmotionHistoryRange, zon
     val first = history.days.first().date.atTime(12, 0).atZone(zone).toInstant().toEpochMilli()
     val last = history.days.last().date.atTime(12, 0).atZone(zone).toInstant().toEpochMilli()
     // "9 registres · 5–11 oct.": el període en dates, que s'entén d'un cop d'ull sense comptar.
+    val locale = viraLocale()
     val interval = DateUtils.formatDateRange(
-        context, java.util.Formatter(StringBuilder(), java.util.Locale.getDefault()), first, last,
+        context, java.util.Formatter(StringBuilder(), locale), first, last,
         DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_NO_YEAR or DateUtils.FORMAT_ABBREV_MONTH,
         zone.id,
     ).toString()
