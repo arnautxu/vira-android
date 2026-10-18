@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -52,7 +53,11 @@ import cat.vira.android.core.design.tokens.ViraGradient
 import cat.vira.android.core.design.tokens.ViraRadius
 import cat.vira.android.core.design.tokens.ViraSpacing
 import cat.vira.android.core.resources.ViraVideo
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 private const val CIRCLE_SIDE = 220f
@@ -75,6 +80,14 @@ fun HelpBreatheContent(onClose: () -> Unit, backLabel: String = stringResource(R
     /// 0 buit, 1 ple. No es deriva de la fase: la fase ja és «Inspira» al segon zero, i el cercle
     /// naixia ple i es quedava quiet els quatre primers segons (iPhone, 2026-10-12).
     val fullness = remember { Animatable(0f) }
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    // En sortir de l'app (Inici, una altra app, pantalla bloquejada) el palmell para a l'instant;
+    // el rellotge s'atura al bucle de sota i continua en tornar.
+    DisposableEffect(lifecycle) {
+        val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_STOP) haptics.stop() }
+        lifecycle.addObserver(observer)
+        onDispose { lifecycle.removeObserver(observer) }
+    }
 
     LaunchedEffect(run) {
         fun breathe(phase: BreathPhase) {
@@ -91,6 +104,11 @@ fun HelpBreatheContent(onClose: () -> Unit, backLabel: String = stringResource(R
             // El primer tram, abans que el rellotge avanci: si no, la vibració aniria un segon tard.
             breathe(BreathPhase.Inhale)
             while (elapsed < HelpBreathing.TOTAL_SECONDS) {
+                if (!lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
+                    haptics.stop()
+                    lifecycle.currentStateFlow.first { it.isAtLeast(Lifecycle.State.STARTED) }
+                    haptics.start()
+                }
                 delay(1000)
                 elapsed += 1
                 HelpBreathing.stretchStartingAt(elapsed)?.let(::breathe)

@@ -69,5 +69,7 @@ class HelpLogicTest {
         assertEquals("+34600112233", smsDigits("+34 600 11 22 33"))
         assertEquals("934001122", smsDigits("(93) 400-11-22"))
         assertEquals("", smsDigits("Casa"))
+        assertEquals("+15551234567", smsDigits("+1 555 123 4567;123"))
+        assertEquals("934001122", smsDigits("93 400 11 22,45"))
     }
 }

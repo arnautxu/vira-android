@@ -64,5 +64,7 @@ enum class GroundingSense(@StringRes val title: Int, val pictogram: Int) {
 }
 
 /// El número que es passa a Missatges: només xifres i el `+`, com `openMessages` de l'iPhone.
-/// Buit vol dir que no hi ha res a obrir.
-fun smsDigits(phoneNumber: String): String = phoneNumber.filter { it.isDigit() || it == '+' }
+/// Una extensió després d'una pausa o espera (`,` `;` `p` `w`) no és part del número: s'hi
+/// enganxaria i Missatges s'obriria amb un altre. Buit vol dir que no hi ha res a obrir.
+fun smsDigits(phoneNumber: String): String =
+    phoneNumber.takeWhile { it !in ",;pPwW" }.filter { it.isDigit() || it == '+' }
