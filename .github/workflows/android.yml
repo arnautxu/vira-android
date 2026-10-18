@@ -26,10 +26,15 @@ jobs:
       - name: Compila i passa les proves
         run: ./gradlew assembleDebug testDebugUnitTest --no-daemon
 
+      # El nom de l'artefacte no pot portar «/», i les branques dels fils sí (claude/…).
+      - name: Nom de l'artefacte
+        id: artefacte
+        run: echo "nom=vira-debug-${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}" | tr '/' '-' >> "$GITHUB_OUTPUT"
+
       - name: Desa l'APK de la branca
         uses: actions/upload-artifact@v4
         with:
-          name: vira-debug-${{ github.ref_name }}
+          name: ${{ steps.artefacte.outputs.nom }}
           path: app/build/outputs/apk/debug/app-debug.apk
 
       - name: Publica l'APK de main com a release
