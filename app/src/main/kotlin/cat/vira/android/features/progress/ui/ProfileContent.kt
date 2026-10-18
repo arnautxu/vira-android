@@ -62,7 +62,6 @@ internal data class FeaturedChallenge(val item: ChallengeItem, val progress: Int
 /// Tot el que dibuixa el Perfil, ja llegit de les dades i dels ajustos.
 internal data class ProfileUi(
     val nickname: String = "",
-    val pinnedBadges: List<String> = emptyList(),
     val counter: ProgressCounter? = null,
     val streak: Streak? = null,
     /// «Mostrar progrés»: sense, marxen el nivell i la frase que el diu.
@@ -107,7 +106,6 @@ internal fun ProfileContent(
             ProfileHeader(
                 nickname = ui.nickname,
                 level = ViraLevel.progress(ui.counter?.totalXP ?: 0),
-                pinnedBadges = ui.pinnedBadges,
                 progressVisible = ui.progressVisible,
                 onNicknameCommit = onNicknameCommit,
                 onCustomize = onCustomize,

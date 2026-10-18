@@ -51,15 +51,11 @@ import cat.vira.android.core.design.tokens.ViraGradient
 import cat.vira.android.core.design.tokens.ViraRadius
 import cat.vira.android.core.design.tokens.ViraSpacing
 import cat.vira.android.core.design.tokens.ViraTouch
-import cat.vira.android.features.progress.BadgeSlot
 import cat.vira.android.features.progress.ProgressSlots
 import cat.vira.android.features.progress.RewardsProgressBar
 import cat.vira.android.features.progress.ViriBubble
 import cat.vira.android.features.progress.logic.ViraLevel
 import kotlin.math.roundToInt
-
-/// Quantes cartes caben al prestatge del perfil (`ViraBadges.slots`).
-internal const val BADGE_SLOTS = 4
 
 /// Mòdul protagonista de la pestanya Viri (`ProfileHeaderView`, `DESIGN_RULES.md` §3): Viri amb la
 /// skin posada, la bombolla que li surt, el malnom, el nivell i el prestatge de cartes. **Cap dada
@@ -72,7 +68,6 @@ internal const val BADGE_SLOTS = 4
 internal fun ProfileHeader(
     nickname: String,
     level: ViraLevelProgress,
-    pinnedBadges: List<String>,
     progressVisible: Boolean,
     onNicknameCommit: (String) -> Unit,
     onCustomize: () -> Unit,
@@ -103,7 +98,7 @@ internal fun ProfileHeader(
             )
             NicknameRow(nickname, level.level, progressVisible, onNicknameCommit)
             if (progressVisible) LevelProgress(level)
-            BadgeShelf(pinnedBadges, onCustomize)
+            ProgressSlots.Shelf(onCustomize, ViraColor.onCard(ViraArea.Rewards), Modifier)
         }
     }
 }
@@ -191,39 +186,5 @@ private fun LevelProgress(level: ViraLevelProgress) {
             )
         }
         RewardsProgressBar(level.fraction, onCard = true)
-    }
-}
-
-/// El prestatge sencer és **un sol botó**: quatre objectius petits amb accions diferents serien un
-/// trencaclosques per a TalkBack i per al dit.
-@Composable
-private fun BadgeShelf(pinned: List<String>, onCustomize: () -> Unit) {
-    val ink = ViraColor.onCard(ViraArea.Rewards)
-    val label = stringResource(R.string.profile_customize)
-    val value = if (pinned.isEmpty()) stringResource(R.string.profile_badges_empty) else null
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = ViraTouch.minimum)
-            .clip(RoundedCornerShape(ViraRadius.m))
-            .background(ViraColor.surfaceElevated.copy(alpha = 0.45f))
-            .viraPressable(onClick = onCustomize)
-            .padding(horizontal = ViraSpacing.xs, vertical = ViraSpacing.xxs)
-            .clearAndSetSemantics {
-                contentDescription = label
-                value?.let { stateDescription = it }
-            },
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(ViraSpacing.xs),
-    ) {
-        pinned.take(BADGE_SLOTS).forEach { ProgressSlots.PinnedBadge(it, 40.dp) }
-        repeat((BADGE_SLOTS - pinned.size).coerceAtLeast(0)) { BadgeSlot(40.dp) }
-        Spacer(Modifier.weight(1f))
-        Box(
-            Modifier.size(40.dp).background(ViraColor.surfaceElevated.copy(alpha = 0.6f), CircleShape),
-            contentAlignment = Alignment.Center,
-        ) {
-            SlidersMark(ink, 18.dp)
-        }
     }
 }

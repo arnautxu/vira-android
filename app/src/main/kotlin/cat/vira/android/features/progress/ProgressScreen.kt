@@ -89,11 +89,10 @@ fun ProgressScreen() {
             null -> ProfileRoute(backend, onOpen = { path.add(it) })
             ProgressDestination.Streak -> StreakRoute(backend, progress, back)
             ProgressDestination.Challenges -> ChallengesRoute(backend, progress, back)
-            ProgressDestination.Shop -> ExternalPage(back) { ProgressSlots.Shop() }
-            ProgressDestination.PersonalRewards -> ExternalPage(back) { ProgressSlots.PersonalRewards() }
-            ProgressDestination.Cards -> ExternalPage(back) {
-                if (ViraReleaseGate.cards) ProgressSlots.Cards() else Gated(R.string.profile_cards_title)
-            }
+            ProgressDestination.Shop -> ProgressSlots.Shop(back)
+            ProgressDestination.PersonalRewards -> ProgressSlots.PersonalRewards(back)
+            ProgressDestination.Cards ->
+                if (ViraReleaseGate.cards) ProgressSlots.Cards(back) else ExternalPage(back) { Gated(R.string.profile_cards_title) }
             // Amics encara no és a Android: a les builds de proves, el mateix avís que a Google Play.
             ProgressDestination.Friends -> ExternalPage(back) { Gated(R.string.friends_title) }
         }
@@ -127,7 +126,6 @@ private fun ProfileRoute(backend: ViraBackend, onOpen: (ProgressDestination) -> 
     ProfileContent(
         ui = ProfileUi(
             nickname = profile?.displayName.orEmpty(),
-            pinnedBadges = profile?.pinnedBadgeKeys.orEmpty(),
             counter = counter,
             streak = streak,
             progressVisible = progressVisible,
@@ -149,7 +147,7 @@ private fun ProfileRoute(backend: ViraBackend, onOpen: (ProgressDestination) -> 
     )
     if (customizing) {
         Dialog(onDismissRequest = { customizing = false }) {
-            ProgressSlots.Customize(onClose = { customizing = false })
+            ProgressSlots.Customize(onDismiss = { customizing = false })
         }
     }
 }
@@ -240,7 +238,7 @@ private fun ChallengesRoute(backend: ViraBackend, progress: ViraProgress, onBack
 
 // Pàgines d'altres fils
 
-/// Una pàgina d'un altre fil dins de la pestanya: el botó d'enrere a dalt i la pàgina a sota.
+/// Una pàgina sense barra pròpia dins de la pestanya: el botó d'enrere a dalt i la pàgina a sota.
 @Composable
 private fun ExternalPage(onBack: () -> Unit, content: @Composable () -> Unit) {
     Column(Modifier.fillMaxSize().viraSectionBackground(ViraArea.Rewards)) {
