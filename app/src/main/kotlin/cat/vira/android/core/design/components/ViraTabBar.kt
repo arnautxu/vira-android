@@ -25,8 +25,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
@@ -69,6 +72,10 @@ object ViraTabBarMetrics {
 ///
 /// Sense estat: `selectedKey` és la pestanya activa, `items` són les quatre (els dos primers van a
 /// l'esquerra de Concentra't i els dos últims a la dreta).
+///
+/// `onItemBounds` diu on és cada un dels quatre destins (no Concentra't), en coordenades de
+/// l'arrel, cada cop que es mou: és l'àncora del tutorial de la primera obertura
+/// (`.viraTutorialAnchor(tab)` de l'iPhone), que hi obre el forat de la cortina.
 @Composable
 fun ViraTabBar(
     items: List<ViraTabBarItem>,
@@ -77,6 +84,7 @@ fun ViraTabBar(
     onTabTap: (String) -> Unit,
     onFocus: () -> Unit,
     modifier: Modifier = Modifier,
+    onItemBounds: (key: String, bounds: Rect) -> Unit = { _, _ -> },
 ) {
     val environment = LocalViraEnvironment.current
     val scrolls = environment.isAccessibilitySize
@@ -84,14 +92,19 @@ fun ViraTabBar(
     val iconSize = (ViraTabBarMetrics.icon * LocalDensity.current.fontScale).coerceAtMost(ViraTabBarMetrics.iconCeiling)
     val half = items.size / 2
 
+    val destination: @Composable (ViraTabBarItem) -> Unit = { item ->
+        TabItem(
+            item,
+            item.key == selectedKey,
+            iconSize,
+            inactiveAlpha,
+            Modifier.onGloballyPositioned { onItemBounds(item.key, it.boundsInRoot()) },
+        ) { onTabTap(item.key) }
+    }
     val content: @Composable () -> Unit = {
-        items.take(half).forEach { item ->
-            TabItem(item, item.key == selectedKey, iconSize, inactiveAlpha) { onTabTap(item.key) }
-        }
+        items.take(half).forEach { destination(it) }
         TabItem(focus, isSelected = false, iconSize, inactiveAlpha, onClick = onFocus)
-        items.drop(half).forEach { item ->
-            TabItem(item, item.key == selectedKey, iconSize, inactiveAlpha) { onTabTap(item.key) }
-        }
+        items.drop(half).forEach { destination(it) }
     }
 
     val capsule = Modifier
@@ -133,6 +146,7 @@ private fun TabItem(
     isSelected: Boolean,
     iconSize: Dp,
     inactiveAlpha: Float,
+    modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
     val pill by animateColorAsState(
@@ -143,7 +157,7 @@ private fun TabItem(
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(ViraSpacing.xxs),
-        modifier = Modifier
+        modifier = modifier
             .defaultMinSize(minHeight = ViraTouch.minimum)
             .background(pill, RoundedCornerShape(ViraRadius.m))
             .viraPressable(role = Role.Tab, onClick = onClick)

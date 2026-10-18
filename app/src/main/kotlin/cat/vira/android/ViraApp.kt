@@ -6,6 +6,7 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import cat.vira.android.app.ViraIncomingLinks
+import cat.vira.android.app.processCompletionQueue
 import cat.vira.android.core.backend.ViraBackend
 import cat.vira.android.core.backend.sync.ViraSyncWorker
 import cat.vira.android.core.data.ViraDatabase
@@ -34,6 +35,10 @@ class ViraApp : Application(), ViraNotificationHost {
     /// Els botons dels avisos fan el que fa cada pantalla: les hi connecta cada fil quan la seva
     /// pantalla ja escriu. Fins aleshores, cap botó escriu res i Viri no programa cap avís.
     override var notificationEffects = ViraNotificationEffects()
+
+    /// La finestra de «Desfer» i la recompensa que ve després (`ViraCompletionQueue`). És del
+    /// procés perquè un gir de pantalla no se l'endugui a mitges.
+    internal val completions by lazy { processCompletionQueue(this, ProcessLifecycleOwner.get().lifecycleScope) }
 
     override fun onCreate() {
         super.onCreate()

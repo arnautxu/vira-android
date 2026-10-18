@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,13 +27,18 @@ import cat.vira.android.core.design.components.ViraActionButton
 import cat.vira.android.core.design.components.ViraActionHierarchy
 import cat.vira.android.core.design.components.ViraCelebrationMoment
 import cat.vira.android.core.design.components.ViraCelebrationScreen
+import cat.vira.android.core.design.components.CompletionPhase
 import cat.vira.android.core.design.components.ViraCompletionCheck
 import cat.vira.android.core.design.components.ViraEmptyState
+import cat.vira.android.core.design.components.ViraIconPicker
+import cat.vira.android.core.design.components.ViraInlineCompletion
 import cat.vira.android.core.design.components.ViraInlineError
 import cat.vira.android.core.design.components.ViraLevelBar
 import cat.vira.android.core.design.components.ViraLevelProgress
 import cat.vira.android.core.design.components.ViraPageTitle
 import cat.vira.android.core.design.components.ViraPictogram
+import cat.vira.android.core.design.components.ViraPictogramName
+import cat.vira.android.core.design.components.ViraRewardTally
 import cat.vira.android.core.design.components.ViraProfileSummary
 import cat.vira.android.core.design.components.ViraSectionItem
 import cat.vira.android.core.design.components.ViraSectionSwitcher
@@ -51,6 +57,9 @@ import cat.vira.android.core.design.tokens.ViraGradient
 import cat.vira.android.core.design.tokens.ViraRadius
 import cat.vira.android.core.design.tokens.ViraSpacing
 import com.android.tools.screenshot.PreviewTest
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 
 /// Galeria del sistema de disseny: cada peça en clar, fosc i lletra al 200 %, a l'ample d'un
 /// iPhone (393 dp) perquè es pugui posar al costat de la captura de l'iPhone. Les imatges les fa
@@ -66,7 +75,7 @@ annotation class ViraCaptures
 annotation class ViraScreenCaptures
 
 @Composable
-private fun Gallery(area: ViraArea = ViraArea.Today, content: @Composable () -> Unit) {
+private fun Gallery(area: ViraArea = ViraArea.Today, content: @Composable () -> Unit) = ViraCapture {
     ViraTheme(reduceMotion = true) {
         Box(Modifier.fillMaxWidth().viraSectionBackground(area).padding(vertical = ViraSpacing.m)) { content() }
     }
@@ -196,7 +205,7 @@ fun StatesAndTitles() = Gallery {
 }
 
 @PreviewTest @ViraScreenCaptures @Composable
-fun Celebration() = ViraTheme(reduceMotion = true) {
+fun Celebration() = ViraCapture { ViraTheme(reduceMotion = true) {
     ViraCelebrationScreen(
         caption = "50 ViriCoins",
         onContinue = {},
@@ -205,10 +214,10 @@ fun Celebration() = ViraTheme(reduceMotion = true) {
         message = stringResource(R.string.level_title, 4),
         celebrationsEnabled = false,
     ) { ViraPictogram(R.drawable.picto_game_trophy, size = 180.dp) }
-}
+} }
 
 @PreviewTest @ViraScreenCaptures @Composable
-fun CelebrationMoment() = ViraTheme(reduceMotion = true) {
+fun CelebrationMoment() = ViraCapture { ViraTheme(reduceMotion = true) {
     ViraCelebrationMoment(
         title = stringResource(R.string.level_title, 4),
         message = stringResource(R.string.metrics_total_xp, 450),
@@ -222,4 +231,47 @@ fun CelebrationMoment() = ViraTheme(reduceMotion = true) {
         },
         summary = { ViraLevelBar(ViraLevelProgress(level = 4, totalXP = 450, currentLevelXP = 50, xpToNext = 250)) },
     )
+} }
+
+@PreviewTest @ViraCaptures @Composable
+fun InlineCompletion() = Gallery(ViraArea.Plan) {
+    Column(Modifier.padding(horizontal = ViraSpacing.screenMargin), verticalArrangement = Arrangement.spacedBy(ViraSpacing.s)) {
+        listOf(
+            ViraArea.Plan to CompletionPhase.Pending,
+            ViraArea.Focus to CompletionPhase.Revealing(coins = 5, xp = 5),
+            ViraArea.Emotions to CompletionPhase.Revealing(coins = 0, xp = 3),
+        ).forEach { (area, phase) ->
+            Box(Modifier.fillMaxWidth().background(ViraGradient.card(area), RoundedCornerShape(ViraRadius.l)).padding(ViraSpacing.m)) {
+                ViraInlineCompletion(phase, ViraColor.onCard(area), onUndo = {})
+            }
+        }
+        ViraRewardTally(coins = 3, xp = 3, color = ViraColor.textPrimary)
+    }
+}
+
+@PreviewTest @ViraCaptures @Composable
+fun IconPicker() = Gallery(ViraArea.Plan) {
+    Column(Modifier.padding(horizontal = ViraSpacing.screenMargin), verticalArrangement = Arrangement.spacedBy(ViraSpacing.m)) {
+        ViraIconPicker(ViraPictogramName.planIcons, selection = ViraPictogramName.flag, onSelect = {})
+        // La triada és fora de les sis primeres: es queda a la vista igualment.
+        ViraIconPicker(ViraPictogramName.habitIcons, selection = ViraPictogramName.habitMusic, onSelect = {})
+    }
+}
+
+/// Prova de `ViraCapture`: una llista «lazy» i una data amb el format de l'idioma de la captura.
+/// Si aquesta imatge surt buida o en anglès, l'entorn de les captures s'ha trencat.
+@PreviewTest @ViraCaptures @Composable
+fun CaptureEnvironment() = Gallery {
+    LazyColumn(
+        Modifier.height(160.dp).padding(horizontal = ViraSpacing.screenMargin),
+        verticalArrangement = Arrangement.spacedBy(ViraSpacing.xs),
+    ) {
+        item {
+            val date = LocalDate.of(2026, 10, 18)
+            Text(date.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.FULL).withLocale(viraLocale())), style = ViraFont.headline, color = ViraColor.textPrimary)
+        }
+        items(3) { index ->
+            ViraTag(stringResource(R.string.level_title, index + 1))
+        }
+    }
 }
