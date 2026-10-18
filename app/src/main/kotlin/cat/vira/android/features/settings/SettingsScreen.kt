@@ -39,7 +39,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import cat.vira.android.R
-import cat.vira.android.ViraApp
+import cat.vira.android.app.LocalViraBackend
 import cat.vira.android.core.data.model.FocusProfile
 import cat.vira.android.core.design.components.ViraEmptyState
 import cat.vira.android.core.design.components.ViraPageTitle
@@ -87,7 +87,8 @@ fun AccountSettingsScreen(onClose: () -> Unit) {
 @Composable
 private fun rememberAppSettingsBackend(): SettingsBackend {
     val context = LocalContext.current.applicationContext
-    return remember(context) { ViraSettingsBackend(context, (context as ViraApp).backend) }
+    val backend = LocalViraBackend.current
+    return remember(context, backend) { ViraSettingsBackend(context, backend) }
 }
 
 /// Posa el backend i les preferències a l'abast de totes les seccions.
