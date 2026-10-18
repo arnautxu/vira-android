@@ -3,6 +3,12 @@
 
     <!-- El compte i la sincronització (`core/backend`). -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Concentra't (`features/focus`): l'avís fix amb el cronòmetre, i l'alarma del final. Els
+         avisos i les alarmes exactes també els fan servir les notificacions (`core/notifications`). -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 
     <application
         android:name=".ViraApp"
@@ -30,6 +36,19 @@
                 <data android:scheme="vira" android:host="auth-callback" />
             </intent-filter>
         </activity>
+
+        <!-- Concentra't: el servei en primer pla que substitueix la Live Activity de l'iPhone. -->
+        <service
+            android:name=".features.focus.FocusService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="focus_timer" />
+        </service>
+        <receiver
+            android:name=".features.focus.FocusAlarmReceiver"
+            android:exported="false" />
     </application>
 
 </manifest>

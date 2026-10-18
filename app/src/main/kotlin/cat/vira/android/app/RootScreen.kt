@@ -1,76 +1,162 @@
 package cat.vira.android.app
 
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
-import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import cat.vira.android.R
+import cat.vira.android.core.data.ViraPreferences
+import cat.vira.android.core.design.components.ViraProfileSummary
+import cat.vira.android.core.design.components.ViraTabBar
+import cat.vira.android.core.design.components.ViraTabBarItem
+import cat.vira.android.core.design.components.ViraTopBar
+import cat.vira.android.core.design.tokens.ViraColor
 import cat.vira.android.features.emotions.EmotionsScreen
 import cat.vira.android.features.plan.PlanScreen
 import cat.vira.android.features.progress.ProgressScreen
 import cat.vira.android.features.today.TodayScreen
 
-/// L'arrel: les quatre pestanyes i la barra. Calca `RootView` de l'iPhone.
-///
-/// La barra d'aquí és la de sistema, provisional: `ViraTabBar` (barra sempre opaca, icones
-/// pròpies, botó central de Concentra't) la fa el fil Sistema de disseny a `core/design`.
+/// L'arrel: quatre destins permanents i Concentra't com a acció (`RootView` de l'iPhone), més les
+/// pantalles que s'obren per sobre (Concentra't, Ajuda ara, la respiració i Ajustos).
 @Composable
 fun RootScreen() {
     val navController = rememberNavController()
-    val backStack by navController.currentBackStackEntryAsState()
-    val currentRoute = backStack?.destination?.route
+    val navigator = rememberViraNavigator()
+    SideEffect {
+        navigator.presentModal = { modal -> navController.navigate(modal.route) { launchSingleTop = true } }
+    }
+    val close: () -> Unit = { navController.popBackStack() }
 
-    Scaffold(
-        bottomBar = {
-            NavigationBar {
-                ViraTab.entries.forEach { tab ->
-                    val title = stringResource(tab.title)
-                    NavigationBarItem(
-                        selected = currentRoute == tab.route,
-                        onClick = {
-                            navController.navigate(tab.route) {
-                                popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        },
-                        icon = {
-                            Icon(
-                                painter = painterResource(tab.icon),
-                                contentDescription = null,
-                                tint = Color.Unspecified,
-                                modifier = Modifier.size(26.dp),
-                            )
-                        },
-                        label = { Text(title) },
-                    )
-                }
-            }
-        },
-    ) { padding ->
+    CompositionLocalProvider(LocalViraNavigator provides navigator) {
         NavHost(
             navController = navController,
-            startDestination = ViraTab.Today.route,
-            modifier = Modifier.padding(padding),
+            startDestination = MAIN_ROUTE,
+            // Els fulls de l'iPhone pugen des de baix; aquí també, i en tancar baixen.
+            enterTransition = { slideInVertically { it } + fadeIn() },
+            exitTransition = { fadeOut() },
+            popEnterTransition = { fadeIn() },
+            popExitTransition = { slideOutVertically { it } + fadeOut() },
         ) {
-            composable(ViraTab.Today.route) { TodayScreen() }
-            composable(ViraTab.Plan.route) { PlanScreen() }
-            composable(ViraTab.Emotions.route) { EmotionsScreen() }
-            composable(ViraTab.Progress.route) { ProgressScreen() }
+            composable(MAIN_ROUTE) { MainTabs(navigator) }
+            composable(ViraModal.Focus.route) { ViraFeatureSlots.Focus(onClose = close) }
+            composable(ViraModal.Help.route) { ViraFeatureSlots.Help(onClose = close) }
+            composable(ViraModal.Breathe.route) { ViraFeatureSlots.Breathe(onClose = close) }
+            composable(ViraModal.Settings.route) { ViraFeatureSlots.Settings(onClose = close) }
         }
     }
 }
+
+/// Les quatre pestanyes amb la capçalera i la barra. Cada pestanya conserva el seu estat (i el
+/// desplaçament) en canviar d'una a l'altra, com el `TabView` de l'iPhone.
+@Composable
+private fun MainTabs(navigator: ViraNavigator) {
+    val stateHolder = rememberSaveableStateHolder()
+    val tab = navigator.selectedTab
+
+    // Enrere des d'una altra pestanya torna a Avui, que és on s'obre l'app; des d'Avui, surt.
+    BackHandler(enabled = tab != ViraTab.Today) { navigator.open(ViraTab.Today) }
+
+    ViraRootLayout(
+        selectedTab = tab,
+        profile = rememberProfileSummary(),
+        onTabTap = navigator::open,
+        onFocus = navigator::startFocus,
+        onProfile = { navigator.navigate(ViraDestination.Profile) },
+        onSettings = navigator::openSettings,
+        onHelp = navigator::openHelp,
+    ) {
+        stateHolder.SaveableStateProvider(tab.route) {
+            when (tab) {
+                ViraTab.Today -> TodayScreen()
+                ViraTab.Plan -> PlanScreen()
+                ViraTab.Emotions -> EmotionsScreen()
+                ViraTab.Progress -> ProgressScreen()
+            }
+        }
+    }
+}
+
+/// La disposició de l'arrel, sense estat, perquè les captures la puguin dibuixar sola.
+///
+/// La capçalera és fixa a dalt (`ViraTopBar`, amb el to de la pestanya) i la barra sura a sobre del
+/// contingut, a baix: cada pantalla deixa a sota l'espai de `viraTabBarClearance()`, com fa
+/// `safeAreaInset` a l'iPhone.
+@Composable
+fun ViraRootLayout(
+    selectedTab: ViraTab,
+    profile: ViraProfileSummary,
+    onTabTap: (ViraTab) -> Unit,
+    onFocus: () -> Unit,
+    onProfile: () -> Unit,
+    onSettings: () -> Unit,
+    onHelp: () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    val items = ViraTab.entries.map { ViraTabBarItem(it.route, stringResource(it.title), it.icon) }
+    val focus = ViraTabBarItem("focus", stringResource(ViraTab.focusTitle), ViraTab.focusIcon)
+
+    Column(Modifier.fillMaxSize().background(ViraColor.background)) {
+        ViraTopBar(
+            area = selectedTab.area,
+            profile = profile,
+            onProfile = onProfile,
+            onSettings = onSettings,
+            onHelp = onHelp,
+        )
+        Box(Modifier.fillMaxWidth().weight(1f)) {
+            content()
+            ViraTabBar(
+                items = items,
+                selectedKey = selectedTab.route,
+                focus = focus,
+                onTabTap = { key -> ViraTab.fromRoute(key)?.let(onTabTap) },
+                onFocus = onFocus,
+                modifier = Modifier.align(Alignment.BottomCenter),
+            )
+        }
+    }
+}
+
+/// El que ensenya la pastilla de perfil, llegit de les dades locals (`ViraProfilePill`).
+///
+/// Amb «Mostrar progrés» apagat no hi surten números, i amb la ratxa amagada només hi ha les
+/// monedes. Sense malnom, el nom és «Perfil». L'avatar de la skin el posarà el fil de la Botiga.
+@Composable
+private fun rememberProfileSummary(): ViraProfileSummary {
+    val backend = LocalViraBackend.current
+    val profile by backend.db.profiles().observe().collectAsStateWithLifecycle(null)
+    val counter by backend.db.progressCounters().observe().collectAsStateWithLifecycle(null)
+    val streak by backend.db.streaks().observe().collectAsStateWithLifecycle(null)
+    val progressVisible by rememberPreference(backend.preferences, PROGRESS_VISIBLE, true)
+
+    val nickname = profile?.displayName?.trim().orEmpty()
+    return ViraProfileSummary(
+        name = nickname.ifEmpty { stringResource(R.string.tab_profile) },
+        coins = if (progressVisible) counter?.coinBalance ?: 0 else null,
+        streakDays = if (progressVisible) streak?.takeIf { it.isVisible }?.currentDays else null,
+    )
+}
+
+private const val MAIN_ROUTE = "main"
+
+/// «Mostrar progrés» (Ajustos), amb el nom de l'iPhone. La clau és del fil d'Ajustos; aquí només
+/// es llegeix.
+private const val PROGRESS_VISIBLE = "settings.progressVisible"

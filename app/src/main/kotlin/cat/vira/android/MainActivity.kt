@@ -5,7 +5,14 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import cat.vira.android.app.LocalViraBackend
 import cat.vira.android.app.RootScreen
+import cat.vira.android.app.ViraOnboardingGate
+import cat.vira.android.app.rememberPreference
+import cat.vira.android.core.data.ViraPreferences
 import cat.vira.android.core.design.ViraTheme
 
 class MainActivity : ComponentActivity() {
@@ -19,8 +26,17 @@ class MainActivity : ComponentActivity() {
         backend.rememberAdoptedCallback(savedInstanceState?.getString(ADOPTED_CALLBACK))
         handleCallback(intent)
         setContent {
-            ViraTheme {
-                RootScreen()
+            // Ajustos → Aparença. `auto` (per defecte) deixa que mani el sistema.
+            val appearance by rememberPreference(backend.preferences, ViraPreferences.APPEARANCE, "auto")
+            val dark = when (appearance) {
+                "light" -> false
+                "dark" -> true
+                else -> isSystemInDarkTheme()
+            }
+            CompositionLocalProvider(LocalViraBackend provides backend) {
+                ViraTheme(darkTheme = dark) {
+                    ViraOnboardingGate { RootScreen() }
+                }
             }
         }
     }
