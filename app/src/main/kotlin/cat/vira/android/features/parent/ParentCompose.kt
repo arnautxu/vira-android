@@ -61,8 +61,8 @@ internal fun ParentComposeSheet(mode: ParentComposeMode, childId: UUID, deps: Pa
             day = day, onDayChange = { day = it },
             isWorking = isWorking, error = error?.let { stringResource(it.message()) },
             onCancel = onDismiss,
-            onSend = {
-                if (!isValidCompose(text, mode)) return@ParentComposeContent
+            onSend = send@{
+                if (!isValidCompose(text, mode)) return@send
                 error = null
                 isWorking = true
                 scope.launch {

@@ -28,7 +28,7 @@ object ParentLinkUrl {
     ///
     /// Accepta les dues formes i normalitza a majúscules, que és com es generen. No valida la
     /// longitud: qui sap què és un codi vàlid és el servidor.
-    fun code(from url: String): String? {
+    fun code(url: String): String? {
         val uri = runCatching { URI(url) }.getOrNull() ?: return null
         val segments = uri.rawPath.orEmpty().split('/').filter { it.isNotEmpty() }
         return when {
@@ -44,7 +44,7 @@ object ParentLinkUrl {
     }
 
     /// L'enllaç que es comparteix, a partir d'un codi.
-    fun url(forCode code: String): String = "https://$HOST/$LINK_PATH/${code.uppercase()}"
+    fun url(code: String): String = "https://$HOST/$LINK_PATH/${code.uppercase()}"
 
     private fun normalised(raw: String?): String? = raw?.trim()?.uppercase()?.takeIf { it.isNotEmpty() }
 }

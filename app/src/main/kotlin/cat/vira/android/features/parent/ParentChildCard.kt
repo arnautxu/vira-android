@@ -78,9 +78,10 @@ internal fun ParentChildCard(link: ParentLink, name: String?, onOpen: () -> Unit
     val environment = LocalViraEnvironment.current
     val title = name ?: stringResource(R.string.parent_child_title)
     val since = stringResource(R.string.parent_child_since, dayMonth(link.createdAt, currentLocale()))
-    val scopes = ParentScope.entries.joinToString(", ") { scope ->
-        val label = stringResource(scope.title)
-        if (scope.isOpen(link)) label else "$label, ${stringResource(R.string.parent_tile_closed_tag)}"
+    val closedTag = stringResource(R.string.parent_tile_closed_tag)
+    val labels = ParentScope.entries.map { stringResource(it.title) }
+    val scopes = ParentScope.entries.zip(labels).joinToString(", ") { (scope, label) ->
+        if (scope.isOpen(link)) label else "$label, $closedTag"
     }
     Column(
         modifier = modifier
