@@ -87,6 +87,16 @@ class StreakNotificationTest {
     }
 
     @Test
+    fun siLaFrancaDeLaNoticiaEsMudaLaDiuLaSeguent() {
+        val first = ViraStreakNotifications.slots(beforeTheSlot, time, zone).first()
+        val muted = ClosedOpenRange(first.minusSeconds(60), first.plusSeconds(60))
+        val planned = requests(ViraStreakNotifications.Event.Milestone(30), dayIsOpen = true, muted = muted)
+        assertTrue("la primera que sona porta la fita", planned.first().body.endsWith("|30"))
+        assertTrue(planned.first().id.endsWith(ViraStreakNotifications.NEWS_SUFFIX))
+        assertTrue("una sola vegada", planned.drop(1).none { it.body.endsWith("|30") })
+    }
+
+    @Test
     fun capAvisDiuElTitolDeResNomesLaMarca() {
         val title = text.get(R.string.notification_generic_title)
         assertTrue(requests(ViraStreakNotifications.Event.Reset, dayIsOpen = true).all { it.title == title })

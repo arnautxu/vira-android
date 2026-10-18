@@ -18,6 +18,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.serialization.json.Json
 import kotlinx.coroutines.sync.withLock
 import java.time.Instant
+import java.time.LocalDate
 import java.time.ZoneId
 
 /// La porta d'entrada dels avisos: el que criden les pantalles, l'arrencada i el segon pla.
@@ -146,7 +147,7 @@ object ViraNotifications {
         val muted = ViraNotificationPlanner.muteWindow(host.notificationDatabase.focusSessions().all(), now)
         val planned = ViraStreakNotifications.requests(
             now = now,
-            event = ViraStreakNotifications.pendingEvent(preferences, time, now, zone),
+            event = ViraStreakNotifications.pendingEvent(preferences, time, now, zone, muted),
             dayIsOpen = state.dayIsOpen,
             muted = muted,
             time = time,
@@ -156,6 +157,13 @@ object ViraNotifications {
         // Un avís de Viri endarrerit no surt si el dia ja compta: diria que encara és obert.
         scheduler.replace(streakPrefixes, planned, now) {
             (state.dayIsOpen || it.id.endsWith(ViraStreakNotifications.NEWS_SUFFIX)) && muted?.contains(it.fireAt) != true
+        }
+        // El mateix per al que ja és a la pantalla: un «encara hi ets a temps» d'un dia que ja compta
+        // (o d'un dia passat) mentiria. Les notícies es queden: són certes encara que el dia es tanqui.
+        val today = LocalDate.ofInstant(now, zone)
+        refreshShown(context, streakPrefixes) {
+            !it.id.endsWith(ViraStreakNotifications.NEWS_SUFFIX) &&
+                (!state.dayIsOpen || LocalDate.ofInstant(it.fireAt, zone) != today)
         }
     }
 

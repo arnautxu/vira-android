@@ -87,7 +87,9 @@ class ViraNotificationAlarmReceiver : BroadcastReceiver() {
                 if (notification.actions == ViraActionSet.VIRI) ViraNotifications.DESTINATION_CHECK_IN
                 else ViraNotifications.DESTINATION_TODAY,
             )
-            launch.data = Uri.parse("vira-notification://open/${Uri.encode(notification.id)}")
+            // Un identificador i no una adreça (`data`): l'arrencada repartiria l'adreça com un enllaç
+            // entrant, i el panell de pares la podria llegir com un codi de vinculació.
+            launch.identifier = notification.id
             return PendingIntent.getActivity(
                 context, notification.id.hashCode(), launch,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,

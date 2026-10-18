@@ -69,10 +69,27 @@ object ViraStreakNotifications {
 
     /// L'esdeveniment pendent, si la franja que l'havia de portar encara no ha passat. Un de
     /// caducat s'esborra: no ha d'aparèixer una setmana més tard fora de context.
-    fun pendingEvent(preferences: SharedPreferences, time: ViraClock, now: Instant, zone: ZoneId): Event? {
+    ///
+    /// La franja que el porta és la primera **que no silencia una concentració**: si la de l'endemà
+    /// cau a mig mode silenciós, la notícia passa a la següent. L'ajornament es desa (la data de
+    /// l'esdeveniment avança fins a la franja silenciada), perquè quan la concentració s'acabi ja no
+    /// se sap que aquella franja era muda i la notícia es donaria per caducada sense haver sonat.
+    fun pendingEvent(
+        preferences: SharedPreferences,
+        time: ViraClock,
+        now: Instant,
+        zone: ZoneId,
+        muted: ClosedOpenRange? = null,
+    ): Event? {
         val raw = preferences.getString(EVENT_KEY, null) ?: return null
-        val recorded = Instant.ofEpochMilli(preferences.getLong(EVENT_DATE_KEY, 0))
-        val slot = slots(recorded, time, zone).firstOrNull()
+        var recorded = Instant.ofEpochMilli(preferences.getLong(EVENT_DATE_KEY, 0))
+        var slot = slots(recorded, time, zone).firstOrNull()
+        while (slot != null && muted?.contains(slot) == true) {
+            val silenced: Instant = slot
+            recorded = silenced
+            preferences.edit { putLong(EVENT_DATE_KEY, silenced.toEpochMilli()) }
+            slot = slots(recorded, time, zone).firstOrNull()
+        }
         if (slot == null || !slot.isAfter(now)) {
             clearPendingEvent(preferences)
             return null
@@ -113,13 +130,14 @@ object ViraStreakNotifications {
     ): List<ViraPlannedNotification> {
         val today = LocalDate.ofInstant(now, zone)
         val planned = mutableListOf<ViraPlannedNotification>()
-        for ((index, fire) in slots(now, time, zone).withIndex()) {
+        var news = event
+        for (fire in slots(now, time, zone)) {
             // Un mode de concentració que silencia Vira: dins de la seva finestra, res.
             if (muted?.contains(fire) == true) continue
             val day = LocalDate.ofInstant(fire, zone)
             val kind = when {
-                // La notícia va a la primera franja, tant si el dia ja compta com si no.
-                index == 0 && event != null -> event.kind
+                // La notícia va a la primera franja que sona, tant si el dia ja compta com si no.
+                news != null -> news.kind.also { news = null }
                 // El dia d'avui ja compta i no hi ha res a explicar: no es diu res.
                 day == today && !dayIsOpen -> continue
                 else -> Kind.Nudge

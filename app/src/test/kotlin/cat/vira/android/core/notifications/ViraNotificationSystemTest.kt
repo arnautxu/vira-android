@@ -26,6 +26,7 @@ import java.util.UUID
 /// Una app de proves amb les accions connectades a una llibreta, per veure què demana cada botó.
 class NotificationTestApp : Application(), ViraNotificationHost {
     val calls = mutableListOf<String>()
+    var streak: ViraStreakState? = null
     override val notificationDatabase: ViraDatabase by lazy { ViraDatabase.inMemory(this) }
     override val notificationEffects = ViraNotificationEffects(
         completeHabit = { id, day -> calls += "habit $id ${day.toEpochMilli()}" },
@@ -34,6 +35,7 @@ class NotificationTestApp : Application(), ViraNotificationHost {
         logEmotion = { emotion -> calls += "emotion ${emotion.raw}" },
         capture = { text -> calls += "capture $text" },
         afterChange = { calls += "afterChange" },
+        streakState = { streak },
     )
 }
 
@@ -133,6 +135,28 @@ class ViraNotificationSystemTest {
     }
 
     @Test
+    fun unRecordatoriDeViriJaPublicatEsTreuQuanElDiaCompta() = runBlocking {
+        val manager = app.getSystemService(android.app.NotificationManager::class.java)
+        ViraNotificationChannel.register(app)
+        shadowOf(app).grantPermissions(ViraNotifications.PERMISSION)
+        val nudge = planned("${ViraStreakNotifications.PREFIX}2027-1-15", minutes = -10).copy(
+            channel = ViraNotificationChannel.VIRI, actions = ViraActionSet.VIRI,
+        )
+        val news = nudge.copy(id = nudge.id + ViraStreakNotifications.NEWS_SUFFIX)
+        manager.notify(nudge.id, 0, ViraNotificationAlarmReceiver.build(app, nudge))
+        manager.notify(news.id, 0, ViraNotificationAlarmReceiver.build(app, news))
+        app.streak = ViraStreakState(isVisible = true, dayIsOpen = false)
+        try {
+            ViraNotifications.reschedule(app, now)
+        } finally {
+            app.streak = null
+        }
+        val shown = manager.activeNotifications.map { it.tag }
+        assertFalse("«encara hi ets a temps» d'un dia que ja compta, fora", nudge.id in shown)
+        assertTrue("la notícia segueix sent certa", news.id in shown)
+    }
+
+    @Test
     fun apagarElDetallTreuElNomDelFarmacDUnAvisJaProgramat() {
         val medication = planned("med-a", actions = ViraActionSet.MEDICATION).copy(
             channel = ViraNotificationChannel.MEDICATION, body = "Concerta",
@@ -175,6 +199,27 @@ class ViraNotificationSystemTest {
         )
         assertNull(ViraStreakNotifications.pendingEvent(preferences, time, now.plusSeconds(86_400), zone))
         assertNull("caducada, s'esborra", ViraStreakNotifications.pendingEvent(preferences, time, now, zone))
+    }
+
+    @Test
+    fun unaNoticiaQueCauAMigaConcentracioEsperaLaFrancaSeguent() {
+        val zone = ZoneId.of("UTC")
+        val preferences = ViraPreferences.open(app)
+        val time = ViraClock(20, 30)
+        ViraStreakNotifications.record(ViraStreakNotifications.Event.Reset, preferences, now)
+        val first = ViraStreakNotifications.slots(now, time, zone).first()
+        val muted = ClosedOpenRange(first.minusSeconds(600), first.plusSeconds(600))
+        assertEquals(
+            ViraStreakNotifications.Event.Reset,
+            ViraStreakNotifications.pendingEvent(preferences, time, now.plusSeconds(3600), zone, muted),
+        )
+        // Acabada la concentració ja no se sap que la franja era muda: l'ajornament s'ha desat.
+        assertEquals(
+            "passada la franja silenciada, encara és pendent",
+            ViraStreakNotifications.Event.Reset,
+            ViraStreakNotifications.pendingEvent(preferences, time, first.plusSeconds(3600), zone),
+        )
+        assertNull(ViraStreakNotifications.pendingEvent(preferences, time, first.plusSeconds(86_400 + 60), zone))
     }
 
     @Test
