@@ -101,27 +101,25 @@ internal fun processCompletionQueue(app: ViraApp, scope: CoroutineScope): Comple
         app.backend.db.habitLogs().all().count { it.day == today } <= 1
     },
     undoWindowMillis = { undoWindowMillis(app) },
-    challengeCompleted = { reason -> completedChallenge(app, reason) },
+    challengeCompleted = { reason, shown -> completedChallenge(app, reason, shown) },
 )
 
 /// El primer repte d'aquest motiu que l'acció acaba de completar i encara no s'ha recollit.
-private suspend fun completedChallenge(app: ViraApp, reason: CoinReason): ChallengeMoment? {
+private suspend fun completedChallenge(app: ViraApp, reason: CoinReason, shown: Set<String>): ChallengeMoment? {
     val db = app.backend.db
     val now = ViraTime.now()
     val days = ViraDays(ZoneId.systemDefault())
     val ledger = db.coinTransactions().all()
     val claims = db.challengeClaims().all()
+    // La mateixa clau es pot recollir cada dia o setmana: l'inici del cicle separa «ja t'ho he
+    // ensenyat avui» de «l'has tornat a completar la setmana següent».
+    fun key(item: ChallengeItem) = "${item.key}-${ViraChallenges.cycleStart(item.period, now, days).epochSecond}"
+    // Els ja ensenyats queden fora **en triar**: un diari sense recollir no pot tapar el setmanal.
     val item = ChallengeItem.catalog.firstOrNull {
-        it.requirementReason == reason &&
+        it.requirementReason == reason && key(it) !in shown &&
             ViraChallenges.isCompleted(it, ledger, now, days) && !ViraChallenges.isClaimed(it, claims, now, days)
     } ?: return null
-    return ChallengeMoment(
-        item = item,
-        progress = ViraChallenges.progress(item, ledger, now, days),
-        // La mateixa clau es pot recollir cada dia o setmana: l'inici del cicle separa «ja t'ho he
-        // ensenyat avui» de «l'has tornat a completar la setmana següent».
-        key = "${item.key}-${ViraChallenges.cycleStart(item.period, now, days).epochSecond}",
-    )
+    return ChallengeMoment(item = item, progress = ViraChallenges.progress(item, ledger, now, days), key = key(item))
 }
 
 /// El que necessita la celebració de l'hàbit.
@@ -140,7 +138,7 @@ internal class CompletionQueue(
     private val isFirstHabitOfDay: suspend () -> Boolean,
     private val undoWindowMillis: () -> Long,
     /// El repte que l'acció acaba de completar, si n'hi ha cap per recollir.
-    private val challengeCompleted: suspend (CoinReason) -> ChallengeMoment? = { null },
+    private val challengeCompleted: suspend (CoinReason, Set<String>) -> ChallengeMoment? = { _, _ -> null },
     private val clock: () -> Instant = ViraTime::now,
 ) {
     /// Retén (`true`) o allibera (`false`) la celebració de ratxa. La connecta la cua de
@@ -201,21 +199,25 @@ internal class CompletionQueue(
         // Es reté **abans** de concedir: la ratxa pot avançar dins de la concessió, i llavors ja
         // seria tard. S'allibera de seguida si no s'obre res, i si s'obre, en tancar-se.
         deferStreak(true)
-        val (coins, xp) = withContext(NonCancellable) { commitCompletion(completion) }
-        val moment = nextChallengeMoment(completion.reason)
-        // **Només el primer hàbit del dia** obre la celebració (Arnau, 2026-08-10).
-        val opensHabitCelebration = completion.reason == CoinReason.HABIT && celebrationsEnabled &&
-            completion.title != null && isFirstHabitOfDay()
-        if (revealing !== completion) {
-            deferStreak(false)
-            return
-        }
-        active = ActiveCompletion(completion.id, CompletionPhase.Revealing(coins, xp))
-        announce(coins, xp)
-        when {
-            moment != null -> challengeMoment = moment
-            opensHabitCelebration -> habitCelebration = HabitCelebration(completion.title!!, coins, xp)
-            else -> deferStreak(false)
+        // Qui retén és qui allibera: si una acció nova cancel·la aquesta, la retenció no pot quedar
+        // penjada i apagar les celebracions fins que l'app torni a començar.
+        var held = true
+        try {
+            val (coins, xp) = withContext(NonCancellable) { commitCompletion(completion) }
+            val moment = nextChallengeMoment(completion.reason)
+            // **Només el primer hàbit del dia** obre la celebració (Arnau, 2026-08-10).
+            val opensHabitCelebration = completion.reason == CoinReason.HABIT && celebrationsEnabled &&
+                completion.title != null && isFirstHabitOfDay()
+            if (revealing !== completion) return
+            active = ActiveCompletion(completion.id, CompletionPhase.Revealing(coins, xp))
+            announce(coins, xp)
+            when {
+                // La retenció passa a la pantalla que s'obre: l'allibera en tancar-se.
+                moment != null -> { challengeMoment = moment; held = false }
+                opensHabitCelebration -> { habitCelebration = HabitCelebration(completion.title!!, coins, xp); held = false }
+            }
+        } finally {
+            if (held) deferStreak(false)
         }
 
         delay(REVEAL_MILLIS)
@@ -227,7 +229,7 @@ internal class CompletionQueue(
 
     private suspend fun nextChallengeMoment(reason: CoinReason): ChallengeMoment? {
         if (!celebrationsEnabled || !challengesEnabled) return null
-        val moment = challengeCompleted(reason) ?: return null
+        val moment = challengeCompleted(reason, shownChallengeKeys.toSet()) ?: return null
         if (!shownChallengeKeys.add(moment.key)) return null
         return moment
     }

@@ -13,7 +13,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.flowWithLifecycle
 import cat.vira.android.core.backend.ViraBackend
 import cat.vira.android.core.data.ViraPreferences
 import cat.vira.android.core.data.ViraStore
@@ -97,6 +98,13 @@ internal class CelebrationQueue(
         private set
     var counter: ProgressCounter? = null
         private set
+    /// Les dues dades arriben per camins separats. Les cartes ja guanyades només es poden donar per
+    /// vistes quan se saben **totes dues**: sembrar amb la ratxa per arribar les tornaria a treure.
+    private var streakLoaded = false
+    private var counterLoaded = false
+    /// La carta de la fita es busca a la base. Mentrestant, la ratxa és qui la posseeix i la cua
+    /// general no la pot ensenyar pel seu compte.
+    private var streakLookupPending = false
 
     private val isDeferred get() = tutorialVisible || deferralCount > 0
 
@@ -113,9 +121,10 @@ internal class CelebrationQueue(
     /// La ratxa ha canviat. Cada dia que avança (també el primer, i un reinici que torna a
     /// començar) es celebra, no només als llindars amb carta.
     fun onStreak(value: Streak?) {
-        val isFirstLoad = streak == null
+        val isFirstLoad = !streakLoaded
         val old = streak?.currentDays
         streak = value
+        streakLoaded = true
         if (value?.isVisible != true) {
             pendingStreak = null
             streakCelebration = null
@@ -153,10 +162,16 @@ internal class CelebrationQueue(
         val message = StreakMessageCatalog(StreakMessageCatalog.Preferences(preferences))
             .advance(StreakMessageCatalog.State.RUNNING, days, hasRecordAhead = streak.bestDays > days)
         val week = StreakWeek.of(streak, days().date(ViraTime.now()), days())
+        streakLookupPending = true
         scope.launch {
-            val card = if (ViraReleaseGate.cards) ViraProgress(store).takeStreakMilestone() else null
+            val card = try {
+                if (ViraReleaseGate.cards) ViraProgress(store).takeStreakMilestone() else null
+            } finally {
+                streakLookupPending = false
+            }
             pendingStreak = StreakCelebrationState(days, week, message, card)
             presentPendingStreak()
+            presentNextCard()
         }
     }
 
@@ -180,6 +195,7 @@ internal class CelebrationQueue(
             badgeCelebration = earned
         } else {
             presentPendingLevel()
+            presentNextCard()
         }
     }
 
@@ -196,6 +212,7 @@ internal class CelebrationQueue(
     fun onCounter(value: ProgressCounter?) {
         val oldXP = counter?.totalXP
         counter = value
+        counterLoaded = true
         presentNextCard()
         if (value == null || oldXP == null || oldXP >= value.totalXP) return
         val level = ViraLevel.level(value.totalXP)
@@ -237,12 +254,13 @@ internal class CelebrationQueue(
     /// La primera vegada, el que ja estigui guanyat es dona per vist: una festa per cada carta que
     /// ja es tenia seria el contrari del que vol dir celebrar.
     private fun presentNextCard() {
-        if (!ViraReleaseGate.cards) return
+        if (!ViraReleaseGate.cards || !streakLoaded || !counterLoaded) return
         if (!celebrationsEnabled || !cards.isSeeded) {
             if (counter != null) cards.absorb(counter, streak)
             return
         }
-        if (isDeferred || streakCelebration != null || badgeCelebration != null ||
+        if (isDeferred || streakLookupPending || pendingStreak != null ||
+            streakCelebration != null || badgeCelebration != null ||
             levelCelebration != null || cardCelebration != null
         ) return
         val next = cards.pending(counter, streak).firstOrNull() ?: return
@@ -272,7 +290,7 @@ internal class CelebrationQueue(
         badgeCelebration = null
         cardCelebration = null
         if (markToday) markCelebrated(days().startOfDay(ViraTime.now()).epochSecond)
-        if (ViraReleaseGate.cards && counter != null) cards.absorb(counter, streak)
+        if (ViraReleaseGate.cards && counter != null && streakLoaded) cards.absorb(counter, streak)
     }
 
     private fun lastCelebratedDay() = preferences.getLong(LAST_CELEBRATED_STREAK_DAY, 0)
@@ -306,10 +324,15 @@ internal fun ViraCelebrations(queue: CelebrationQueue) {
     // Sense celebracions o amb el progrés amagat, el nivell no surt (`ViraCelebrationPolicy`).
     queue.allowsLevel = celebrations && progressVisible
 
-    val streak by backend.db.streaks().observe().collectAsStateWithLifecycle(null)
-    val counter by backend.db.progressCounters().observe().collectAsStateWithLifecycle(null)
-    LaunchedEffect(streak) { queue.onStreak(streak) }
-    LaunchedEffect(counter) { queue.onCounter(counter) }
+    // Directament del flux i no d'un estat amb valor inicial: el `null` d'abans de la primera
+    // lectura es confondria amb «no n'hi ha cap» i les cartes se sembrarien a mitges.
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(lifecycle) {
+        backend.db.streaks().observe().flowWithLifecycle(lifecycle).collect { queue.onStreak(it) }
+    }
+    LaunchedEffect(lifecycle) {
+        backend.db.progressCounters().observe().flowWithLifecycle(lifecycle).collect { queue.onCounter(it) }
+    }
 
     // Arrencar de zero i tornar de segon pla: el dia es pot haver completat en qualsevol dels dos.
     val scope = rememberCoroutineScope()

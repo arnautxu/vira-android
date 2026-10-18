@@ -98,7 +98,9 @@ fun ViraAppLock(content: @Composable () -> Unit) {
     DisposableEffect(lifecycle, enabled) {
         val observer = LifecycleEventObserver { _, event ->
             when {
-                event == Lifecycle.Event.ON_STOP && enabled && !prompt.isShowing -> locked = true
+                // Un gir de pantalla també para l'activitat, però l'app no ha sortit enlloc.
+                event == Lifecycle.Event.ON_STOP && enabled && !prompt.isShowing &&
+                    !activity.isChangingConfigurations -> locked = true
                 event == Lifecycle.Event.ON_RESUME && locked && !prompt.isShowing -> prompt.show()
             }
         }

@@ -31,8 +31,19 @@ class CompletionQueueTest {
         commit = { reason, _ -> delay(commitMillis); committed += reason; 3 to 3 },
         isFirstHabitOfDay = { firstHabit },
         undoWindowMillis = { 2_000 },
-        challengeCompleted = { challenge },
+        challengeCompleted = { _, _ -> challenge },
     ).also { it.deferStreak = { deferred -> deferrals += deferred } }
+
+    @Test
+    fun `una acció nova a mitja concessió no deixa la ratxa retinguda`() = runTest {
+        val queue = queue(commitMillis = 1_000)
+        queue.present(PendingCompletion("plan-1", CoinReason.PLAN_ITEM, onUndo = {}))
+        advanceTimeBy(2_500)
+        queue.present(PendingCompletion("plan-2", CoinReason.PLAN_ITEM, onUndo = {}))
+        advanceTimeBy(10_000)
+        runCurrent()
+        assertEquals(deferrals.count { it }, deferrals.count { !it })
+    }
 
     @Test
     fun `la ratxa es reté mentre es concedeix i s'allibera si no s'obre res`() = runTest {
