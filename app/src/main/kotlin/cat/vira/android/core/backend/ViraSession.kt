@@ -224,8 +224,8 @@ class ViraSession(
 
     /// Pregunta al servidor l'estat del permís. Es crida abans de cada passada de sincronització.
     ///
-    /// Si falla, no toca res: `verifiedConsent` segueix com estava (`null` el primer cop) i les capes
-    /// sensibles no s'obren per una resposta que no ha arribat.
+    /// Si falla, `verifiedConsent` torna a `null`: les capes sensibles no s'obren per una resposta que
+    /// no ha arribat, ni per la d'una passada anterior.
     suspend fun refreshConsent() {
         val generation = dataGeneration
         if (!isSignedIn) return
