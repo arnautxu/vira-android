@@ -53,7 +53,6 @@ import cat.vira.android.core.design.tokens.ViraMotion
 import cat.vira.android.core.design.tokens.ViraRadius
 import cat.vira.android.core.design.tokens.ViraSpacing
 import cat.vira.android.core.design.tokens.ViraTouch
-import cat.vira.android.core.design.tokens.viraSpec
 
 /// El que diu Viri en un moment concret, i què es pot fer des d'allà (`TodayViriMoment`).
 internal data class TodayViriMomentUi(
@@ -93,13 +92,18 @@ internal fun TodayViriCard(
                 modifier = Modifier.weight(1f),
             )
         }
+        val reduceMotion = LocalViraEnvironment.current.reduceMotion
         AnimatedVisibility(isExpanded) {
             AnimatedContent(
                 targetState = moment,
                 contentKey = { it.id },
                 transitionSpec = {
-                    (fadeIn(viraSpec(ViraMotion.entrance())) + scaleIn(viraSpec(ViraMotion.entrance()), initialScale = 0.97f)) togetherWith
-                        fadeOut(viraSpec(ViraMotion.standard()))
+                    if (reduceMotion) {
+                        fadeIn(ViraMotion.reduced()) togetherWith fadeOut(ViraMotion.reduced())
+                    } else {
+                        (fadeIn(ViraMotion.entrance()) + scaleIn(ViraMotion.entrance(), initialScale = 0.97f)) togetherWith
+                            fadeOut(ViraMotion.standard())
+                    }
                 },
                 label = "viriMoment",
             ) { shown -> MomentContent(shown) }

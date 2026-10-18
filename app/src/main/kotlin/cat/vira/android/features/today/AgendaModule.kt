@@ -89,7 +89,7 @@ internal fun AgendaModule(
             .fillMaxWidth()
             .clip(shape)
             .background(ViraGradient.card(area), shape)
-            .animateContentSize(viraSpec(ViraMotion.settle())),
+            .animateContentSize(if (LocalViraEnvironment.current.reduceMotion) ViraMotion.reduced() else ViraMotion.settle()),
     ) {
         Header(entries, onAdd)
         if (entries.isEmpty()) {
