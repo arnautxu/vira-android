@@ -71,35 +71,30 @@ jobs:
           name: ${{ steps.artefacte.outputs.nom }}
           path: app/build/outputs/apk/debug/app-debug.apk
 
-      # Captures (clar, fosc i lletra gran) de les proves de `src/screenshotTest`. Primer es
-      # comparen amb les aprovades que hi ha al repositori: si una pantalla canvia sense voler,
-      # aquest pas falla. Després es tornen a fer i es publiquen a la branca
-      # `captures/<branca>`, d'on el fil les agafa per posar-les al costat de les de l'iPhone.
+      # Captures (clar, fosc i lletra gran) de les proves de `src/screenshotTest`. Es comparen
+      # amb les aprovades que hi ha al repositori: si una pantalla canvia sense voler, el build
+      # falla al final. Les imatges que aquest pas fa servir per comparar es publiquen a la
+      # branca `captures/<branca>`, d'on el fil les agafa per posar-les al costat de les de
+      # l'iPhone. Abans es tornaven a fer amb updateDebugScreenshotTest, però aquella tasca
+      # renderitza en un procés propi que es queda sense memòria a partir d'unes 330 captures.
       - name: Compara les captures amb les aprovades
         id: compara
         timeout-minutes: 15
         continue-on-error: true
-        run: |
-          if find app/src -type d -name reference -path '*creenshot*' | grep -q .; then
-            ./gradlew validateDebugScreenshotTest --no-daemon --no-configuration-cache
-          fi
-
-      # Aquest pas s'ha quedat penjat hores en algunes execucions. Amb el límit, si es penja
-      # el build segueix sent vàlid (APK i proves ja han passat) i només falten les captures.
-      - name: Fa les captures de la branca
-        id: captures
-        if: github.event_name == 'push' && github.ref != 'refs/heads/main'
-        timeout-minutes: 15
-        continue-on-error: true
-        run: ./gradlew updateDebugScreenshotTest --no-daemon --no-configuration-cache
+        run: ./gradlew validateDebugScreenshotTest --no-daemon --no-configuration-cache
 
       - name: Publica les captures a captures/<branca>
-        if: github.event_name == 'push' && github.ref != 'refs/heads/main' && steps.captures.outcome == 'success'
+        if: github.event_name == 'push' && github.ref != 'refs/heads/main'
         run: |
           set -e
-          src=$(find app/src -type d -name reference -path '*creenshot*' | head -1)
-          [ -n "$src" ] || exit 0
-          echo "Captures a $src"
+          out=app/build/outputs/screenshotTest-results
+          src=$(find "$out" -type d -name rendered 2>/dev/null | head -1)
+          if [ -z "$src" ]; then
+            echo "::warning::No hi ha captures renderitzades a $out."
+            find "$out" -maxdepth 4 -type d 2>/dev/null || true
+            exit 0
+          fi
+          echo "Captures a $src: $(find "$src" -name '*.png' | wc -l) imatges"
           dest=$(mktemp -d)
           cp -R "$src"/. "$dest"/
           cd "$dest"
