@@ -47,6 +47,7 @@ import cat.vira.android.core.design.tokens.ViraFont
 import cat.vira.android.core.design.tokens.ViraGradient
 import cat.vira.android.core.design.tokens.ViraRadius
 import cat.vira.android.core.design.tokens.ViraSpacing
+import cat.vira.android.core.notifications.ViraNotificationWorker
 
 /// Què se sap del permís d'avisos. Android no diu "encara no preguntat": ho sap el flux, que
 /// recorda si ja l'ha demanat (`entry.notificationsAsked`).
@@ -67,6 +68,12 @@ fun EntryNotificationsStep(prefs: EntryPreferences, taskTitle: String?, onContin
     val asked = prefs.boolean(EntryPreferenceKeys.NOTIFICATIONS_ASKED, false)
     var status by remember { mutableStateOf(if (inPreview) EntryNotificationStatus.NOT_DETERMINED else notificationStatus(context, asked.value)) }
     var awaitsAnswer by remember { mutableStateOf(false) }
+    // Els avisos es refan en sortir del pas: els interruptors de les categories poden haver
+    // canviat. Va per WorkManager perquè el flux pot tancar-se abans que la passada acabi.
+    val leave: (() -> Unit) -> Unit = { next ->
+        if (!inPreview) ViraNotificationWorker.request(context)
+        next()
+    }
 
     // En tornar dels Ajustos del sistema, el permís pot haver canviat.
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -83,7 +90,8 @@ fun EntryNotificationsStep(prefs: EntryPreferences, taskTitle: String?, onContin
         status = if (granted) EntryNotificationStatus.AUTHORIZED else notificationStatus(context, true)
         awaitsAnswer = false
         // Amb el permís concedit el pas **no** es tanca sol: ara és quan apareixen les categories.
-        if (!granted) onContinue()
+        // Però els avisos ja es poden posar, per si l'app es tanca aquí mateix.
+        if (granted) ViraNotificationWorker.request(context) else leave(onContinue)
     }
     val canAsk = status == EntryNotificationStatus.NOT_DETERMINED
     val ink = ViraColor.onCard(ViraArea.Rewards)
@@ -102,7 +110,7 @@ fun EntryNotificationsStep(prefs: EntryPreferences, taskTitle: String?, onContin
                 stringResource(if (canAsk) R.string.action_activate else R.string.action_continue),
                 {
                     if (!canAsk) {
-                        onContinue()
+                        leave(onContinue)
                     } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                         awaitsAnswer = true
                         launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -113,7 +121,7 @@ fun EntryNotificationsStep(prefs: EntryPreferences, taskTitle: String?, onContin
                 isLoading = awaitsAnswer,
             )
             // "Ara no" només té sentit mentre hi hagi alguna cosa a dir que no.
-            if (canAsk) EntryLinkButton(stringResource(R.string.action_not_now), onSkip)
+            if (canAsk) EntryLinkButton(stringResource(R.string.action_not_now), { leave(onSkip) })
         }
     }
 }
