@@ -99,3 +99,12 @@ fun FocusModeEditor() = ViraTheme(reduceMotion = true) {
 fun FocusModeEditorNew() = ViraTheme(reduceMotion = true) {
     FocusProfileEditor(profile = null, onSave = {}, onBack = {})
 }
+
+// Prova temporal: el carrusel sol i un medalló sol.
+@PreviewTest @androidx.compose.ui.tooling.preview.Preview(widthDp = 393, heightDp = 600) @Composable
+fun FocusCarouselProbe() = ViraTheme(reduceMotion = true) {
+    Column {
+        FocusModeCarousel(FocusMode.builtIns(), FocusMode.builtIns()[0].id, androidx.compose.ui.unit.Dp(260f)) {}
+        FocusMedallionButton(FocusMode.builtIns()[0], androidx.compose.ui.unit.Dp(260f), true) {}
+    }
+}

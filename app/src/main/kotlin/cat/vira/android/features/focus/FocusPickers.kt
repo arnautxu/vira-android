@@ -137,7 +137,7 @@ fun FocusModeCarousel(modes: List<FocusMode>, selectedID: FocusModeID, side: Dp,
 private fun <T> rememberUpdated(value: T) = androidx.compose.runtime.rememberUpdatedState(value)
 
 @Composable
-private fun FocusMedallionButton(mode: FocusMode, side: Dp, selected: Boolean, onClick: () -> Unit) {
+internal fun FocusMedallionButton(mode: FocusMode, side: Dp, selected: Boolean, onClick: () -> Unit) {
     val scale by animateFloatAsState(if (selected) 1f else 0.5f, viraSpec(ViraMotion.standard(), decorative = true), label = "medallion")
     val opacity by animateFloatAsState(if (selected) 1f else 0.62f, viraSpec(ViraMotion.standard(), decorative = true), label = "opacity")
     val disc = FocusMedallionMetrics.discSide(side)
