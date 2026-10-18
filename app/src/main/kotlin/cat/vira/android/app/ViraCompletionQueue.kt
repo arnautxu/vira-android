@@ -5,15 +5,15 @@ import android.content.Context
 import android.view.View
 import android.view.accessibility.AccessibilityManager
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import cat.vira.android.R
+import cat.vira.android.ViraApp
 import cat.vira.android.core.data.ViraPreferences
 import cat.vira.android.core.data.model.CoinReason
 import cat.vira.android.core.design.components.ActiveCompletion
@@ -43,22 +43,16 @@ fun ViraCompletionQueue(content: @Composable () -> Unit) {
     val backend = LocalViraBackend.current
     val context = LocalContext.current
     val view = LocalView.current
-    val scope = rememberCoroutineScope()
     val celebrationsEnabled by rememberPreference(backend.preferences, ViraPreferences.CELEBRATIONS_ENABLED, true)
 
-    val queue = remember(backend) {
-        CompletionQueue(
-            scope = scope,
-            commit = { reason -> ViraFeatureSlots.commitReward(backend, reason) },
-            isFirstHabitOfDay = {
-                val today = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant()
-                backend.db.habitLogs().all().count { it.day == today } <= 1
-            },
-            undoWindowMillis = { if (usesAssistiveInput(context)) 5_000 else 2_000 },
-            announce = { coins, xp -> announce(view, context, coins, xp) },
-        )
-    }
+    // La cua és del procés, no d'aquesta composició: un gir de pantalla a mitja finestra de
+    // «Desfer» no ha de perdre la recompensa d'una cosa que ja s'ha marcat.
+    val queue = (context.applicationContext as ViraApp).completions
     queue.celebrationsEnabled = celebrationsEnabled
+    DisposableEffect(queue, view) {
+        queue.announce = { coins, xp -> announce(view, context, coins, xp) }
+        onDispose { queue.announce = { _, _ -> } }
+    }
 
     ProvideViraCompletions(present = queue::present, undo = queue::undo, active = queue.active) {
         content()
@@ -69,6 +63,17 @@ fun ViraCompletionQueue(content: @Composable () -> Unit) {
         }
     }
 }
+
+/// La cua de tot el procés, amb les recompenses de `backend`. La crea `ViraApp`.
+internal fun processCompletionQueue(app: ViraApp, scope: CoroutineScope): CompletionQueue = CompletionQueue(
+    scope = scope,
+    commit = { reason -> ViraFeatureSlots.commitReward(app.backend, reason) },
+    isFirstHabitOfDay = {
+        val today = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant()
+        app.backend.db.habitLogs().all().count { it.day == today } <= 1
+    },
+    undoWindowMillis = { undoWindowMillis(app) },
+)
 
 /// El que necessita la celebració de l'hàbit.
 internal data class HabitCelebration(val title: String, val coins: Int, val xp: Int)
@@ -81,14 +86,18 @@ internal class CompletionQueue(
     private val commit: suspend (CoinReason) -> Pair<Int, Int>,
     private val isFirstHabitOfDay: suspend () -> Boolean,
     private val undoWindowMillis: () -> Long,
-    private val announce: (coins: Int, xp: Int) -> Unit = { _, _ -> },
 ) {
+    /// La revelació dita per TalkBack. La posa la pantalla visible: cal una vista on anunciar-la.
+    var announce: (coins: Int, xp: Int) -> Unit = { _, _ -> }
     var active by mutableStateOf<ActiveCompletion?>(null)
         private set
     var habitCelebration by mutableStateOf<HabitCelebration?>(null)
     var celebrationsEnabled = true
 
+    /// Encara dins de la finestra de «Desfer»: es pot desfer o, si n'arriba una altra, concedir.
     private var pending: PendingCompletion? = null
+    /// Ja concedint-se o revelant-se: no es pot desfer ni tornar a concedir.
+    private var revealing: PendingCompletion? = null
     private var timeline: Job? = null
 
     fun present(completion: PendingCompletion) {
@@ -98,6 +107,8 @@ internal class CompletionQueue(
             // L'usuari ja ha passat a una altra cosa: l'anterior es dona per feta, sense revelació.
             scope.launch { withContext(NonCancellable) { commitCompletion(existing) } }
         }
+        // La que ja es concedia acaba de concedir-se sola, però ja no es revela: ara mana la nova.
+        revealing = null
         pending = completion
         active = ActiveCompletion(completion.id, CompletionPhase.Pending)
         timeline = scope.launch { run(completion) }
@@ -116,8 +127,12 @@ internal class CompletionQueue(
     /// més abans de desaparèixer sola.
     private suspend fun run(completion: PendingCompletion) {
         delay(undoWindowMillis())
-        // A partir d'aquí la recompensa és seva: res no la pot aturar a mitges.
+        // A partir d'aquí la recompensa és seva: res no la pot aturar a mitges, i surt de `pending`
+        // abans de concedir-se perquè una acció nova no la torni a concedir.
+        pending = null
+        revealing = completion
         val (coins, xp) = withContext(NonCancellable) { commitCompletion(completion) }
+        if (revealing !== completion) return
         // **Només el primer hàbit del dia** obre la celebració (Arnau, 2026-08-10).
         val opensHabitCelebration = completion.reason == CoinReason.HABIT && celebrationsEnabled &&
             completion.title != null && isFirstHabitOfDay()
@@ -126,8 +141,8 @@ internal class CompletionQueue(
         if (opensHabitCelebration) habitCelebration = HabitCelebration(completion.title!!, coins, xp)
 
         delay(REVEAL_MILLIS)
-        if (pending === completion) {
-            pending = null
+        if (revealing === completion) {
+            revealing = null
             active = null
         }
     }
@@ -143,10 +158,16 @@ internal class CompletionQueue(
     }
 }
 
-/// TalkBack o l'accés amb interruptors: arribar al «Desfer» amb el gest ja en gasta més de dos
-/// segons (`ACCESSIBILITY_REQUIREMENTS.md`, temps suficient).
-private fun usesAssistiveInput(context: Context): Boolean {
-    val manager = context.getSystemService(AccessibilityManager::class.java) ?: return false
+/// 2 s, o el que l'usuari hagi demanat a Accessibilitat → «Temps per actuar». Amb TalkBack o
+/// l'accés amb interruptors, 5 s com a mínim: arribar al «Desfer» amb el gest ja en gasta més de
+/// dos (`ACCESSIBILITY_REQUIREMENTS.md`, temps suficient).
+private fun undoWindowMillis(context: Context): Long {
+    val manager = context.getSystemService(AccessibilityManager::class.java) ?: return 2_000
+    val requested = manager.getRecommendedTimeoutMillis(2_000, AccessibilityManager.FLAG_CONTENT_CONTROLS).toLong()
+    return if (usesAssistiveInput(manager)) maxOf(requested, 5_000) else requested
+}
+
+private fun usesAssistiveInput(manager: AccessibilityManager): Boolean {
     if (!manager.isEnabled) return false
     return manager.isTouchExplorationEnabled ||
         manager.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_ALL_MASK)

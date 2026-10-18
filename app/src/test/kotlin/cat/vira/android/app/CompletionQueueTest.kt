@@ -4,6 +4,7 @@ import cat.vira.android.core.data.model.CoinReason
 import cat.vira.android.core.design.components.CompletionPhase
 import cat.vira.android.core.design.components.PendingCompletion
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -19,9 +20,9 @@ class CompletionQueueTest {
 
     private val committed = mutableListOf<CoinReason>()
 
-    private fun TestScope.queue(firstHabit: Boolean = true) = CompletionQueue(
+    private fun TestScope.queue(firstHabit: Boolean = true, commitMillis: Long = 0) = CompletionQueue(
         scope = backgroundScope,
-        commit = { reason -> committed += reason; 3 to 3 },
+        commit = { reason -> delay(commitMillis); committed += reason; 3 to 3 },
         isFirstHabitOfDay = { firstHabit },
         undoWindowMillis = { 2_000 },
     )
@@ -83,5 +84,16 @@ class CompletionQueueTest {
         advanceTimeBy(2_001)
         runCurrent()
         assertNull(second.habitCelebration)
+    }
+
+    @Test
+    fun `una acció nova mentre l'anterior es concedeix no la concedeix dues vegades`() = runTest {
+        val queue = queue(commitMillis = 500)
+        queue.present(PendingCompletion("plan-1", CoinReason.PLAN_ITEM, onUndo = {}))
+        advanceTimeBy(2_100)
+        queue.present(PendingCompletion("habit-1", CoinReason.HABIT, onUndo = {}))
+        advanceUntilIdle()
+        assertEquals(listOf(CoinReason.PLAN_ITEM, CoinReason.HABIT), committed)
+        assertNull(queue.active)
     }
 }
