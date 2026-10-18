@@ -4,7 +4,6 @@ import android.content.Intent
 import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -12,15 +11,18 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.fragment.app.FragmentActivity
 import cat.vira.android.app.LocalViraBackend
 import cat.vira.android.app.LocalViraIncomingLinks
 import cat.vira.android.app.RootScreen
+import cat.vira.android.app.ViraAppLock
 import cat.vira.android.app.ViraOnboardingGate
 import cat.vira.android.app.rememberPreference
 import cat.vira.android.core.data.ViraPreferences
 import cat.vira.android.core.design.ViraTheme
 
-class MainActivity : ComponentActivity() {
+/// `FragmentActivity` i no `ComponentActivity` a seques: el diàleg de l'empremta n'és un fragment.
+class MainActivity : FragmentActivity() {
     private val backend get() = (application as ViraApp).backend
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -56,7 +58,7 @@ class MainActivity : ComponentActivity() {
                 LocalViraIncomingLinks provides incomingLinks,
             ) {
                 ViraTheme(darkTheme = dark) {
-                    ViraOnboardingGate { RootScreen() }
+                    ViraOnboardingGate { ViraAppLock { RootScreen() } }
                 }
             }
         }
