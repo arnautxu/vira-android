@@ -1,5 +1,7 @@
 package cat.vira.android.features.shop
 
+import cat.vira.android.app.ViraReleaseGate
+
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import androidx.compose.foundation.Canvas
@@ -71,16 +73,9 @@ fun ShopNavigationBar(
     }
 }
 
-/// Les cartes encara no poden sortir en una build pública (`ViraReleaseGate.cards`): obertes en
-/// proves, tancades en Release.
-fun cardsEnabled(context: Context): Boolean =
-    (context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
-
+/// Les cartes, tancades en Release com a l'iPhone (`ViraReleaseGate.cards`).
 @Composable
-fun rememberCardsEnabled(): Boolean {
-    val context = LocalContext.current
-    return remember { cardsEnabled(context) }
-}
+fun rememberCardsEnabled(): Boolean = ViraReleaseGate.cards
 
 /// «Celebracions» d'Ajustos: apagades, no hi ha revelació ni confeti.
 @Composable

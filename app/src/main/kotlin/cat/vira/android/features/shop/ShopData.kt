@@ -3,7 +3,7 @@ package cat.vira.android.features.shop
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
-import cat.vira.android.ViraApp
+import cat.vira.android.app.LocalViraBackend
 import cat.vira.android.core.data.ViraDatabase
 import cat.vira.android.core.data.ViraPreferences
 import cat.vira.android.core.data.ViraRewards
@@ -33,8 +33,6 @@ class ShopData(val db: ViraDatabase, preferences: android.content.SharedPreferen
 @Composable
 fun rememberShopData(): ShopData {
     val context = LocalContext.current
-    return remember {
-        val backend = (context.applicationContext as ViraApp).backend
-        ShopData(backend.db, ViraPreferences.open(context))
-    }
+    val backend = LocalViraBackend.current
+    return remember(backend) { ShopData(backend.db, ViraPreferences.open(context)) }
 }
