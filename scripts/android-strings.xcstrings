@@ -139,6 +139,52 @@
           }
         }
       }
+    },
+    "plan.reorder.moveUp": {
+      "comment": "Android: acció de TalkBack per reordenar; a l'iPhone ho fa el sistema.",
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mou amunt"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Subir"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move up"
+          }
+        }
+      }
+    },
+    "plan.reorder.moveDown": {
+      "comment": "Android: acció de TalkBack per reordenar; a l'iPhone ho fa el sistema.",
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mou avall"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bajar"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move down"
+          }
+        }
+      }
     }
   }
 }

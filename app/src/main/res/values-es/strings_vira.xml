@@ -1420,6 +1420,8 @@
     <string name="plan_pending_title">Todavía no está</string>
     <string name="plan_reorder">Reordenar</string>
     <string name="plan_reorder_hint">Arrastra para cambiar el orden del día.</string>
+    <string name="plan_reorder_move_down">Bajar</string>
+    <string name="plan_reorder_move_up">Subir</string>
     <string name="plan_repeat">Repetición</string>
     <string name="plan_repeat_daily_until_month_end">Todos los días hasta final de mes</string>
     <string name="plan_repeat_daily_until_week_end">Todos los días hasta el fin de semana</string>

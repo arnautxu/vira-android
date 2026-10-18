@@ -1420,6 +1420,8 @@
     <string name="plan_pending_title">Encara no hi és</string>
     <string name="plan_reorder">Reendreçar</string>
     <string name="plan_reorder_hint">Arrossega per canviar l’ordre del dia.</string>
+    <string name="plan_reorder_move_down">Mou avall</string>
+    <string name="plan_reorder_move_up">Mou amunt</string>
     <string name="plan_repeat">Repetició</string>
     <string name="plan_repeat_daily_until_month_end">Cada dia fins a final de mes</string>
     <string name="plan_repeat_daily_until_week_end">Cada dia fins al cap de setmana</string>
