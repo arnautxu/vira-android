@@ -100,3 +100,13 @@ class FocusAlarmReceiver : BroadcastReceiver() {
         }
     }
 }
+
+/// La represa des de l'avís fix: si l'app torna a primer pla amb una sessió en marxa, Concentra't
+/// torna a ser a la vista. La crida l'arrel, amb `onResume` obrint la sessió.
+@androidx.compose.runtime.Composable
+fun FocusResumeEffect(onResume: () -> Unit) {
+    androidx.lifecycle.compose.LifecycleEventEffect(androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+        val controller = FocusRuntime.current.value
+        if (controller != null && controller.phase != FocusSessionController.Phase.SETUP) onResume()
+    }
+}
