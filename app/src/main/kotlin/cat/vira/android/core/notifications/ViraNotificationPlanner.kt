@@ -248,9 +248,44 @@ object ViraNotificationPlanner {
     fun medicationTimes(medication: Medication, day: LocalDate, zone: ZoneId): List<Instant> {
         if (!medication.isActive) return emptyList()
         if (medication.weekdays.isNotEmpty() && day.dayOfWeek.iosWeekday() !in medication.weekdays) return emptyList()
-        val start = day.atStartOfDay(zone)
-        return medication.timesInMinutes.sorted().map { start.plusMinutes(it.toLong()).toInstant() }
+        // Hora de rellotge sobre el dia, no minuts des de mitjanit: el dia que canvia l'hora,
+        // «les 9» han de seguir sent les 9. (L'iPhone suma minuts i es desplaça una hora aquells
+        // dos dies.)
+        return medication.timesInMinutes.sorted().map { day.atTime(it / 60, it % 60).atZone(zone).toInstant() }
     }
+
+    /// Si allò que recorda un avís ja programat encara està per fer. Un «Més tard» o una alarma
+    /// endarrerida sobreviuen a la passada, però no si mentrestant s'ha marcat a l'app: seria
+    /// recordar una cosa ja feta, i els botons de medicació actuarien sobre una presa resolta.
+    fun isStillPending(notification: ViraPlannedNotification, inputs: ViraNotificationInputs, zone: ZoneId): Boolean =
+        when (notification.actions) {
+            ViraActionSet.HABIT -> {
+                val habitId = notification.habitId?.toUuidOrNull()
+                val day = notification.dayMillis?.let { LocalDate.ofInstant(Instant.ofEpochMilli(it), zone) }
+                habitId != null && day != null &&
+                    inputs.habits.any { it.id == habitId && !it.isArchived } &&
+                    inputs.habitLogs.none { it.habitId == habitId && LocalDate.ofInstant(it.day, zone) == day }
+            }
+            ViraActionSet.MEDICATION -> {
+                val medicationId = notification.medicationId?.toUuidOrNull()
+                val at = notification.scheduledAtMillis?.let(Instant::ofEpochMilli)
+                medicationId != null && at != null &&
+                    inputs.medications.any { it.id == medicationId && it.isActive } &&
+                    inputs.intakes.none {
+                        it.medicationId == medicationId && sameMinute(it.scheduledAt, at) && it.status != IntakeStatus.PENDING
+                    }
+            }
+            ViraActionSet.PLAN -> {
+                val itemId = notification.planItemId?.toUuidOrNull()
+                inputs.planItems.any { it.id == itemId && it.status == PlanItemStatus.PENDING }
+            }
+            ViraActionSet.VIRI -> {
+                val day = LocalDate.ofInstant(notification.fireAt, zone)
+                inputs.emotionEntries.none { LocalDate.ofInstant(it.createdAt, zone) == day }
+            }
+        }
+
+    private fun String.toUuidOrNull() = runCatching { java.util.UUID.fromString(this) }.getOrNull()
 
     /// L'aparellament d'una presa amb la seva hora és **al minut**, com a l'iPhone.
     fun sameMinute(a: Instant, b: Instant) =

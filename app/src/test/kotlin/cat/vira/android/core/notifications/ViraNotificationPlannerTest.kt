@@ -135,6 +135,34 @@ class ViraNotificationPlannerTest {
         assertEquals(56, 51 + ViraStreakNotifications.BUDGET)
     }
 
+    @Test
+    fun elDiaQueCanviaLHoraLaPresaSegueixALaSevaHora() {
+        // A Madrid, el 28 de març de 2027 es passa de les 2 a les 3: les 9 han de seguir sent les 9.
+        val day = LocalDate.of(2027, 3, 28)
+        val medication = Medication(name = "M", timesInMinutes = listOf(9 * 60))
+        assertEquals(listOf(at(day, 9)), ViraNotificationPlanner.medicationTimes(medication, day, zone))
+    }
+
+    @Test
+    fun unAvisJaProgramatDeixaDeTocarQuanEsMarca() {
+        val habit = Habit(title = "Llegir", reminderTime = at(today, 18))
+        val medication = Medication(name = "M", timesInMinutes = listOf(9 * 60))
+        val item = PlanItem(title = "Dentista", day = today.atStartOfDay(zone).toInstant(), time = at(today, 17))
+        val inputs = ViraNotificationInputs(habits = listOf(habit), medications = listOf(medication), planItems = listOf(item))
+        val planned = plan(inputs)
+        val h = planned.first { it.habitId == habit.id.toString() }
+        val m = planned.first { it.medicationId == medication.id.toString() }
+        val p = planned.first { it.planItemId == item.id.toString() }
+        assertTrue(listOf(h, m, p).all { ViraNotificationPlanner.isStillPending(it, inputs, zone) })
+
+        val resolved = inputs.copy(
+            habitLogs = listOf(HabitLog(habitId = habit.id, day = today.atStartOfDay(zone).toInstant())),
+            intakes = listOf(MedicationIntake(medicationId = medication.id, scheduledAt = at(today, 9), statusRaw = IntakeStatus.TAKEN.raw)),
+            planItems = listOf(item.copy(statusRaw = PlanItemStatus.DONE.raw)),
+        )
+        assertTrue(listOf(h, m, p).none { ViraNotificationPlanner.isStillPending(it, resolved, zone) })
+    }
+
     // Pla
 
     @Test

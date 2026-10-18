@@ -29,7 +29,8 @@ class ViraNotificationScheduler(private val context: Context) {
     /// Les que hi ha programades ara mateix.
     fun armed(): List<ViraPlannedNotification> = synchronized(LOCK) { read() }
 
-    /// Treu les programades d'aquests prefixos i posa les noves. Dues excepcions:
+    /// Treu les programades d'aquests prefixos i posa les noves. Dues excepcions, sempre que
+    /// `stillPending` digui que el que recorden encara està per fer:
     /// - **Els «Més tard» no es toquen**: són una petició de l'usuari, no part de la finestra, i la
     ///   propera passada no els ha de desfer. (A l'iPhone la passada que segueix a l'acció sí que
     ///   l'esborra, perquè el seu filtre és només pel prefix: és un error de l'iPhone, i aquí no es
@@ -41,11 +42,12 @@ class ViraNotificationScheduler(private val context: Context) {
         prefixes: List<String>,
         planned: List<ViraPlannedNotification>,
         now: Instant = Instant.now(),
+        stillPending: (ViraPlannedNotification) -> Boolean = { true },
     ) = synchronized(LOCK) {
         val graceStart = now.minus(OVERDUE_GRACE)
         val (stale, kept) = read().partition { n ->
-            prefixes.any { n.id.startsWith(it) } && !n.isSnooze &&
-                !(n.fireAt <= now && n.fireAt > graceStart)
+            val exempt = n.isSnooze || (n.fireAt <= now && n.fireAt > graceStart)
+            prefixes.any { n.id.startsWith(it) } && !(exempt && stillPending(n))
         }
         stale.forEach { cancelAlarm(it.id) }
         val fresh = planned.distinctBy { it.id }

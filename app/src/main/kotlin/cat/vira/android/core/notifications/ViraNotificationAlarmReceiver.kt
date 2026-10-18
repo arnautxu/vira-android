@@ -43,7 +43,8 @@ class ViraNotificationAlarmReceiver : BroadcastReceiver() {
                 ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
                 PackageManager.PERMISSION_GRANTED
             ) return
-            NotificationManagerCompat.from(context).notify(notification.id, 0, build(context, notification))
+            val shown = ViraNotifications.presented(context, notification)
+            NotificationManagerCompat.from(context).notify(shown.id, 0, build(context, shown))
         }
 
         fun build(context: Context, notification: ViraPlannedNotification): Notification {

@@ -10,6 +10,7 @@ import android.os.Build
 import android.provider.Settings
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import cat.vira.android.R
 import cat.vira.android.core.data.ViraDatabase
 import cat.vira.android.core.data.ViraPreferences
 import kotlinx.coroutines.sync.Mutex
@@ -110,8 +111,9 @@ object ViraNotifications {
             medicationDetail = ViraNotificationPreferences.medicationDetailEnabled(preferences),
             emotionTime = ViraNotificationPreferences.emotionTime(preferences),
         )
-        val planned = ViraNotificationPlanner.plan(snapshot(db), settings, now, zone, text(context))
-        scheduler.replace(reminderPrefixes, planned, now)
+        val inputs = snapshot(db)
+        val planned = ViraNotificationPlanner.plan(inputs, settings, now, zone, text(context))
+        scheduler.replace(reminderPrefixes, planned, now) { ViraNotificationPlanner.isStillPending(it, inputs, zone) }
     }
 
     private suspend fun rescheduleStreak(context: Context, host: ViraNotificationHost, now: Instant, zone: ZoneId) {
@@ -157,10 +159,26 @@ object ViraNotifications {
     fun record(context: Context, event: ViraStreakNotifications.Event, now: Instant = Instant.now()) =
         ViraStreakNotifications.record(event, ViraPreferences.open(context), now)
 
-    /// Esborrat total i canvi de compte: cap avís programat del compte anterior.
-    fun cancelEverything(context: Context) {
+    /// Esborrat total i canvi de compte: cap avís programat del compte anterior. Va per la mateixa
+    /// cua que les passades: una que ja hagués llegit les dades d'abans no pot tornar a posar-les
+    /// després d'esborrar.
+    suspend fun cancelEverything(context: Context) = passes.withLock {
         ViraNotificationScheduler(context).cancelAll(reminderPrefixes + streakPrefixes)
         ViraStreakNotifications.clearPendingEvent(ViraPreferences.open(context))
+    }
+
+    /// El text tal com ha de sortir **ara**. Un «Més tard» o una alarma endarrerida porten el text
+    /// del moment en què es van programar; si mentrestant s'ha apagat el detall, el nom (del
+    /// fàrmac sobretot) no pot sortir igualment.
+    fun presented(context: Context, notification: ViraPlannedNotification): ViraPlannedNotification {
+        val p = ViraPreferences.open(context)
+        val detail = when (notification.channel) {
+            ViraNotificationChannel.MEDICATION -> ViraNotificationPreferences.medicationDetailEnabled(p)
+            ViraNotificationChannel.HABITS, ViraNotificationChannel.PLAN -> ViraNotificationPreferences.detailEnabled(p)
+            ViraNotificationChannel.EMOTION, ViraNotificationChannel.VIRI -> true
+        }
+        return if (detail) notification
+        else notification.copy(body = context.getString(R.string.notification_generic_body))
     }
 
     private suspend fun snapshot(db: ViraDatabase) = ViraNotificationInputs(

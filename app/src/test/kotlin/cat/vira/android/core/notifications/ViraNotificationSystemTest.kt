@@ -103,6 +103,23 @@ class ViraNotificationSystemTest {
     }
 
     @Test
+    fun unMesTardDUnaCosaJaFetaEsTreu() {
+        scheduler.add(ViraNotificationActions.snoozed(planned("habit-a"), now))
+        scheduler.replace(listOf("habit-"), emptyList(), now) { false }
+        assertTrue(scheduler.armed().isEmpty())
+    }
+
+    @Test
+    fun apagarElDetallTreuElNomDelFarmacDUnAvisJaProgramat() {
+        val medication = planned("med-a", actions = ViraActionSet.MEDICATION).copy(
+            channel = ViraNotificationChannel.MEDICATION, body = "Concerta",
+        )
+        assertEquals(app.getString(R.string.notification_generic_body), ViraNotifications.presented(app, medication).body)
+        ViraPreferences.open(app).edit().putBoolean(ViraNotificationPreferences.NOTIFICATION_DETAIL_MEDICATION_ENABLED, true).commit()
+        assertEquals("Concerta", ViraNotifications.presented(app, medication).body)
+    }
+
+    @Test
     fun unAvisDUnaCategoriaApagadaNoSurt() {
         ViraPreferences.open(app).edit().putBoolean(ViraNotificationPreferences.REMINDERS_HABITS_ENABLED, false).commit()
         assertFalse(ViraNotifications.isWanted(app, planned("habit-a")))
