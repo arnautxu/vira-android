@@ -46,32 +46,30 @@ fun RootScreen() {
     val close: () -> Unit = { navController.popBackStack() }
 
     CompositionLocalProvider(LocalViraNavigator provides navigator) {
-        ViraCompletionQueue {
-            NavHost(
-                navController = navController,
-                startDestination = MAIN_ROUTE,
-                // Els fulls de l'iPhone pugen des de baix; aquí també, i en tancar baixen.
-                enterTransition = { slideInVertically { it } + fadeIn() },
-                exitTransition = { fadeOut() },
-                popEnterTransition = { fadeIn() },
-                popExitTransition = { slideOutVertically { it } + fadeOut() },
-            ) {
-                composable(MAIN_ROUTE) { MainTabs(navigator) }
-                composable(ViraModal.Focus.route) {
-                    ViraFeatureSlots.Focus(link = navigator.focusLink, onClose = close)
-                }
-                composable(ViraModal.Help.route) {
-                    ViraFeatureSlots.Help(
-                        onClose = close,
-                        onOpenCheckIn = {
-                            close()
-                            navigator.navigate(ViraDestination.Emotions(EmotionsSection.CheckIn))
-                        },
-                    )
-                }
-                composable(ViraModal.Breathe.route) { ViraFeatureSlots.Breathe(onClose = close) }
-                composable(ViraModal.Settings.route) { ViraFeatureSlots.Settings(onClose = close) }
+        NavHost(
+            navController = navController,
+            startDestination = MAIN_ROUTE,
+            // Els fulls de l'iPhone pugen des de baix; aquí també, i en tancar baixen.
+            enterTransition = { slideInVertically { it } + fadeIn() },
+            exitTransition = { fadeOut() },
+            popEnterTransition = { fadeIn() },
+            popExitTransition = { slideOutVertically { it } + fadeOut() },
+        ) {
+            composable(MAIN_ROUTE) { MainTabs(navigator) }
+            composable(ViraModal.Focus.route) {
+                ViraFeatureSlots.Focus(link = navigator.focusLink, onClose = close)
             }
+            composable(ViraModal.Help.route) {
+                ViraFeatureSlots.Help(
+                    onClose = close,
+                    onOpenCheckIn = {
+                        close()
+                        navigator.navigate(ViraDestination.Emotions(EmotionsSection.CheckIn))
+                    },
+                )
+            }
+            composable(ViraModal.Breathe.route) { ViraFeatureSlots.Breathe(onClose = close) }
+            composable(ViraModal.Settings.route) { ViraFeatureSlots.Settings(onClose = close) }
         }
     }
 }
