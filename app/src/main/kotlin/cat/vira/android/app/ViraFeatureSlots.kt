@@ -31,7 +31,10 @@ import cat.vira.android.core.design.components.ViraActionHierarchy
 import cat.vira.android.core.design.tokens.ViraSpacing
 import cat.vira.android.features.emotions.EmotionEntryCheckIn
 import cat.vira.android.features.entry.EntryFirstActionHosts
-import cat.vira.android.features.progress.recordProgress
+import cat.vira.android.core.data.ViraRewards
+import cat.vira.android.core.data.ViraStore
+import cat.vira.android.features.progress.logic.ViraProgress
+import java.time.Instant
 import cat.vira.android.features.entry.EntryRequest
 import cat.vira.android.features.entry.LocalEntryFirstActionHosts
 import cat.vira.android.features.focus.FocusProfileEditorScreen
@@ -131,8 +134,11 @@ internal object ViraFeatureSlots {
 
     /// Fil Viri i ratxa (`features/progress`): concedeix la recompensa d'una acció feta i en torna
     /// (monedes, XP). Ha de passar per `ViraProgress.record`, que també compta el dia per a la ratxa;
-    /// l'XP és `ViraRewards.rule(reason)?.coins`. Mai des de medicació.
-    suspend fun commitReward(backend: ViraBackend, reason: CoinReason): Pair<Int, Int> = recordProgress(backend, reason)
+    /// l'XP és `ViraRewards.rule(reason)?.coins`. Mai des de medicació. `at` és quan s'ha tocat.
+    suspend fun commitReward(backend: ViraBackend, reason: CoinReason, at: Instant): Pair<Int, Int> {
+        val coins = ViraProgress(ViraStore(backend.db)).record(reason, now = at)
+        return coins to (ViraRewards.rule(reason)?.coins ?: 0)
+    }
 
     /// Fil Pla (`HabitCelebrationView`): la celebració a pantalla completa del primer hàbit del dia.
     /// Mentre no hi és, es tanca sola.

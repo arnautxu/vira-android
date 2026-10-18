@@ -15,19 +15,25 @@ import androidx.compose.ui.platform.LocalView
 import cat.vira.android.R
 import cat.vira.android.ViraApp
 import cat.vira.android.core.data.ViraPreferences
+import cat.vira.android.core.data.ViraTime
 import cat.vira.android.core.data.model.CoinReason
 import cat.vira.android.core.design.components.ActiveCompletion
 import cat.vira.android.core.design.components.CompletionPhase
 import cat.vira.android.core.design.components.PendingCompletion
 import cat.vira.android.core.design.components.ProvideViraCompletions
+import cat.vira.android.features.progress.ChallengeProgressMoment
+import cat.vira.android.features.progress.logic.ChallengeItem
+import cat.vira.android.features.progress.logic.ViraChallenges
+import cat.vira.android.features.progress.logic.ViraDays
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.time.LocalDate
-import java.time.ZoneId
 
 /// La finestra de «Desfer» i la recompensa que ve després, per a **tota** l'app
 /// (`ViraCompletionQueue` de l'iPhone). Viu a l'arrel perquè ha de sobreviure a un canvi de
@@ -36,19 +42,22 @@ import java.time.ZoneId
 /// Cap vista pròpia: només porta el cronòmetre i publica l'estat. La fila amb l'`id` actiu és qui
 /// dibuixa el «Desfer» i la revelació dins de la seva targeta.
 ///
-/// Encara no hi és (arribarà amb els fils que en són amos): les monedes que volen cap a la
-/// capçalera, el moment de repte i la retenció de la celebració de ratxa.
+/// Retén la celebració de ratxa mentre concedeix i mentre hi ha la celebració de l'hàbit o el
+/// moment de repte a la pantalla (`deferStreakCelebration`): dues pantalles completes alhora es
+/// trepitjarien. Encara no hi és: les monedes que volen cap a la capçalera.
 @Composable
 fun ViraCompletionQueue(content: @Composable () -> Unit) {
     val backend = LocalViraBackend.current
     val context = LocalContext.current
     val view = LocalView.current
     val celebrationsEnabled by rememberPreference(backend.preferences, ViraPreferences.CELEBRATIONS_ENABLED, true)
+    val challengesEnabled by rememberPreference(backend.preferences, ViraPreferences.CHALLENGES_ENABLED, true)
 
     // La cua és del procés, no d'aquesta composició: un gir de pantalla a mitja finestra de
     // «Desfer» no ha de perdre la recompensa d'una cosa que ja s'ha marcat.
     val queue = (context.applicationContext as ViraApp).completions
     queue.celebrationsEnabled = celebrationsEnabled
+    queue.challengesEnabled = challengesEnabled
     DisposableEffect(queue, view) {
         queue.announce = { coins, xp -> announce(view, context, coins, xp) }
         onDispose { queue.announce = { _, _ -> } }
@@ -59,6 +68,25 @@ fun ViraCompletionQueue(content: @Composable () -> Unit) {
         queue.habitCelebration?.let { celebration ->
             ViraFeatureSlots.HabitCelebration(celebration.title, celebration.coins, celebration.xp) {
                 queue.habitCelebration = null
+                queue.deferStreak(false)
+            }
+        }
+        queue.challengeMoment?.let { moment ->
+            val navigator = LocalViraNavigator.current
+            val close = {
+                queue.challengeMoment = null
+                queue.deferStreak(false)
+            }
+            ViraFullScreen(onDismiss = close) {
+                ChallengeProgressMoment(
+                    item = moment.item,
+                    progress = moment.progress,
+                    onContinue = close,
+                    onOpenChallenges = {
+                        close()
+                        navigator.navigate(ViraDestination.Challenges)
+                    },
+                )
             }
         }
     }
@@ -67,26 +95,63 @@ fun ViraCompletionQueue(content: @Composable () -> Unit) {
 /// La cua de tot el procés, amb les recompenses de `backend`. La crea `ViraApp`.
 internal fun processCompletionQueue(app: ViraApp, scope: CoroutineScope): CompletionQueue = CompletionQueue(
     scope = scope,
-    commit = { reason -> ViraFeatureSlots.commitReward(app.backend, reason) },
+    commit = { reason, at -> ViraFeatureSlots.commitReward(app.backend, reason, at) },
     isFirstHabitOfDay = {
         val today = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant()
         app.backend.db.habitLogs().all().count { it.day == today } <= 1
     },
     undoWindowMillis = { undoWindowMillis(app) },
+    challengeCompleted = { reason -> completedChallenge(app, reason) },
 )
+
+/// El primer repte d'aquest motiu que l'acció acaba de completar i encara no s'ha recollit.
+private suspend fun completedChallenge(app: ViraApp, reason: CoinReason): ChallengeMoment? {
+    val db = app.backend.db
+    val now = ViraTime.now()
+    val days = ViraDays(ZoneId.systemDefault())
+    val ledger = db.coinTransactions().all()
+    val claims = db.challengeClaims().all()
+    val item = ChallengeItem.catalog.firstOrNull {
+        it.requirementReason == reason &&
+            ViraChallenges.isCompleted(it, ledger, now, days) && !ViraChallenges.isClaimed(it, claims, now, days)
+    } ?: return null
+    return ChallengeMoment(
+        item = item,
+        progress = ViraChallenges.progress(item, ledger, now, days),
+        // La mateixa clau es pot recollir cada dia o setmana: l'inici del cicle separa «ja t'ho he
+        // ensenyat avui» de «l'has tornat a completar la setmana següent».
+        key = "${item.key}-${ViraChallenges.cycleStart(item.period, now, days).epochSecond}",
+    )
+}
 
 /// El que necessita la celebració de l'hàbit.
 internal data class HabitCelebration(val title: String, val coins: Int, val xp: Int)
+
+/// Un repte que l'acció acaba d'obrir (`ChallengeProgressMoment` de l'iPhone).
+internal data class ChallengeMoment(val item: ChallengeItem, val progress: Int, val key: String)
 
 /// La màquina d'estats, separada de la vista perquè es pugui provar.
 @Stable
 internal class CompletionQueue(
     private val scope: CoroutineScope,
-    /// Concedeix la recompensa i retorna (monedes, XP).
-    private val commit: suspend (CoinReason) -> Pair<Int, Int>,
+    /// Concedeix la recompensa i retorna (monedes, XP). Rep l'instant de l'acció, no el de la
+    /// concessió: marcar una cosa a les 23:59:59 compta per al dia en què s'ha marcat.
+    private val commit: suspend (CoinReason, Instant) -> Pair<Int, Int>,
     private val isFirstHabitOfDay: suspend () -> Boolean,
     private val undoWindowMillis: () -> Long,
+    /// El repte que l'acció acaba de completar, si n'hi ha cap per recollir.
+    private val challengeCompleted: suspend (CoinReason) -> ChallengeMoment? = { null },
+    private val clock: () -> Instant = ViraTime::now,
 ) {
+    /// Retén (`true`) o allibera (`false`) la celebració de ratxa. La connecta la cua de
+    /// celebracions.
+    var deferStreak: (Boolean) -> Unit = {}
+    var challengeMoment by mutableStateOf<ChallengeMoment?>(null)
+    var challengesEnabled = true
+    /// Un moment per repte i **cicle**: veure'l és útil, repetir-lo a cada hàbit no.
+    private val shownChallengeKeys = mutableSetOf<String>()
+    /// Quan s'ha tocat cada acció pendent.
+    private val actionAt = mutableMapOf<PendingCompletion, Instant>()
     /// La revelació dita per TalkBack. La posa la pantalla visible: cal una vista on anunciar-la.
     var announce: (coins: Int, xp: Int) -> Unit = { _, _ -> }
     var active by mutableStateOf<ActiveCompletion?>(null)
@@ -109,6 +174,7 @@ internal class CompletionQueue(
         }
         // La que ja es concedia acaba de concedir-se sola, però ja no es revela: ara mana la nova.
         revealing = null
+        actionAt[completion] = clock()
         pending = completion
         active = ActiveCompletion(completion.id, CompletionPhase.Pending)
         timeline = scope.launch { run(completion) }
@@ -119,6 +185,7 @@ internal class CompletionQueue(
         if (current.id != id) return
         timeline?.cancel()
         current.onUndo()
+        actionAt.remove(current)
         pending = null
         active = null
     }
@@ -131,14 +198,25 @@ internal class CompletionQueue(
         // abans de concedir-se perquè una acció nova no la torni a concedir.
         pending = null
         revealing = completion
+        // Es reté **abans** de concedir: la ratxa pot avançar dins de la concessió, i llavors ja
+        // seria tard. S'allibera de seguida si no s'obre res, i si s'obre, en tancar-se.
+        deferStreak(true)
         val (coins, xp) = withContext(NonCancellable) { commitCompletion(completion) }
-        if (revealing !== completion) return
+        val moment = nextChallengeMoment(completion.reason)
         // **Només el primer hàbit del dia** obre la celebració (Arnau, 2026-08-10).
         val opensHabitCelebration = completion.reason == CoinReason.HABIT && celebrationsEnabled &&
             completion.title != null && isFirstHabitOfDay()
+        if (revealing !== completion) {
+            deferStreak(false)
+            return
+        }
         active = ActiveCompletion(completion.id, CompletionPhase.Revealing(coins, xp))
         announce(coins, xp)
-        if (opensHabitCelebration) habitCelebration = HabitCelebration(completion.title!!, coins, xp)
+        when {
+            moment != null -> challengeMoment = moment
+            opensHabitCelebration -> habitCelebration = HabitCelebration(completion.title!!, coins, xp)
+            else -> deferStreak(false)
+        }
 
         delay(REVEAL_MILLIS)
         if (revealing === completion) {
@@ -147,8 +225,15 @@ internal class CompletionQueue(
         }
     }
 
+    private suspend fun nextChallengeMoment(reason: CoinReason): ChallengeMoment? {
+        if (!celebrationsEnabled || !challengesEnabled) return null
+        val moment = challengeCompleted(reason) ?: return null
+        if (!shownChallengeKeys.add(moment.key)) return null
+        return moment
+    }
+
     private suspend fun commitCompletion(completion: PendingCompletion): Pair<Int, Int> {
-        val result = commit(completion.reason)
+        val result = commit(completion.reason, actionAt.remove(completion) ?: clock())
         completion.onCommit?.invoke()
         return result
     }

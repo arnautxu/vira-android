@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
@@ -21,6 +22,7 @@ import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -28,6 +30,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import cat.vira.android.R
+import cat.vira.android.ViraApp
 import cat.vira.android.core.data.ViraPreferences
 import cat.vira.android.core.design.components.ViraProfileSummary
 import cat.vira.android.core.design.components.ViraTabBar
@@ -54,6 +57,7 @@ fun RootScreen() {
         onDispose { }
     }
     val close: () -> Unit = { navController.popBackStack() }
+    val celebrations = (LocalContext.current.applicationContext as ViraApp).celebrations
     // Una sessió en marxa torna a la vista quan l'app torna a primer pla (des de l'avís fix).
     FocusResumeEffect { navigator.startFocus(navigator.focusLink) }
 
@@ -87,6 +91,7 @@ fun RootScreen() {
                     ViraFeatureSlots.FocusProfileEditor(profileId = navigator.editingFocusProfileId, onClose = close)
                 }
             }
+            ViraCelebrations(celebrations)
         }
     }
 }
@@ -98,6 +103,10 @@ private fun MainTabs(navigator: ViraNavigator) {
     val stateHolder = rememberSaveableStateHolder()
     val tab = navigator.selectedTab
     val tutorial = rememberViraTutorial(navigator)
+    // Mentre hi ha la cortina, cap celebració agafa la pantalla; es queden pendents.
+    val celebrations = (LocalContext.current.applicationContext as ViraApp).celebrations
+    SideEffect { celebrations.tutorialVisible = tutorial.step != null }
+    DisposableEffect(celebrations) { onDispose { celebrations.tutorialVisible = false } }
     val tabBounds = remember { mutableStateMapOf<String, Rect>() }
 
     // Enrere des d'una altra pestanya torna a Avui, que és on s'obre l'app; des d'Avui, surt.
