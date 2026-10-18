@@ -68,28 +68,13 @@ object PlanModules {
 fun PlanScreen() {
     val navigator = LocalViraNavigator.current
     val backend = LocalViraBackend.current
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     val habitsEnabled by rememberPreference(backend.preferences, PlanModules.HABITS, true)
     val medicationEnabled by rememberPreference(backend.preferences, PlanModules.MEDICATION, true)
     val snapshot by remember(backend) { PlanSnapshot.observe(backend.db) }.collectAsState(PlanSnapshot())
 
-    val present = LocalPresentCompletion.current
-    val undo = LocalUndoCompletion.current
     val chrome = remember { PlanChrome() }
-    val actions = remember(backend, present, undo) {
-        PlanActions(
-            store = ViraStore(backend.db),
-            scope = scope,
-            host = PlanHost(
-                present = present,
-                undo = undo,
-                // Fins que Avui tingui la captura ràpida, s'hi arriba amb l'editor en blanc.
-                onCapture = { day, period -> chrome.capture = PlanCaptureRequest(day, period) },
-                onScheduleChanged = { ViraNotifications.reschedule(context.applicationContext) },
-            ),
-        )
-    }
+    // Fins que la captura ràpida d'Avui sigui a main, s'hi arriba amb l'editor en blanc.
+    val actions = rememberPlanActions(onCapture = { day, period -> chrome.capture = PlanCaptureRequest(day, period) })
 
     PlanContent(
         snapshot = snapshot,
@@ -101,6 +86,34 @@ fun PlanScreen() {
         medicationEnabled = medicationEnabled,
     )
 }
+
+/// Les escriptures de Pla connectades a l'app (la cua de "Desfer", els avisos), per a qualsevol
+/// pantalla que marqui una tasca, un hàbit o una presa: Avui fa el mateix que Pla.
+@Composable
+fun rememberPlanActions(onCapture: (java.time.LocalDate, DayPeriod?) -> Unit = { _, _ -> }): PlanActions {
+    val backend = LocalViraBackend.current
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val present = LocalPresentCompletion.current
+    val undo = LocalUndoCompletion.current
+    return remember(backend, present, undo) {
+        PlanActions(
+            store = ViraStore(backend.db),
+            scope = scope,
+            host = PlanHost(
+                present = present,
+                undo = undo,
+                onCapture = onCapture,
+                onScheduleChanged = { ViraNotifications.reschedule(context.applicationContext) },
+            ),
+        )
+    }
+}
+
+/// L'editor d'una tasca des de fora de Pla (el "Edita" d'Avui).
+@Composable
+fun PlanItemEditorScreen(item: cat.vira.android.core.data.model.PlanItem, onDismiss: () -> Unit) =
+    PlanItemEditor(item, rememberPlanActions(), onDismiss)
 
 /// L'estat de la fila del títol, compartit entre `PlanContent` i la cara activa: els botons de la
 /// barra (afegir, reendreçar) són de cada cara però viuen a la fila de dalt, com a l'iPhone.
