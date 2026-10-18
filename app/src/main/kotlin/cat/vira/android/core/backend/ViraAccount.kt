@@ -6,8 +6,9 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonPrimitive
 import java.util.UUID
 
-/// Qui és qui al backend. Viu a `user_metadata` del compte, no al telèfon: el servidor l'ha de poder
-/// comprovar a les polítiques RLS.
+/// Qui és qui, per a la interfície. Viu a `user_metadata` del compte perquè torni en canviar de
+/// telèfon, però **no és un permís**: l'usuari el pot escriure, i cap política RLS el llegeix. El que
+/// dona accés a un pare o una mare és la vinculació per codi (`parent_links`, migració 0003).
 enum class ViraAccountRole(val raw: String) {
     /// L'adolescent que fa servir Vira.
     TEEN("teen"),

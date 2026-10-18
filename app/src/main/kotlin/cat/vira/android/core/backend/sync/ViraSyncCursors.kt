@@ -21,18 +21,30 @@ class ViraSyncCursors(private val preferences: SharedPreferences) {
             ?.minus(OVERLAP)
             ?.let { maxOf(it, ViraTime.distantPast) }
 
-    fun set(key: String, instant: Instant) {
-        preferences.edit().putString(ViraPreferences.SYNC_CURSOR_PREFIX + key, ViraTime.format(instant)).apply()
+    fun set(key: String, instant: Instant) = synchronized(LOCK) {
+        preferences.edit().putString(ViraPreferences.SYNC_CURSOR_PREFIX + key, ViraTime.format(instant)).commit()
+    }
+
+    /// Desa el cursor només si la passada encara és del compte que hi ha ara. La comprovació i
+    /// l'escriptura van juntes, sota el mateix pany que `reset`: si no, un canvi de compte entremig
+    /// buidaria els cursors i aquesta passada vella hi tornaria a posar el seu.
+    fun setIfCurrent(key: String, instant: Instant, isCurrent: () -> Boolean): Boolean = synchronized(LOCK) {
+        if (!isCurrent()) return false
+        set(key, instant)
+        true
     }
 
     /// Oblida per on anava, perquè la propera passada es baixi **el compte sencer**. Es crida en
     /// obrir sessió (Arnau, 2026-08-12) i després de l'esborrat total.
-    fun reset() {
+    fun reset() = synchronized(LOCK) {
         val keys = preferences.all.keys.filter { it.startsWith(ViraPreferences.SYNC_CURSOR_PREFIX) }
         preferences.edit().apply { keys.forEach(::remove) }.commit()
     }
 
     companion object {
         val OVERLAP: Duration = Duration.ofMinutes(5)
+
+        /// Un per procés, no per instància: la sessió i el motor en tenen cadascun la seva.
+        private val LOCK = Any()
     }
 }

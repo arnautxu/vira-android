@@ -8,6 +8,8 @@ import cat.vira.android.core.data.ViraDataEraser
 import cat.vira.android.core.data.ViraDatabase
 import cat.vira.android.core.data.ViraPreferences
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -283,7 +285,15 @@ class ViraSession(
         verifiedConsent = null
         // Primer es decideix de qui són les dades del telèfon, i només després es diu a la interfície
         // que hi ha sessió. Al revés, hi hauria un instant amb les dades de qui hi havia abans.
-        claimLocalData(session.user, isNewSignIn = true)
+        // Sense interrupcions: si es tallés a mitges, el telèfon tindria les dades d'un compte i la
+        // sessió d'un altre, i la sincronització en pujaria unes al compte que no toca.
+        try {
+            withContext(NonCancellable) { claimLocalData(session.user, isNewSignIn = true) }
+        } catch (error: Exception) {
+            withContext(NonCancellable) { runCatching { requireAuth().forgetSession() } }
+            clearLocalSession()
+            throw error
+        }
         _state.value = State.SignedIn(session.user)
     }
 

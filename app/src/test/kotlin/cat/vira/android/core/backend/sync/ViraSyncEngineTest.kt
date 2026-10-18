@@ -20,6 +20,7 @@ import cat.vira.android.core.data.ViraTime
 import cat.vira.android.core.data.model.CoinTransaction
 import cat.vira.android.core.data.model.EmotionEntry
 import cat.vira.android.core.data.model.PlanItem
+import cat.vira.android.core.data.model.SyncTombstone
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -298,6 +299,22 @@ class ViraSyncEngineTest {
         assertEquals(ViraSyncEngine.State.Failed(cat.vira.android.core.backend.ViraBackendError.SESSION_EXPIRED), engine.state.value)
         // La consulta del permís no compta: si falla, no obre res i la passada segueix fins al 401.
         assertEquals(1, requests.count { it.requestUrl!!.pathSegments.last() != "guardian_consents" })
+    }
+
+    @Test
+    fun lesLapidesDUnaCapaTancadaEsperenElPermis() = runBlocking {
+        val emotion = UUID.randomUUID()
+        val task = UUID.randomUUID()
+        db.tombstones().upsertRaw(listOf(
+            SyncTombstone(table = "emotion_entries", recordID = emotion),
+            SyncTombstone(table = "plan_items", recordID = task),
+        ))
+        engine(ViraConsentStatus.PENDING).sync()
+
+        val deletes = requests.filter { it.method == "DELETE" }.map { it.requestUrl!!.pathSegments.last() }
+        assertEquals(listOf("plan_items"), deletes)
+        assertEquals(listOf(emotion), db.tombstones().recordIDs("emotion_entries"))
+        assertTrue(db.tombstones().recordIDs("plan_items").isEmpty())
     }
 
     @Test

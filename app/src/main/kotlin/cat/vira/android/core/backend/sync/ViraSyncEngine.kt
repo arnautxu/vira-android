@@ -188,7 +188,12 @@ class ViraSyncEngine(
 
         // Cada tros pel seu compte: un que el servidor rebutgi sempre no ha de deixar els de les
         // altres taules sense esborrar.
-        for (group in tombstoneGroups()) attempt("tombstones ${group.first().table}") { flushTombstones(group, token) }
+        // Les làpides d'una capa tancada s'esperen: sense permís, la política RLS no deixa veure la fila
+        // i l'esborrat diria que sí sense haver tocat res. Esborrar la làpida llavors faria tornar la
+        // fila el dia que el permís torni.
+        val layers = tables.associate { it.table to it.layer }
+        val openGroups = tombstoneGroups().filter { group -> layers[group.first().table]?.let(scope::allows) ?: true }
+        for (group in openGroups) attempt("tombstones ${group.first().table}") { flushTombstones(group, token) }
         for (table in tables) {
             // Sense el pare, els fills que arribessin es descartarien i el cursor ja els hauria passat.
             if (PARENTS[table.table] in failed) {
@@ -234,7 +239,7 @@ class ViraSyncEngine(
             )
             requireCurrentAccount()
         }
-        cursors.set("push.${table.table}", startedAt)
+        if (!cursors.setIfCurrent("push.${table.table}", startedAt, ::isCurrentAccount)) throw AccountChanged()
     }
 
     // Baixada
@@ -279,7 +284,7 @@ class ViraSyncEngine(
         requireCurrentAccount()
         table.afterPull(db)
         requireCurrentAccount()
-        newest?.let { cursors.set("pull.${table.table}", it) }
+        newest?.let { if (!cursors.setIfCurrent("pull.${table.table}", it, ::isCurrentAccount)) throw AccountChanged() }
     }
 
     // Esborrats
@@ -351,10 +356,12 @@ class ViraSyncEngine(
     private class AccountChanged : CancellationException("Ha canviat el compte")
 
     private fun requireCurrentAccount() {
-        val identity = identity ?: throw AccountChanged()
-        if (session.user?.id != identity.userId || session.dataGeneration != identity.generation) {
-            throw AccountChanged()
-        }
+        if (!isCurrentAccount()) throw AccountChanged()
+    }
+
+    private fun isCurrentAccount(): Boolean {
+        val identity = identity ?: return false
+        return session.user?.id == identity.userId && session.dataGeneration == identity.generation
     }
 
     /// Torna a mirar l'àmbit en cada pas: apagar l'interruptor a mitja passada atura la pujada.
