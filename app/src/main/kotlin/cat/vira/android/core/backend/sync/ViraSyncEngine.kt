@@ -179,7 +179,7 @@ class ViraSyncEngine(
                 log("Sincronització de $name fallida: ${reason ?: error.javaClass.simpleName}")
                 // El servidor no reconeix la sessió: cap taula més anirà bé, i la interfície ho ha de saber.
                 if (reason == ViraBackendError.SESSION_EXPIRED) {
-                    session.invalidate()
+                    identity?.let { session.invalidate(onlyIf = it.generation) }
                     throw error
                 }
                 failed += name
