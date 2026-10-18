@@ -359,7 +359,7 @@ object ViraNotifications {
         val db = context.notificationHost?.notificationDatabase ?: return true
         return db.medicationIntakes().all().any {
             it.medicationId == medicationId && ViraNotificationPlanner.sameMinute(it.scheduledAt, scheduledAt) &&
-                it.status != cat.vira.android.core.data.model.IntakeStatus.PENDING
+                it.statusRaw != cat.vira.android.core.data.model.IntakeStatus.PENDING.raw
         }
     }
 
