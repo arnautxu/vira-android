@@ -189,6 +189,7 @@ internal fun ViraLockScreen(onUnlock: () -> Unit) {
             text = stringResource(R.string.settings_privacy_lock_button),
             onClick = onUnlock,
             modifier = Modifier.widthIn(min = 200.dp),
+            textStyle = ViraFont.headline,
         )
     }
 }
