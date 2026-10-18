@@ -13,7 +13,7 @@ import cat.vira.android.features.settings.export.ViraDataExportPdf
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.flowOf
+import androidx.compose.runtime.collectAsState
 import kotlinx.coroutines.flow.map
 import java.io.File
 
@@ -106,10 +106,10 @@ class PreviewSettingsBackend(
 ) : SettingsBackend {
     override val session = MutableStateFlow(sessionState)
     override val syncState = MutableStateFlow(sync)
-    override val profileName: Flow<String> = flowOf(name)
-    override val equippedSkin: Flow<String?> = flowOf(skin)
-    override val streakVisible: Flow<Boolean> = flowOf(true)
-    override val focusProfiles: Flow<List<FocusProfile>> = flowOf(profiles)
+    override val profileName: Flow<String> = MutableStateFlow(name)
+    override val equippedSkin: Flow<String?> = MutableStateFlow(skin)
+    override val streakVisible: Flow<Boolean> = MutableStateFlow(true)
+    override val focusProfiles: Flow<List<FocusProfile>> = MutableStateFlow(profiles)
     override val appVersion = "0.1 (1)"
 
     override suspend fun syncNow() = Unit
@@ -121,3 +121,9 @@ class PreviewSettingsBackend(
     override suspend fun exportJson(): File = error("Sense fitxers a les captures")
     override suspend fun exportPdf(): File = error("Sense fitxers a les captures")
 }
+
+/// El valor d'un flux com a estat. Si el flux ja en té un (`StateFlow`), es comença per aquest: les
+/// captures només dibuixen el primer fotograma, i amb un valor inicial buit hi sortiria Ajustos buit.
+@androidx.compose.runtime.Composable
+fun <T> Flow<T>.collectAsStateOr(initial: T): androidx.compose.runtime.State<T> =
+    collectAsState(initial = (this as? StateFlow<T>)?.value ?: initial)

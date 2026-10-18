@@ -13,6 +13,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -54,8 +55,8 @@ fun rememberSettingsUser(): ViraUser? {
 fun SettingsIdentity(modifier: Modifier = Modifier) {
     val backend = LocalSettingsBackend.current
     val user = rememberSettingsUser()
-    val nickname by backend.profileName.collectAsState(initial = "")
-    val skin by backend.equippedSkin.collectAsState(initial = null)
+    val nickname by backend.profileName.collectAsStateOr("")
+    val skin by backend.equippedSkin.collectAsStateOr(null)
     val ink = ViraColor.onCard(ViraArea.Today)
     val name = nickname.trim().ifEmpty { stringResource(R.string.tab_profile) }
     val avatar = 60.dp * LocalDensity.current.fontScale.coerceAtMost(2f)

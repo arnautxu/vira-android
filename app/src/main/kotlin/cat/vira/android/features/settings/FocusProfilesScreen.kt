@@ -22,7 +22,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -78,7 +78,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun FocusProfilesContent(onEdit: (FocusProfile?) -> Unit) {
     val backend = LocalSettingsBackend.current
-    val profiles by backend.focusProfiles.collectAsState(initial = emptyList())
+    val profiles by backend.focusProfiles.collectAsStateOr(emptyList())
     val scope = rememberCoroutineScope()
     val entries: List<FocusProfile?> = profiles + null
 

@@ -1,7 +1,7 @@
 package cat.vira.android.features.settings
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
+
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -28,7 +28,7 @@ fun SettingsMotivationSection() {
     var progress by rememberBooleanPreference(SettingsKeys.PROGRESS_VISIBLE, true)
     var shop by rememberBooleanPreference(SettingsKeys.SHOP_VISIBLE, true)
     // La ratxa és un singleton creat sota demanda: l'ajust s'ha de poder apagar abans del primer dia.
-    val streakVisible by backend.streakVisible.collectAsState(initial = true)
+    val streakVisible by backend.streakVisible.collectAsStateOr(true)
 
     val soundsTitle = stringResource(R.string.settings_sounds)
     val soundsHint = stringResource(R.string.settings_sounds_hint)
