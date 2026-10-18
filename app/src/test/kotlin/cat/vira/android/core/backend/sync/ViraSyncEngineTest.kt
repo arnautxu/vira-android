@@ -223,7 +223,7 @@ class ViraSyncEngineTest {
     @Test
     fun unEsborratRebutjatNoAturaElsDeLesAltresTaules() = runBlocking {
         store.delete(store.create(db.planItems(), PlanItem(title = "Fora")))
-        store.delete(store.create(db.habits(), cat.vira.android.core.data.model.Habit(title = "Fora")))
+        store.delete(store.create(db.personalRewards(), cat.vira.android.core.data.model.PersonalReward(title = "Fora")))
         server.dispatcher = object : Dispatcher() {
             override fun dispatch(request: RecordedRequest): MockResponse {
                 requests += request
@@ -240,7 +240,7 @@ class ViraSyncEngineTest {
         engine.sync()
 
         assertEquals(1, db.tombstones().recordIDs("plan_items").size)
-        assertTrue(db.tombstones().recordIDs("habits").isEmpty())
+        assertTrue(db.tombstones().recordIDs("personal_rewards").isEmpty())
         assertTrue(engine.state.value is ViraSyncEngine.State.Failed)
     }
 
