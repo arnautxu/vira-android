@@ -44,6 +44,7 @@ import cat.vira.android.core.design.tokens.ViraMotion
 import cat.vira.android.core.design.tokens.ViraSpacing
 import cat.vira.android.features.help.HelpBreathingHaptics
 import kotlinx.coroutines.delay
+import kotlin.math.roundToInt
 
 /// Una sessió guiada: la veu, i a la pantalla el mateix que diu (`MindfulnessSessionView`).
 ///
@@ -103,7 +104,8 @@ internal fun MindfulnessSessionScreen(
         if (current.kind == MindfulnessScript.Kind.BREATH &&
             (phase == MindfulnessScript.Phase.INHALE || phase == MindfulnessScript.Phase.EXHALE)
         ) {
-            val remaining = (current.end - player.currentTime).toInt()
+            // Arrodonit, no truncat: el tic de 100 ms arriba quan el tram ja ha començat.
+            val remaining = (current.end - player.currentTime).roundToInt()
             if (remaining > 0) haptics.play(phase == MindfulnessScript.Phase.INHALE, remaining)
         }
     }
