@@ -71,6 +71,24 @@ object ViraNotifications {
 
     private val passes = Mutex()
 
+    /// L'alarma ha sonat. Va per la mateixa cua que les passades: entre treure-la de la llista i
+    /// esborrar la notícia que porta, una passada la donaria per no programada i la tornaria a
+    /// posar a l'endemà.
+    suspend fun deliver(context: Context, notification: ViraPlannedNotification, now: Instant = Instant.now()) =
+        passes.withLock {
+            ViraNotificationScheduler(context).forget(notification.id)
+            // Mai recorda una cosa que ja no està per fer, encara que la passada no hagi arribat
+            // a treure l'alarma (o que la fila sigui d'un compte que ja no hi és).
+            if (!isStillPending(context, notification, now = now)) return@withLock
+            // Una notícia de Viri ja dita no es torna a programar si després es canvia l'hora de Viri.
+            // Només si encara és la seva: una de més nova apuntada mentrestant no s'esborra.
+            if (ViraNotificationAlarmReceiver.post(context, notification) &&
+                notification.id.endsWith(ViraStreakNotifications.NEWS_SUFFIX)
+            ) {
+                ViraStreakNotifications.clearPendingEvent(ViraPreferences.open(context), onlyIfStamp = notification.scheduledAtMillis)
+            }
+        }
+
     /// Si l'avís encara el vol l'usuari en el moment de sonar. Un «Més tard» o una alarma
     /// endarrerida poden sonar després d'apagar-ne la categoria: aleshores no surt.
     fun isWanted(context: Context, notification: ViraPlannedNotification): Boolean {
@@ -233,7 +251,11 @@ object ViraNotifications {
                 isCurrentNews(ViraPreferences.open(context), notification)
             } else {
                 // `dayIsOpen` parla d'avui: un recordatori d'ahir endarrerit passada la mitjanit, no.
-                state.dayIsOpen && LocalDate.ofInstant(notification.fireAt, zone) == LocalDate.ofInstant(now, zone)
+                // I si mentrestant s'ha canviat l'hora de Viri, el de l'hora d'abans tampoc.
+                val fire = notification.fireAt.atZone(zone)
+                val time = ViraNotificationPreferences.viriTime(ViraPreferences.open(context))
+                state.dayIsOpen && fire.toLocalDate() == LocalDate.ofInstant(now, zone) &&
+                    fire.hour == time.hour && fire.minute == time.minute
             }
         }
         if (reminderPrefixes.none { notification.id.startsWith(it) }) return true

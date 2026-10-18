@@ -15,7 +15,6 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.RemoteInput
 import androidx.core.content.ContextCompat
 import cat.vira.android.R
-import cat.vira.android.core.data.ViraPreferences
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -34,18 +33,10 @@ class ViraNotificationAlarmReceiver : BroadcastReceiver() {
         val notification = runCatching {
             Json.decodeFromString(ViraPlannedNotification.serializer(), raw)
         }.getOrNull() ?: return
-        ViraNotificationScheduler(context).forget(notification.id)
         val pending = goAsync()
         scope.launch {
             try {
-                // Mai recorda una cosa que ja no està per fer, encara que la passada no hagi arribat
-                // a treure l'alarma (o que la fila sigui d'un compte que ja no hi és).
-                if (!ViraNotifications.isStillPending(context.applicationContext, notification)) return@launch
-                // Una notícia de Viri ja dita no es torna a programar si després es canvia l'hora de Viri.
-                // Només si encara és la seva: una de més nova apuntada mentrestant no s'esborra.
-                if (post(context, notification) && notification.id.endsWith(ViraStreakNotifications.NEWS_SUFFIX)) {
-                    ViraStreakNotifications.clearPendingEvent(ViraPreferences.open(context), onlyIfStamp = notification.scheduledAtMillis)
-                }
+                ViraNotifications.deliver(context.applicationContext, notification)
             } finally {
                 pending.finish()
             }

@@ -49,6 +49,12 @@ class ViraNotificationSystemTest {
     private val scheduler = ViraNotificationScheduler(app)
     private val now = Instant.parse("2027-01-15T08:00:00Z")
 
+    /// Un recordatori de Viri d'avui a l'hora de fàbrica (20:30), com els que programa la passada.
+    private fun viriNudge() = planned("${ViraStreakNotifications.PREFIX}2027-1-15").copy(
+        actions = ViraActionSet.VIRI, channel = ViraNotificationChannel.VIRI,
+        fireAtMillis = Instant.parse("2027-01-15T20:30:00Z").toEpochMilli(),
+    )
+
     private fun planned(id: String, minutes: Long = 60, actions: ViraActionSet = ViraActionSet.HABIT) = ViraPlannedNotification(
         id = id, fireAtMillis = now.plusSeconds(minutes * 60).toEpochMilli(), title = "Vira", body = "Hora de llegir",
         channel = ViraNotificationChannel.HABITS, actions = actions,
@@ -164,7 +170,7 @@ class ViraNotificationSystemTest {
         app.streak = ViraStreakState(isVisible = true, dayIsOpen = true)
         // Un hàbit que no és a la base de dades: un compte esborrat, o un altre compte.
         assertFalse(ViraNotifications.isStillPending(app, planned("habit-a"), ZoneId.of("UTC"), now))
-        val viri = planned("${ViraStreakNotifications.PREFIX}2027-1-15").copy(actions = ViraActionSet.VIRI)
+        val viri = viriNudge()
         assertTrue("els de Viri no recorden cap fila", ViraNotifications.isStillPending(app, viri, ZoneId.of("UTC"), now))
     }
 
@@ -237,8 +243,8 @@ class ViraNotificationSystemTest {
     @Test
     fun unaConcentracioQueSilenciaViriAturaLAlarmaQueJaEraArmada() = runBlocking {
         app.streak = ViraStreakState(isVisible = true, dayIsOpen = true)
-        val viri = planned("${ViraStreakNotifications.PREFIX}2027-1-15").copy(actions = ViraActionSet.VIRI)
-        assertTrue(ViraNotifications.isStillPending(app, viri, now = now))
+        val viri = viriNudge()
+        assertTrue(ViraNotifications.isStillPending(app, viri, ZoneId.of("UTC"), now))
         app.notificationDatabase.focusSessions().upsertRaw(
             listOf(cat.vira.android.core.data.model.FocusSession(startedAt = now.minusSeconds(60), mutesNotifications = true)),
         )
@@ -247,7 +253,7 @@ class ViraNotificationSystemTest {
 
     @Test
     fun unRecordatoriDeViriArmatNoSurtSiElDiaJaCompta() = runBlocking {
-        val viri = planned("${ViraStreakNotifications.PREFIX}2027-1-15").copy(actions = ViraActionSet.VIRI)
+        val viri = viriNudge()
         app.streak = ViraStreakState(isVisible = true, dayIsOpen = false)
         assertFalse(ViraNotifications.isStillPending(app, viri, now = now))
         app.streak = ViraStreakState(isVisible = false, dayIsOpen = true)
@@ -269,9 +275,18 @@ class ViraNotificationSystemTest {
     }
 
     @Test
+    fun unRecordatoriDeViriDeLHoraDAbansNoSurt() = runBlocking {
+        app.streak = ViraStreakState(isVisible = true, dayIsOpen = true)
+        val viri = viriNudge()
+        assertTrue(ViraNotifications.isStillPending(app, viri, ZoneId.of("UTC"), now))
+        ViraPreferences.open(app).edit().putInt(ViraNotificationPreferences.VIRI_MESSAGE_HOUR, 21).commit()
+        assertFalse("l'hora de Viri ha canviat", ViraNotifications.isStillPending(app, viri, ZoneId.of("UTC"), now))
+    }
+
+    @Test
     fun unaAlarmaQueArribaHoresTardNoSurt() = runBlocking {
         app.streak = ViraStreakState(isVisible = true, dayIsOpen = true)
-        val viri = planned("${ViraStreakNotifications.PREFIX}2027-1-15").copy(actions = ViraActionSet.VIRI)
+        val viri = viriNudge()
         assertFalse(ViraNotifications.isStillPending(app, viri, now = viri.fireAt.plusSeconds(3 * 3600)))
     }
 
