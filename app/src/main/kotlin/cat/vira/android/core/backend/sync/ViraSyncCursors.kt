@@ -34,6 +34,15 @@ class ViraSyncCursors(private val preferences: SharedPreferences) {
         true
     }
 
+    /// La taula s'ha guardat files al telèfon (`ViraSyncTable.withholds`) i, quan ja no calgui,
+    /// s'ha de tornar a pujar sencera. Va amb els cursors i se'n va amb ells a `reset`.
+    fun isWithheld(table: String) = preferences.getBoolean(ViraPreferences.SYNC_CURSOR_PREFIX + "withheld.$table", false)
+
+    fun setWithheld(table: String, withheld: Boolean) = synchronized(LOCK) {
+        val key = ViraPreferences.SYNC_CURSOR_PREFIX + "withheld.$table"
+        preferences.edit().apply { if (withheld) putBoolean(key, true) else remove(key) }.commit()
+    }
+
     /// Oblida per on anava, perquè la propera passada es baixi **el compte sencer**. Es crida en
     /// obrir sessió (Arnau, 2026-08-12) i després de l'esborrat total.
     fun reset() = synchronized(LOCK) {

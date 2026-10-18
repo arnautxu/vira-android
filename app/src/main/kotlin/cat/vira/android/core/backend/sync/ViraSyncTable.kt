@@ -38,7 +38,18 @@ abstract class ViraSyncTable<R : ViraSyncRow>(
     /// Després de la baixada sencera de la taula (totes les pàgines, o cap si no hi havia res de nou).
     open suspend fun afterPull(db: ViraDatabase) {}
 
-    fun encode(row: R): JsonObject = ViraJson.json.encodeToJsonElement(serializer, row).jsonObject
+    /// Taules de la capa `CORE` que porten un tros d'una capa sensible (el recompte, les monedes i
+    /// els reptes del check-in emocional). Cert vol dir que, amb aquest abast, alguna cosa es queda
+    /// al telèfon. Vegeu `ViraSyncRowsEmotionCounts.kt`.
+    open fun withholds(scope: ViraSyncScope): Boolean = false
+
+    /// El que queda per pujar després de treure-hi el que no pot sortir del telèfon.
+    open fun preparedForUpload(rows: List<R>, scope: ViraSyncScope): List<R> = rows
+
+    /// El que arriba del servidor, sense el que no ha de trepitjar el que hi ha aquí.
+    open fun preparedAfterDownload(rows: List<R>, scope: ViraSyncScope): List<R> = rows
+
+    open fun encode(row: R): JsonObject = ViraJson.json.encodeToJsonElement(serializer, row).jsonObject
     fun decode(row: JsonObject): R = ViraJson.json.decodeFromJsonElement(serializer, row)
 
     /// Les columnes de la clau, sense `user_id`: són les que desempaten una pàgina.

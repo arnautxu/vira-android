@@ -17,6 +17,7 @@ import cat.vira.android.core.data.ViraDatabase
 import cat.vira.android.core.data.ViraPreferences
 import cat.vira.android.core.data.ViraStore
 import cat.vira.android.core.data.ViraTime
+import cat.vira.android.core.data.model.ChallengeClaim
 import cat.vira.android.core.data.model.CoinTransaction
 import cat.vira.android.core.data.model.EmotionEntry
 import cat.vira.android.core.data.model.PlanItem
@@ -350,6 +351,36 @@ class ViraSyncEngineTest {
             "updated_at":"2026-10-17T10:00:00+00:00","user_id":"$userId"}]"""
         engine(ViraConsentStatus.GRANTED).sync()
         assertEquals(50, store.counter().coinBalance)
+    }
+
+    @Test
+    fun elRastreDeLesEmocionsEsperaElPermisITornaSencer() = runBlocking {
+        val stamp = Instant.parse("2026-10-17T10:00:00Z")
+        db.progressCounters().upsertRaw(listOf(store.counter().copy(emotionCheckinsCount = 3, updatedAt = stamp)))
+        db.coinTransactions().upsertRaw(listOf(
+            CoinTransaction(amount = 5, reasonRaw = "emotion", updatedAt = stamp),
+            CoinTransaction(amount = 10, reasonRaw = "habit", updatedAt = stamp),
+        ))
+        db.challengeClaims().upsertRaw(listOf(
+            ChallengeClaim(key = "daily_emotion", cycleStart = stamp, claimedAt = stamp, updatedAt = stamp),
+            ChallengeClaim(key = "daily_focus", cycleStart = stamp, claimedAt = stamp, updatedAt = stamp),
+        ))
+        engine(ViraConsentStatus.PENDING).sync()
+
+        val counter = bodies("progress_counters").single().body.readUtf8()
+        assertTrue(!counter.contains("emotion_checkins_count"))
+        assertTrue(counter.contains("2026-10-17T09:59:59.999"))
+        val coins = bodies("coin_transactions").single().body.readUtf8()
+        assertTrue(coins.contains("habit") && !coins.contains("emotion"))
+        val claims = bodies("challenge_claims").single().body.readUtf8()
+        assertTrue(claims.contains("daily_focus") && !claims.contains("daily_emotion"))
+
+        // Amb el permís, tot torna a pujar sencer encara que no hagi canviat res.
+        requests.clear()
+        engine(ViraConsentStatus.GRANTED).sync()
+        assertTrue(bodies("progress_counters").single().body.readUtf8().contains("\"emotion_checkins_count\":3"))
+        assertTrue(bodies("coin_transactions").single().body.readUtf8().contains("emotion"))
+        assertTrue(bodies("challenge_claims").single().body.readUtf8().contains("daily_emotion"))
     }
 
     @Test

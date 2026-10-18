@@ -35,6 +35,11 @@ class CoinTransactionSyncTable(private val store: (ViraDatabase) -> ViraStore) :
 
     override suspend fun local(db: ViraDatabase) = db.coinTransactions().all().map(::CoinTransactionSyncRow)
 
+    override fun withholds(scope: ViraSyncScope) = ViraEmotionTrace.withholds(scope)
+
+    override fun preparedForUpload(rows: List<CoinTransactionSyncRow>, scope: ViraSyncScope) =
+        if (withholds(scope)) rows.filter { it.reason != ViraEmotionTrace.coinReason } else rows
+
     override suspend fun apply(rows: List<CoinTransactionSyncRow>, db: ViraDatabase) {
         val existing = db.coinTransactions().all().map { it.id }.toSet()
         db.coinTransactions().upsertRaw(rows.filter { it.id !in existing }.map {
@@ -178,6 +183,11 @@ object ChallengeClaimSyncTable : ViraSyncTable<ChallengeClaimSyncRow>(
     "challenge_claims", ViraSyncLayer.CORE, ChallengeClaimSyncRow.serializer(), conflictTarget = "user_id,key,cycle_start",
 ) {
     override suspend fun local(db: ViraDatabase) = db.challengeClaims().all().map(::ChallengeClaimSyncRow)
+
+    override fun withholds(scope: ViraSyncScope) = ViraEmotionTrace.withholds(scope)
+
+    override fun preparedForUpload(rows: List<ChallengeClaimSyncRow>, scope: ViraSyncScope) =
+        if (withholds(scope)) rows.filter { it.key !in ViraEmotionTrace.challengeKeys } else rows
 
     override suspend fun apply(rows: List<ChallengeClaimSyncRow>, db: ViraDatabase) {
         val existing = db.challengeClaims().all().map { it.key to it.cycleStart }.toSet()

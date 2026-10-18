@@ -223,13 +223,21 @@ class ViraSyncEngine(
 
     private suspend fun <R : ViraSyncRow> push(table: ViraSyncTable<R>, token: String) {
         requireCurrentAccount()
-        if (!allowsNow(table)) return
-        val since = cursors.get("push.${table.table}")
+        val scope = ViraSyncScope.current(session, preferences)
+        if (!scope.allows(table.layer)) return
+        // Una taula que s'ha guardat files (`withholds`) ho torna a pujar tot el primer cop que ja no
+        // se les guarda: el cursor les havia deixat enrere.
+        val withholding = table.withholds(scope)
+        if (withholding) cursors.setWithheld(table.table, true)
+        val since = if (!withholding && cursors.isWithheld(table.table)) null else cursors.get("push.${table.table}")
         val startedAt = clock()
-        val outgoing = outgoing(table.local(db), since)
+        val outgoing = table.preparedForUpload(outgoing(table.local(db), since), scope)
         for (chunk in outgoing.chunked(PAGE_SIZE)) {
             requireCurrentAccount()
-            if (!allowsNow(table)) return
+            // L'interruptor o el permís poden canviar a mitja pujada: si ara cal guardar-se files que
+            // abans no, o al revés, aquest lot ja no és vàlid i es para aquí.
+            val current = ViraSyncScope.current(session, preferences)
+            if (!current.allows(table.layer) || table.withholds(current) != withholding) return
             rest.upsert(
                 table.table, chunk.map(table::encode), token,
                 onConflict = table.conflictTarget,
@@ -238,6 +246,7 @@ class ViraSyncEngine(
             requireCurrentAccount()
         }
         if (!cursors.setIfCurrent("push.${table.table}", startedAt, ::isCurrentAccount)) throw AccountChanged()
+        if (!withholding) cursors.setWithheld(table.table, false)
     }
 
     // Baixada
@@ -272,7 +281,8 @@ class ViraSyncEngine(
                 // Si l'esborrat d'aquest telèfon encara no ha arribat al servidor (ha fallat, o s'acaba
                 // de fer), la fila torna a baixar: no s'ha de ressuscitar.
                 val buried: Set<UUID?> = db.tombstones().recordIDs(table.table).toSet()
-                table.apply(page.filter { it.recordID() !in buried }.map(table::decode), db)
+                val rows = page.filter { it.recordID() !in buried }.map(table::decode)
+            table.apply(table.preparedAfterDownload(rows, ViraSyncScope.current(session, preferences)), db)
             }
 
             newest = maxOf(newest ?: batchNewest, batchNewest)

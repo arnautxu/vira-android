@@ -13,6 +13,7 @@ import cat.vira.android.core.data.model.ViraProfile
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.UseSerializers
+import kotlinx.serialization.json.JsonObject
 import java.time.Instant
 
 // Els tres singletons. Al servidor la clau és `user_id`, no un `id` aleatori: dos telèfons del
@@ -44,7 +45,9 @@ data class ProgressCounterSyncRow(
     @SerialName("total_xp") val totalXp: Int,
     @SerialName("coin_balance") val coinBalance: Int,
     @SerialName("coins_earned_total") val coinsEarnedTotal: Int,
-    @SerialName("emotion_checkins_count") val emotionCheckinsCount: Int,
+    /// `null` quan la capa d'emocions no pot sortir del telèfon: no s'envia i, si arriba així, no toca
+    /// el recompte local (`ViraSyncRowsEmotionCounts.kt`).
+    @SerialName("emotion_checkins_count") val emotionCheckinsCount: Int?,
     @SerialName("focus_sessions_count") val focusSessionsCount: Int,
     @SerialName("habits_completed_count") val habitsCompletedCount: Int,
     @SerialName("days_active_count") val daysActiveCount: Int,
@@ -66,15 +69,34 @@ class ProgressCounterSyncTable(
 ) {
     override suspend fun local(db: ViraDatabase) = db.progressCounters().all().map(::ProgressCounterSyncRow)
 
+    override fun withholds(scope: ViraSyncScope) = ViraEmotionTrace.withholds(scope)
+
+    override fun preparedForUpload(rows: List<ProgressCounterSyncRow>, scope: ViraSyncScope) =
+        if (!withholds(scope)) rows
+        else rows.map { it.copy(emotionCheckinsCount = null, updatedAt = it.updatedAt.minus(ViraEmotionTrace.heldUploadOffset)) }
+
+    override fun preparedAfterDownload(rows: List<ProgressCounterSyncRow>, scope: ViraSyncScope) =
+        if (withholds(scope)) rows.map { it.copy(emotionCheckinsCount = null) } else rows
+
+    /// Sense recompte, el camp **no hi és**: un `null` buidaria el del servidor.
+    override fun encode(row: ProgressCounterSyncRow) = super.encode(row).let { json ->
+        if (row.emotionCheckinsCount != null) json else JsonObject(json - "emotion_checkins_count")
+    }
+
     override suspend fun apply(rows: List<ProgressCounterSyncRow>, db: ViraDatabase) {
         val row = rows.lastOrNull() ?: return
         val model = store(db).counter()
         if (!shouldOverwrite(row, model)) return
         db.progressCounters().upsertRaw(listOf(model.copy(
             totalXP = row.totalXp, coinBalance = row.coinBalance, coinsEarnedTotal = row.coinsEarnedTotal,
-            emotionCheckinsCount = row.emotionCheckinsCount, focusSessionsCount = row.focusSessionsCount,
+            emotionCheckinsCount = row.emotionCheckinsCount ?: model.emotionCheckinsCount,
+            focusSessionsCount = row.focusSessionsCount,
             habitsCompletedCount = row.habitsCompletedCount, daysActiveCount = row.daysActiveCount,
-            updatedAt = row.updatedAt,
+            // Sense recompte, el model es queda el local, que el servidor no té: ha de quedar per sobre
+            // de la fila baixada fins i tot després de restar-li el mil·lisegon de la pujada retinguda,
+            // o en obrir la porta la pujada sencera hi empataria i `keep_last_write` la descartaria.
+            updatedAt = if (row.emotionCheckinsCount != null) row.updatedAt
+                else maxOf(ViraTime.now(), row.updatedAt.plus(ViraEmotionTrace.heldUploadOffset.multipliedBy(2))),
         )))
         // El comptador del servidor pot ser més vell que el llibre major que ja hi ha al telèfon (una
         // passada anterior el va reparar i ara la baixada del llibre no porta res de nou).
