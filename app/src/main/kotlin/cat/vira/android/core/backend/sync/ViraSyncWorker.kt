@@ -18,6 +18,8 @@ class ViraSyncWorker(context: Context, parameters: WorkerParameters) : Coroutine
     override suspend fun doWork(): Result {
         val backend = (applicationContext as ViraApp).backend
         backend.syncIfStale()
+        // Sense compte no hi ha res a sincronitzar: un error d'una sessió ja tancada no es reintenta.
+        if (!backend.session.isSignedIn) return Result.success()
         // Un error de xarxa o del servidor es torna a provar aviat; la resta, a la passada següent.
         val failure = (backend.engine.state.value as? ViraSyncEngine.State.Failed)?.error
         return if (failure?.isRetryable == true) Result.retry() else Result.success()

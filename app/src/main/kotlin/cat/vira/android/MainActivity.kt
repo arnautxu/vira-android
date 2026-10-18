@@ -9,12 +9,14 @@ import cat.vira.android.app.RootScreen
 import cat.vira.android.core.design.ViraTheme
 
 class MainActivity : ComponentActivity() {
+    private val backend get() = (application as ViraApp).backend
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         // Si Android ha tancat l'app amb el navegador obert, la tornada arriba amb estat desat: es
-        // fa servir igual, però només un cop (un gir de pantalla no l'ha de tornar a enviar).
-        handled = savedInstanceState?.getString(HANDLED_CALLBACK)
+        // fa servir igual. El que ja havia obert sessió abans de tancar-se no es torna a enviar.
+        backend.rememberAdoptedCallback(savedInstanceState?.getString(ADOPTED_CALLBACK))
         handleCallback(intent)
         setContent {
             ViraTheme {
@@ -25,7 +27,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
-        outState.putString(HANDLED_CALLBACK, handled)
+        outState.putString(ADOPTED_CALLBACK, backend.lastAdoptedCallback)
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -34,20 +36,12 @@ class MainActivity : ComponentActivity() {
     }
 
     /// Tornada del navegador (Google, Apple) o d'un enllaç del correu: `vira://auth-callback?…`.
+    /// `ViraBackend` evita fer-la servir dos cops.
     private fun handleCallback(intent: Intent?) {
-        val uri = intent?.data ?: return
-        val key = uri.toString()
-        if (key == handled) return
-        handled = key
-        // Si l'intercanvi falla (sense xarxa), el mateix enllaç s'ha de poder tornar a fer servir.
-        (application as ViraApp).backend.handleCallback(uri) {
-            runOnUiThread { if (handled == key) handled = null }
-        }
+        backend.handleCallback(intent?.data ?: return)
     }
 
-    private var handled: String? = null
-
     private companion object {
-        const val HANDLED_CALLBACK = "cat.vira.android.handledCallback"
+        const val ADOPTED_CALLBACK = "cat.vira.android.adoptedCallback"
     }
 }

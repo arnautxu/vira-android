@@ -99,17 +99,22 @@ class ViraSyncEngine(
     /// compte, la que corria s'atura i el compte nou no ha d'esperar cinc minuts.
     suspend fun sync() {
         if (!session.requiresAccount) return
-        if (!isRunning.compareAndSet(false, true)) {
-            rerunRequested = true
-            return
-        }
-        try {
-            do {
-                rerunRequested = false
-                pass()
-            } while (rerunRequested)
-        } finally {
-            isRunning.set(false)
+        while (true) {
+            if (!isRunning.compareAndSet(false, true)) {
+                rerunRequested = true
+                // Qui la té en marxa ho veurà en acabar; si l'acaba de deixar, la passada és nostra.
+                if (isRunning.get()) return else continue
+            }
+            try {
+                do {
+                    rerunRequested = false
+                    pass()
+                } while (rerunRequested)
+            } finally {
+                isRunning.set(false)
+            }
+            // Una petició arribada entre l'última comprovació i deixar el torn no es perd.
+            if (!rerunRequested) return
         }
     }
 

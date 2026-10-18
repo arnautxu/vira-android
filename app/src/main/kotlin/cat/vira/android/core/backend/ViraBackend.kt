@@ -13,6 +13,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.launch
+import java.util.concurrent.ConcurrentHashMap
 
 /// Les peces de dades d'una execució de l'app: la base de dades, la sessió i el motor. En viu una
 /// per procés, dins de `ViraApp`; les pantalles i el treball en segon pla la demanen allà.
@@ -45,12 +46,36 @@ class ViraBackend(context: Context) {
 
     /// Tornada de `vira://auth-callback`. Va al seu propi àmbit: si la pantalla es tanca a mig
     /// intercanvi, la sessió s'ha d'acabar d'obrir igualment.
-    fun handleCallback(uri: Uri, onFailure: () -> Unit = {}) {
+    ///
+    /// Cada enllaç es fa servir un sol cop per procés, encara que l'activitat es recreï a mig
+    /// intercanvi (un gir de pantalla); si falla (sense xarxa), es pot tornar a provar.
+    fun handleCallback(uri: Uri) {
+        val key = uri.toString()
+        if (callbacks.putIfAbsent(key, false) != null) return
         scope.launch {
             restored.await()
-            if (!session.handleCallback(uri)) onFailure()
+            if (session.handleCallback(uri)) {
+                callbacks[key] = true
+                lastAdoptedCallback = key
+            } else {
+                callbacks.remove(key)
+            }
         }
     }
+
+    /// L'últim enllaç que ha obert sessió. L'activitat el desa perquè, si Android tanca el procés,
+    /// en tornar no el reenviï; un que estigués a mig fer no hi és i es torna a provar.
+    @Volatile var lastAdoptedCallback: String? = null
+        private set
+
+    fun rememberAdoptedCallback(key: String?) {
+        key ?: return
+        callbacks[key] = true
+        lastAdoptedCallback = key
+    }
+
+    /// Enllaç → si ja ha obert sessió (`true`) o encara és en marxa (`false`).
+    private val callbacks = ConcurrentHashMap<String, Boolean>()
 
     /// Passada si fa més de cinc minuts de l'última (en tornar a primer pla i des del segon pla).
     suspend fun syncIfStale() {
