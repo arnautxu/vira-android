@@ -7,6 +7,7 @@ import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import cat.vira.android.core.backend.ViraBackend
 import cat.vira.android.core.backend.sync.ViraSyncWorker
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
@@ -28,7 +29,7 @@ class ViraApp : Application() {
         private var loop: Job? = null
 
         override fun onStart(owner: LifecycleOwner) {
-            loop = owner.lifecycleScope.launch { backend.syncWhileVisible() }
+            loop = owner.lifecycleScope.launch(Dispatchers.Default) { backend.syncWhileVisible() }
         }
 
         override fun onStop(owner: LifecycleOwner) {

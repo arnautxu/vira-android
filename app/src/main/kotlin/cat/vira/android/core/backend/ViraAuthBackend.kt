@@ -41,6 +41,9 @@ interface ViraAuthBackend {
     /// Sessió vàlida, renovant-la si cal.
     suspend fun session(): ViraStoredSession
 
+    /// Sessió renovada ara mateix, encara que no calgui: porta les metadades d'aquest moment.
+    suspend fun refreshedSession(): ViraStoredSession
+
     /// Sessió tal com està desada, sense tocar la xarxa. Pot estar caducada.
     suspend fun storedSession(): ViraStoredSession?
 

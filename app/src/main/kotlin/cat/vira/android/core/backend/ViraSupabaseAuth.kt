@@ -116,6 +116,13 @@ class ViraSupabaseAuth(
         current()
     }
 
+    override suspend fun refreshedSession(): ViraStoredSession = mapping {
+        auth.awaitInitialization()
+        if (auth.currentSessionOrNull() == null) throw ViraBackendException(ViraBackendError.SESSION_EXPIRED)
+        auth.refreshCurrentSession()
+        current()
+    }
+
     override suspend fun storedSession(): ViraStoredSession? = try {
         auth.awaitInitialization()
         auth.currentSessionOrNull()?.toVira()

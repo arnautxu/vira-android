@@ -141,9 +141,11 @@ class ViraSyncEngine(
     /// que el servidor no tenia va deixar catorze taules sense sincronitzar durant dies). El primer
     /// error es guarda i es llança al final, perquè Ajustos pugui dir per què.
     private suspend fun run() {
-        val scope = ViraSyncScope.current(session, preferences)
-        val token = session.accessToken()
+        // Primer el testimoni renovat i després l'abast: un permís retirat en un altre telèfon ha de
+        // pesar en aquesta mateixa passada, no quan caduqui el testimoni.
+        val token = session.accessToken(refresh = true)
         requireCurrentAccount()
+        val scope = ViraSyncScope.current(session, preferences)
 
         var firstFailure: Exception? = null
         val failed = mutableSetOf<String>()

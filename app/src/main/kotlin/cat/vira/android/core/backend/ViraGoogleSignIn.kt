@@ -8,6 +8,7 @@ import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.credentials.exceptions.GetCredentialException
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
 import java.security.MessageDigest
 import java.security.SecureRandom
 
@@ -40,6 +41,8 @@ class ViraGoogleSignIn(private val serverClientId: String) {
         } catch (_: GetCredentialCancellationException) {
             Result.Cancelled
         } catch (_: GetCredentialException) {
+            Result.Unavailable
+        } catch (_: GoogleIdTokenParsingException) {
             Result.Unavailable
         }
     }

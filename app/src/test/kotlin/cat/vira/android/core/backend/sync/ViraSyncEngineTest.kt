@@ -282,6 +282,7 @@ class ViraSyncEngineTest {
         override suspend fun signInWithGoogleIdToken(idToken: String, rawNonce: String) = session
         override suspend fun session(fromCallback: Uri) = session
         override suspend fun session() = session
+        override suspend fun refreshedSession() = session
         override suspend fun storedSession() = session
         override suspend fun signOut() = Unit
         override suspend fun forgetSession() = Unit

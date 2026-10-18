@@ -159,13 +159,14 @@ class ViraSession(
     }
 
     /// Testimoni vàlid per a qualsevol crida. Si el refresc falla de debò, la sessió ja no existeix
-    /// al servidor i la interfície ho ha de saber de seguida.
-    suspend fun accessToken(): String {
+    /// al servidor i la interfície ho ha de saber de seguida. Amb `refresh`, renovat ara mateix: és
+    /// el que fa servir cada passada de sincronització, perquè el permís del tutor sigui el d'ara.
+    suspend fun accessToken(refresh: Boolean = false): String {
         val auth = auth ?: throw ViraBackendException(ViraBackendError.NOT_CONFIGURED)
         if (stored == null) throw ViraBackendException(ViraBackendError.SESSION_EXPIRED)
         val generation = dataGeneration
         try {
-            val renewed = auth.session()
+            val renewed = if (refresh) auth.refreshedSession() else auth.session()
             if (generation != dataGeneration) throw CancellationException("Ha canviat el compte")
             stored = renewed
             // El refresc porta les metadades d'ara: un permís del tutor concedit o retirat en un
