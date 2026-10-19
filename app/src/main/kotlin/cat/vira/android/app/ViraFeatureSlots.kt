@@ -141,10 +141,11 @@ internal object ViraFeatureSlots {
         return coins to (ViraRewards.rule(reason)?.coins ?: 0)
     }
 
-    /// Fil Pla (`HabitCelebrationView`): la celebració a pantalla completa del primer hàbit del dia.
+    /// Fil Pla (`HabitCelebrationView`): la celebració a pantalla completa del primer hàbit del dia,
+    /// a la mateixa finestra modal que les altres celebracions (Enrere la tanca).
     @Composable
     fun HabitCelebration(title: String, coins: Int, xp: Int, onContinue: () -> Unit) =
-        HabitCelebrationScreen(title, coins, xp, onContinue)
+        ViraFullScreen(onDismiss = onContinue) { HabitCelebrationScreen(title, coins, xp, onContinue) }
 
     /// Fil Concentra't: `FocusProfileEditorScreen` amb el mode `profileId` (`null`, un de nou). Es desa
     /// sol.

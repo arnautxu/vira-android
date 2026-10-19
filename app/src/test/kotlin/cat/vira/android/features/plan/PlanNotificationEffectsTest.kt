@@ -89,4 +89,17 @@ class PlanNotificationEffectsTest {
         effects.completePlanItem(item.id)
         assertEquals(2, db.planItems().all().size)
     }
+
+    @Test
+    fun unAvisVellDUnHabitArxivatODUnaHoraQueJaNoHiEsNoCompta() = runBlocking {
+        val habit = Habit(title = "Llegir", isArchived = true)
+        store.create(db.habits(), habit)
+        effects.completeHabit(habit.id, PlanDay.at(today, 9, 0, zone))
+        val medication = Medication(name = "M", timesInMinutes = listOf(9 * 60))
+        store.create(db.medications(), medication)
+        effects.recordIntake(medication.id, PlanDay.at(today, 8, 0, zone), IntakeStatus.TAKEN)
+        assertTrue(db.habitLogs().all().isEmpty())
+        assertTrue(db.medicationIntakes().all().isEmpty())
+        assertTrue(db.coinTransactions().all().isEmpty())
+    }
 }

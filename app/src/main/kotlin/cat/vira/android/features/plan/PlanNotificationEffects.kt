@@ -28,6 +28,8 @@ class PlanNotificationEffects(
     suspend fun completeHabit(habitId: UUID, day: Instant): Unit = PlanWrites.lock.withLock {
         val habit = db.habits().byId(habitId) ?: return@withLock
         val date = PlanDay.date(day, zone())
+        // Un avís vell d'un hàbit arxivat o que ja no toca aquell dia no compta.
+        if (habit.isArchived || !habit.isScheduled(date)) return@withLock
         if (db.habitLogs().all().any { it.habitId == habit.id && PlanDay.date(it.day, zone()) == date }) return@withLock
         store.create(db.habitLogs(), HabitLog(day = PlanDay.start(date, zone()), habitId = habit.id))
         progress.record(CoinReason.HABIT)
@@ -47,7 +49,12 @@ class PlanNotificationEffects(
     suspend fun recordIntake(medicationId: UUID, scheduledAt: Instant, status: IntakeStatus): Unit = PlanWrites.lock.withLock {
         val medication = db.medications().byId(medicationId) ?: return@withLock
         val own = db.medicationIntakes().all().filter { it.medicationId == medicationId }
-        val slot = MedicationSchedule.Slot(medication, scheduledAt, MedicationSchedule.intake(own, scheduledAt))
+        // Només un espai que la pauta d'ara encara té: un avís d'una hora canviada o d'un
+        // tractament acabat no deixa una presa que cap pantalla ensenyaria.
+        val minute = scheduledAt.truncatedTo(java.time.temporal.ChronoUnit.MINUTES)
+        val slot = MedicationSchedule.slots(medication, own, PlanDay.date(scheduledAt, zone()), zone())
+            .firstOrNull { it.scheduledAt.truncatedTo(java.time.temporal.ChronoUnit.MINUTES) == minute }
+            ?: return@withLock
         // Des de l'avís, el mateix estat no desmarca: un botó vell no pot esborrar una presa.
         if (slot.status == status) return@withLock
         when (val change = ViraMedication.record(status, slot)) {
