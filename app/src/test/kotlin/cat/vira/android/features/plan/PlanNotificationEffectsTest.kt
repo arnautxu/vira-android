@@ -78,4 +78,15 @@ class PlanNotificationEffectsTest {
         assertEquals(2, db.planItems().all().size)
         assertEquals(1, db.coinTransactions().all().size)
     }
+
+    @Test
+    fun reobrirITornarATancarNoFaUnaSegonaRepeticio() = runBlocking {
+        val item = PlanItem(title = "Deures", day = PlanDay.start(today, zone), recurrenceRaw = PlanItemRecurrence.WEEKLY.raw)
+        store.create(db.planItems(), item)
+        effects.completePlanItem(item.id)
+        val done = db.planItems().byId(item.id)!!
+        store.save(db.planItems(), done.copy(statusRaw = PlanItemStatus.PENDING.raw, completedAt = null))
+        effects.completePlanItem(item.id)
+        assertEquals(2, db.planItems().all().size)
+    }
 }

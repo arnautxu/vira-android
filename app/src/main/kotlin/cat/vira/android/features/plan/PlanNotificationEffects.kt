@@ -39,7 +39,7 @@ class PlanNotificationEffects(
         val item = db.planItems().byId(planItemId) ?: return@withLock
         if (item.status == PlanItemStatus.DONE) return@withLock
         store.save(db.planItems(), item.copy(statusRaw = PlanItemStatus.DONE.raw, completedAt = ViraTime.now()))
-        PlanItemCompletion.nextOccurrence(item, zone())?.let { store.create(db.planItems(), it) }
+        store.createNextOccurrence(item, zone())
         progress.record(CoinReason.PLAN_ITEM)
     }
 

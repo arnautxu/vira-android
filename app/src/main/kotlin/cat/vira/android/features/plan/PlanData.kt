@@ -98,10 +98,7 @@ class PlanActions(
                 val current = db.planItems().byId(item.id) ?: return@write
                 if (current.status == PlanItemStatus.DONE) return@write
                 save(db.planItems(), current.copy(statusRaw = PlanItemStatus.DONE.raw, completedAt = ViraTime.now()))
-                PlanItemCompletion.nextOccurrence(current, zone)?.let {
-                    create(db.planItems(), it)
-                    nextId = it.id
-                }
+                nextId = createNextOccurrence(current, zone)
                 host.onScheduleChanged()
             }
             host.present(
@@ -206,8 +203,24 @@ class PlanActions(
     private suspend fun ViraStore.logs(habit: Habit, day: LocalDate) =
         db.habitLogs().all().filter { it.habitId == habit.id && PlanDay.date(it.day, zone) == day }
 
+    /// Sobre la fila d'ara: un hàbit arxivat des d'un altre telèfon mentre l'editor era obert no
+    /// torna a la vida per desar-lo aquí.
     fun save(habit: Habit, isNew: Boolean) = write {
-        if (isNew) create(db.habits(), habit) else save(db.habits(), habit)
+        if (isNew) {
+            create(db.habits(), habit)
+        } else {
+            val current = db.habits().byId(habit.id) ?: return@write
+            save(
+                db.habits(),
+                current.copy(
+                    title = habit.title,
+                    notes = habit.notes,
+                    symbolName = habit.symbolName,
+                    weekdays = habit.weekdays,
+                    reminderTime = habit.reminderTime,
+                ),
+            )
+        }
         host.onScheduleChanged()
     }
 
@@ -232,8 +245,26 @@ class PlanActions(
         host.onScheduleChanged()
     }
 
+    /// Sobre la fila d'ara: un tractament acabat des d'un altre telèfon mentre l'editor era obert
+    /// no es reactiva per desar-lo aquí.
     fun save(medication: Medication, isNew: Boolean) = write {
-        if (isNew) create(db.medications(), medication) else save(db.medications(), medication)
+        if (isNew) {
+            create(db.medications(), medication)
+        } else {
+            val current = db.medications().byId(medication.id) ?: return@write
+            save(
+                db.medications(),
+                current.copy(
+                    name = medication.name,
+                    dose = medication.dose,
+                    formRaw = medication.formRaw,
+                    colorIndex = medication.colorIndex,
+                    hasReminder = medication.hasReminder,
+                    timesInMinutes = medication.timesInMinutes,
+                    weekdays = medication.weekdays,
+                ),
+            )
+        }
         host.onScheduleChanged()
     }
 
@@ -246,6 +277,20 @@ class PlanActions(
         /// Per a les captures i les previsualitzacions: no escriu res.
         fun preview(scope: CoroutineScope) = PlanActions(null, scope, PlanHost())
     }
+}
+
+/// La propera repetició d'un ítem que es tanca, si no hi és ja: reobrir-lo i tornar-lo a tancar
+/// no en fa una segona per al mateix dia. Torna l'identificador de la nova, si se n'ha fet cap.
+internal suspend fun ViraStore.createNextOccurrence(item: PlanItem, zone: ZoneId): java.util.UUID? {
+    val next = PlanItemCompletion.nextOccurrence(item, zone) ?: return null
+    val date = PlanDay.date(next.day, zone)
+    val exists = db.planItems().all().any {
+        it.id != item.id && it.title == next.title && it.recurrenceRaw == next.recurrenceRaw &&
+            PlanDay.date(it.day, zone) == date
+    }
+    if (exists) return null
+    create(db.planItems(), next)
+    return next.id
 }
 
 /// Una edició aplicada sobre la fila d'ara: de cada camp de l'editor, el valor editat si l'editor
