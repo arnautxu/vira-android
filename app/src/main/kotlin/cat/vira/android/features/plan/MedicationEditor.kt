@@ -48,10 +48,11 @@ fun MedicationEditor(medication: Medication?, actions: PlanActions, onDismiss: (
     var isDenied by remember { mutableStateOf(false) }
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted -> isDenied = !granted }
     // Una pauta nova neix amb l'avís encès: sense permís, es demana ara i no en tocar l'interruptor,
-    // o es desaria un avís que no sonaria mai.
+    // o es desaria un avís que no sonaria mai. Una que ja el tenia i ha perdut el permís ho diu
+    // al peu, sense obrir cap diàleg només per entrar-hi.
     LaunchedEffect(Unit) {
-        if (medication == null && hasReminder && !ViraNotifications.canPost(context)) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) permission.launch(ViraNotifications.PERMISSION) else isDenied = true
+        if (hasReminder && !ViraNotifications.canPost(context)) {
+            if (medication == null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) permission.launch(ViraNotifications.PERMISSION) else isDenied = true
         }
     }
     val canSave = name.isNotBlank() && times.isNotEmpty()

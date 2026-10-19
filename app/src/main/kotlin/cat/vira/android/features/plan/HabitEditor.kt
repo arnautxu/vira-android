@@ -4,6 +4,7 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -34,6 +35,8 @@ fun HabitEditor(habit: Habit?, actions: PlanActions, onDismiss: () -> Unit, zone
     var reminder by remember { mutableStateOf(habit?.reminderTime?.atZone(zone)?.toLocalTime() ?: LocalTime.of(9, 0)) }
     var isDenied by remember { mutableStateOf(false) }
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted -> isDenied = !granted }
+    // Un avís que ja hi era i ha perdut el permís ho diu al peu; el diàleg només surt en encendre'l.
+    LaunchedEffect(Unit) { if (hasReminder && !ViraNotifications.canPost(context)) isDenied = true }
     val canSave = title.isNotBlank()
 
     fun save() {

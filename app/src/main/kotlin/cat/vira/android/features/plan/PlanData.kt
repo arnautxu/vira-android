@@ -16,10 +16,12 @@ import cat.vira.android.core.data.model.PlanItemStatus
 import cat.vira.android.core.data.model.status
 import cat.vira.android.core.design.components.PendingCompletion
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import java.time.LocalDate
 import java.time.ZoneId
 
@@ -75,6 +77,10 @@ class PlanActions(
         scope.launch { PlanWrites.lock.withLock { store.block() } }
     }
 
+    /// La cua de "Desfer" és de la interfície: s'hi parla des del fil principal.
+    private suspend fun presentOnMain(completion: PendingCompletion) =
+        withContext(Dispatchers.Main.immediate) { host.present(completion) }
+
     // Calendari
 
     /// Marca o desmarca (`PlanItemCompletion.toggle`). En marcar, l'estat canvia **a l'instant**,
@@ -91,31 +97,31 @@ class PlanActions(
             host.undo(id)
         } else {
             // La propera repetició es fa ara (com a l'iPhone) i el "Desfer" se l'emporta: si no,
-            // tornar-la a marcar en faria una segona per al mateix dia.
-            var nextId: java.util.UUID? = null
+            // tornar-la a marcar en faria una segona per al mateix dia. El "Desfer" només s'obre si
+            // aquest toc l'ha marcada: un segon toc abans del refresc no el substitueix per un de buit.
             write {
                 // La fila d'ara, no la de la pantalla: una sincronització entremig no es perd.
                 val current = db.planItems().byId(item.id) ?: return@write
                 if (current.status == PlanItemStatus.DONE) return@write
                 save(db.planItems(), current.copy(statusRaw = PlanItemStatus.DONE.raw, completedAt = ViraTime.now()))
-                nextId = createNextOccurrence(current, zone)
+                val nextId = createNextOccurrence(current, zone)
                 host.onScheduleChanged()
-            }
-            host.present(
-                PendingCompletion(
-                    id = id,
-                    reason = CoinReason.PLAN_ITEM,
-                    onUndo = {
-                        write {
-                            db.planItems().byId(item.id)?.let {
-                                save(db.planItems(), it.copy(statusRaw = PlanItemStatus.PENDING.raw, completedAt = null))
+                presentOnMain(
+                    PendingCompletion(
+                        id = id,
+                        reason = CoinReason.PLAN_ITEM,
+                        onUndo = {
+                            write {
+                                db.planItems().byId(item.id)?.let {
+                                    save(db.planItems(), it.copy(statusRaw = PlanItemStatus.PENDING.raw, completedAt = null))
+                                }
+                                nextId?.let { db.planItems().byId(it) }?.let { delete(it) }
+                                host.onScheduleChanged()
                             }
-                            nextId?.let { db.planItems().byId(it) }?.let { delete(it) }
-                            host.onScheduleChanged()
-                        }
-                    },
-                ),
-            )
+                        },
+                    ),
+                )
+            }
         }
     }
 
@@ -178,25 +184,29 @@ class PlanActions(
             host.undo(id)
         } else {
             write {
-                if (logs(habit, day).isEmpty()) create(db.habitLogs(), HabitLog(day = PlanDay.start(day, zone), habitId = habit.id))
+                // L'hàbit d'ara: un d'arxivat des d'un altre telèfon no rep cap registre ni premi, i
+                // un segon toc abans del refresc no obre un segon "Desfer".
+                val current = db.habits().byId(habit.id) ?: return@write
+                if (current.isArchived || logs(habit, day).isNotEmpty()) return@write
+                create(db.habitLogs(), HabitLog(day = PlanDay.start(day, zone), habitId = habit.id))
                 host.onScheduleChanged()
+                presentOnMain(
+                    PendingCompletion(
+                        id = id,
+                        reason = CoinReason.HABIT,
+                        onUndo = {
+                            write {
+                                logs(habit, day).forEach { delete(it) }
+                                host.onScheduleChanged()
+                            }
+                        },
+                        onCommit = {
+                            store?.let { ViraProgress(it).countHabitCompleted() }
+                        },
+                        title = current.title,
+                    ),
+                )
             }
-            host.present(
-                PendingCompletion(
-                    id = id,
-                    reason = CoinReason.HABIT,
-                    onUndo = {
-                        write {
-                            logs(habit, day).forEach { delete(it) }
-                            host.onScheduleChanged()
-                        }
-                    },
-                    onCommit = {
-                        store?.let { ViraProgress(it).countHabitCompleted() }
-                    },
-                    title = habit.title,
-                ),
-            )
         }
     }
 
@@ -234,9 +244,13 @@ class PlanActions(
 
     /// Registrar no dona res i no treu res: només deixa constància.
     fun record(status: IntakeStatus, slot: MedicationSchedule.Slot) = write {
-        // La presa d'ara: dos tocs abans que la pantalla es refresqui no en fan dues.
-        val own = db.medicationIntakes().all().filter { it.medicationId == slot.medication.id }
-        val current = slot.copy(intake = MedicationSchedule.intake(own, slot.scheduledAt))
+        // La pauta i la presa d'ara: dos tocs abans que la pantalla es refresqui no en fan dues, i
+        // una hora treta o un tractament acabat entremig no deixen una presa que cap pantalla ensenyaria.
+        val medication = db.medications().byId(slot.medication.id) ?: return@write
+        val own = db.medicationIntakes().all().filter { it.medicationId == medication.id }
+        val minute = slot.scheduledAt.truncatedTo(java.time.temporal.ChronoUnit.MINUTES)
+        val current = MedicationSchedule.slots(medication, own, PlanDay.date(slot.scheduledAt, zone), zone)
+            .firstOrNull { it.scheduledAt.truncatedTo(java.time.temporal.ChronoUnit.MINUTES) == minute } ?: return@write
         when (val change = ViraMedication.record(status, current)) {
             is ViraMedication.Change.Create -> create(db.medicationIntakes(), change.intake)
             is ViraMedication.Change.Save -> save(db.medicationIntakes(), change.intake)
