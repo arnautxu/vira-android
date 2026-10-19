@@ -102,4 +102,19 @@ class PlanNotificationEffectsTest {
         assertTrue(db.medicationIntakes().all().isEmpty())
         assertTrue(db.coinTransactions().all().isEmpty())
     }
+
+    @Test
+    fun unAvisVellNoTocaUnaTascaDescartadaNiUnaPresaJaContestada() = runBlocking {
+        val item = PlanItem(title = "Deures", day = PlanDay.start(today, zone), statusRaw = PlanItemStatus.DISMISSED.raw)
+        store.create(db.planItems(), item)
+        effects.completePlanItem(item.id)
+        assertEquals(PlanItemStatus.DISMISSED, db.planItems().byId(item.id)?.status)
+        val medication = Medication(name = "M", timesInMinutes = listOf(8 * 60))
+        store.create(db.medications(), medication)
+        val at = PlanDay.at(today, 8, 0, zone)
+        effects.recordIntake(medication.id, at, IntakeStatus.SKIPPED)
+        effects.recordIntake(medication.id, at, IntakeStatus.TAKEN)
+        assertEquals(IntakeStatus.SKIPPED, db.medicationIntakes().all().single().status)
+        assertTrue(db.coinTransactions().all().isEmpty())
+    }
 }

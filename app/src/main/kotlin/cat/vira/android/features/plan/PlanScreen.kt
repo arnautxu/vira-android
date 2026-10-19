@@ -55,7 +55,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import androidx.room.withTransaction
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /// Les claus dels mòduls, les mateixes de l'iPhone (`ViraPreferences.moduleHabitsEnabled`).
 object PlanModules {
@@ -113,6 +115,10 @@ private fun rememberPlanToday(): java.time.LocalDate {
 internal object PlanWrites {
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default.limitedParallelism(1))
     val lock = Mutex()
+
+    /// El pany i una transacció: una sincronització no pot entrar entre llegir la fila i escriure-la.
+    suspend fun <R> locked(db: cat.vira.android.core.data.ViraDatabase, block: suspend () -> R): R =
+        lock.withLock { db.withTransaction { block() } }
 }
 
 /// Les escriptures de Pla connectades a l'app (la cua de "Desfer", els avisos), per a qualsevol
@@ -136,6 +142,7 @@ fun rememberPlanActions(onCapture: (java.time.LocalDate, DayPeriod?) -> Unit = {
                 onScheduleChanged = { ViraNotifications.reschedule(context.applicationContext) },
             ),
             firstDay = firstDay,
+            generation = { backend.session.dataGeneration },
         )
     }
 }

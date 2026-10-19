@@ -15,6 +15,7 @@ import cat.vira.android.core.data.model.PlanItemRecurrence
 import cat.vira.android.core.data.model.PlanItemStatus
 import cat.vira.android.core.data.model.status
 import cat.vira.android.core.design.components.PendingCompletion
+import androidx.room.withTransaction
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -69,17 +70,27 @@ class PlanActions(
     private val zone: ZoneId = ZoneId.systemDefault(),
     /// El primer dia de la setmana de l'idioma de l'app, el mateix que pinta el calendari.
     private val firstDay: java.time.DayOfWeek = PlanDay.firstDayOfWeek(),
+    /// El compte de les dades locals (`ViraSession.dataGeneration`): si canvia, el que esperava no s'escriu.
+    private val generation: () -> Any? = { null },
 ) {
-    private fun write(block: suspend ViraStore.() -> Unit) {
-        val store = store ?: return
-        // Una darrere l'altra i en l'ordre dels tocs: un "Desfer" no pot llegir abans que s'hagi
-        // escrit el que desfà.
-        scope.launch { PlanWrites.lock.withLock { store.block() } }
-    }
+    private fun write(block: suspend ViraStore.() -> Unit) = writeThen { block(); null }
 
-    /// La cua de "Desfer" és de la interfície: s'hi parla des del fil principal.
-    private suspend fun presentOnMain(completion: PendingCompletion) =
-        withContext(Dispatchers.Main.immediate) { host.present(completion) }
+    /// Una darrere l'altra i en l'ordre dels tocs: un "Desfer" no pot llegir abans que s'hagi
+    /// escrit el que desfà. La lectura i l'escriptura van en una sola transacció, perquè una
+    /// sincronització no hi pugui entrar pel mig, i una escriptura que esperava d'abans d'un canvi
+    /// de compte no arriba mai al compte nou. El "Desfer" que torna el bloc s'obre després, al fil
+    /// principal: la cua és de la interfície.
+    private fun writeThen(block: suspend ViraStore.() -> PendingCompletion?) {
+        val store = store ?: return
+        val account = generation()
+        scope.launch {
+            PlanWrites.lock.withLock {
+                if (generation() != account) return@withLock
+                val completion = store.db.withTransaction { store.block() }
+                completion?.let { withContext(Dispatchers.Main.immediate) { host.present(it) } }
+            }
+        }
+    }
 
     // Calendari
 
@@ -92,34 +103,29 @@ class PlanActions(
             write {
                 val current = db.planItems().byId(item.id) ?: return@write
                 save(db.planItems(), current.copy(statusRaw = PlanItemStatus.PENDING.raw, completedAt = null))
-                host.onScheduleChanged()
             }
             host.undo(id)
         } else {
             // La propera repetició es fa ara (com a l'iPhone) i el "Desfer" se l'emporta: si no,
             // tornar-la a marcar en faria una segona per al mateix dia. El "Desfer" només s'obre si
             // aquest toc l'ha marcada: un segon toc abans del refresc no el substitueix per un de buit.
-            write {
+            writeThen {
                 // La fila d'ara, no la de la pantalla: una sincronització entremig no es perd.
-                val current = db.planItems().byId(item.id) ?: return@write
-                if (current.status == PlanItemStatus.DONE) return@write
+                val current = db.planItems().byId(item.id) ?: return@writeThen null
+                if (current.status == PlanItemStatus.DONE) return@writeThen null
                 save(db.planItems(), current.copy(statusRaw = PlanItemStatus.DONE.raw, completedAt = ViraTime.now()))
                 val nextId = createNextOccurrence(current, zone)
-                host.onScheduleChanged()
-                presentOnMain(
-                    PendingCompletion(
-                        id = id,
-                        reason = CoinReason.PLAN_ITEM,
-                        onUndo = {
-                            write {
-                                db.planItems().byId(item.id)?.let {
-                                    save(db.planItems(), it.copy(statusRaw = PlanItemStatus.PENDING.raw, completedAt = null))
-                                }
-                                nextId?.let { db.planItems().byId(it) }?.let { delete(it) }
-                                host.onScheduleChanged()
+                PendingCompletion(
+                    id = id,
+                    reason = CoinReason.PLAN_ITEM,
+                    onUndo = {
+                        write {
+                            db.planItems().byId(item.id)?.let {
+                                save(db.planItems(), it.copy(statusRaw = PlanItemStatus.PENDING.raw, completedAt = null))
                             }
-                        },
-                    ),
+                            nextId?.let { db.planItems().byId(it) }?.let { delete(it) }
+                        }
+                    },
                 )
             }
         }
@@ -130,7 +136,6 @@ class PlanActions(
 
     fun delete(item: PlanItem) = write {
         delete(item)
-        host.onScheduleChanged()
     }
 
     /// Només l'ordre: la resta de la fila es llegeix d'ara, perquè una sincronització entremig no es perdi.
@@ -157,7 +162,6 @@ class PlanActions(
         val (item, copies) = PlanItemCompletion.applyRecurrence(reordered, selected, zone, firstDay)
         save(db.planItems(), item)
         copies.forEach { create(db.planItems(), it) }
-        host.onScheduleChanged()
     }
 
     /// Un ítem nou (el pont de la captura ràpida): amb la repetició, com en desar.
@@ -165,7 +169,6 @@ class PlanActions(
         val (first, copies) = PlanItemCompletion.applyRecurrence(item, recurrence, zone, firstDay)
         create(db.planItems(), first)
         copies.forEach { create(db.planItems(), it) }
-        host.onScheduleChanged()
     }
 
     // Hàbits
@@ -179,32 +182,27 @@ class PlanActions(
         if (progress.log(habit, day) != null) {
             write {
                 logs(habit, day).forEach { delete(it) }
-                host.onScheduleChanged()
             }
             host.undo(id)
         } else {
-            write {
+            writeThen {
                 // L'hàbit d'ara: un d'arxivat des d'un altre telèfon no rep cap registre ni premi, i
                 // un segon toc abans del refresc no obre un segon "Desfer".
-                val current = db.habits().byId(habit.id) ?: return@write
-                if (current.isArchived || logs(habit, day).isNotEmpty()) return@write
+                val current = db.habits().byId(habit.id) ?: return@writeThen null
+                if (current.isArchived || logs(habit, day).isNotEmpty()) return@writeThen null
                 create(db.habitLogs(), HabitLog(day = PlanDay.start(day, zone), habitId = habit.id))
-                host.onScheduleChanged()
-                presentOnMain(
-                    PendingCompletion(
-                        id = id,
-                        reason = CoinReason.HABIT,
-                        onUndo = {
-                            write {
-                                logs(habit, day).forEach { delete(it) }
-                                host.onScheduleChanged()
-                            }
-                        },
-                        onCommit = {
-                            store?.let { ViraProgress(it).countHabitCompleted() }
-                        },
-                        title = current.title,
-                    ),
+                PendingCompletion(
+                    id = id,
+                    reason = CoinReason.HABIT,
+                    onUndo = {
+                        write {
+                            logs(habit, day).forEach { delete(it) }
+                        }
+                    },
+                    onCommit = {
+                        store?.let { ViraProgress(it).countHabitCompleted() }
+                    },
+                    title = current.title,
                 )
             }
         }
@@ -231,13 +229,11 @@ class PlanActions(
                 ),
             )
         }
-        host.onScheduleChanged()
     }
 
     fun archive(habit: Habit) = write {
         val current = db.habits().byId(habit.id) ?: return@write
         save(db.habits(), current.copy(isArchived = true))
-        host.onScheduleChanged()
     }
 
     // Medicació
@@ -257,7 +253,6 @@ class PlanActions(
             is ViraMedication.Change.Delete -> delete(change.intake)
             ViraMedication.Change.Nothing -> Unit
         }
-        host.onScheduleChanged()
     }
 
     /// Sobre la fila d'ara: un tractament acabat des d'un altre telèfon mentre l'editor era obert
@@ -280,13 +275,11 @@ class PlanActions(
                 ),
             )
         }
-        host.onScheduleChanged()
     }
 
     fun end(medication: Medication) = write {
         val current = db.medications().byId(medication.id) ?: return@write
         save(db.medications(), ViraMedication.end(current))
-        host.onScheduleChanged()
     }
 
     companion object {
