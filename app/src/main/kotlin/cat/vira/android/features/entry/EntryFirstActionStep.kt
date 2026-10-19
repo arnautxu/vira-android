@@ -14,6 +14,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -137,8 +138,8 @@ fun EntryFirstTaskStep(services: EntryServices, onDone: (EntryFirstActionOutcome
 fun EntryFirstCheckInStep(services: EntryServices, onDone: (EntryFirstActionOutcome) -> Unit) {
     val host = LocalEntryFirstActionHosts.current.checkIn
     val scope = rememberCoroutineScope()
-    var isPresented by remember { mutableStateOf(false) }
-    var before by remember { mutableStateOf(EntryReward.NONE) }
+    var isPresented by rememberSaveable { mutableStateOf(false) }
+    var before by rememberSaveable(stateSaver = EntryRewardSaver) { mutableStateOf(EntryReward.NONE) }
 
     EntryPrimaryButton(stringResource(R.string.suggestion_check_in_action), {
         scope.launch {
@@ -166,23 +167,28 @@ fun EntryFirstCheckInStep(services: EntryServices, onDone: (EntryFirstActionOutc
 fun EntryFirstFocusStep(services: EntryServices, onDone: (EntryFirstActionOutcome) -> Unit) {
     val host = LocalEntryFirstActionHosts.current.focus
     val scope = rememberCoroutineScope()
-    var isPresented by remember { mutableStateOf(false) }
-    var before by remember { mutableStateOf(EntryReward.NONE) }
-    var startedAt by remember { mutableStateOf(Instant.EPOCH) }
+    // Es desa el procés que l'ha obert, i no un sí o un no: girar la pantalla la torna a obrir sobre
+    // la sessió viva, però si Android ha matat el procés el controlador de la sessió ja no hi és, i
+    // tornar-la a obrir en començaria una altra de duplicada.
+    var presentedInProcess by rememberSaveable { mutableStateOf("") }
+    var before by rememberSaveable(stateSaver = EntryRewardSaver) { mutableStateOf(EntryReward.NONE) }
+    // Desat com a mil·lisegons: si la pantalla gira a mig focus, la sessió viva s'ha de seguir
+    // comptant des d'aquí, i no des d'un tall nou que la deixaria fora.
+    var startedAtMillis by rememberSaveable { mutableStateOf(Instant.EPOCH.toEpochMilli()) }
 
     EntryPrimaryButton(stringResource(R.string.onboarding_focus_start), {
         scope.launch {
             before = services.rewardSnapshot()
             // Un segon de marge: la sessió es crea just després de presentar-se.
-            startedAt = entryNow().minusSeconds(1)
-            isPresented = true
+            startedAtMillis = entryNow().minusSeconds(1).toEpochMilli()
+            presentedInProcess = ProcessToken
         }
     })
-    if (isPresented) {
+    if (presentedInProcess == ProcessToken) {
         val close: () -> Unit = {
-            isPresented = false
+            presentedInProcess = ""
             scope.launch {
-                val completed = services.focusCompletedSince(startedAt) ?: return@launch
+                val completed = services.focusCompletedSince(Instant.ofEpochMilli(startedAtMillis)) ?: return@launch
                 onDone(EntryFirstActionOutcome.Focus(completed, services.rewardSnapshot().earned(before)))
             }
         }
@@ -191,6 +197,16 @@ fun EntryFirstFocusStep(services: EntryServices, onDone: (EntryFirstActionOutcom
         }
     }
 }
+
+/// El que es tenia abans d'obrir la primera acció, perquè giri la pantalla i encara es pugui
+/// comptar el que ha donat.
+private val EntryRewardSaver = Saver<EntryReward, IntArray>(
+    save = { intArrayOf(it.coins, it.xp) },
+    restore = { EntryReward(it[0], it[1]) },
+)
+
+/// Diferent a cada procés: el que una pantalla desada porta d'un procés mort no hi coincideix.
+private val ProcessToken = java.util.UUID.randomUUID().toString()
 
 /// Els dos minuts del focus de la primera acció.
 const val FOCUS_SECONDS = 120
