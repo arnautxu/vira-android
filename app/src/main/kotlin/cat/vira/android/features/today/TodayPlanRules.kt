@@ -4,23 +4,16 @@ import cat.vira.android.core.data.model.Habit
 import cat.vira.android.core.data.model.Medication
 import cat.vira.android.core.data.model.MedicationIntake
 import cat.vira.android.core.data.model.PlanItem
-import cat.vira.android.core.data.model.PlanItemRecurrence
 import cat.vira.android.core.data.model.iosWeekday
-import java.time.DayOfWeek
 import java.time.Instant
 import java.time.ZoneId
-import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
-import java.time.temporal.TemporalAdjusters
-import java.time.temporal.WeekFields
-import java.util.Locale
 
 /// Les regles del pla que Avui fa servir i que a l'iPhone viuen a `Vira/Features/Plan/`
-/// (`PlanItemOrder`, `DayPeriod`, `MedicationSchedule`, `PlanItemRecurrence`, `isScheduled`).
+/// (`PlanItemOrder`, `DayPeriod`, `MedicationSchedule`, `isScheduled`).
 ///
-/// **Còpia de pont.** L'amo és el fil Pla (`features/plan`). Quan la seva versió sigui a `main`,
-/// aquest fitxer desapareix i Avui la importa: dues còpies de l'ordre del dia és com comencen a
-/// separar-se. Fins llavors, calca l'iPhone línia a línia.
+/// **Còpia de pont, només de lectura.** L'amo és el fil Pla (`features/plan`): les escriptures ja
+/// són les seves (`PlanActions`); aquestes lectures queden fins que Avui llegeixi amb les seves.
 internal object TodayPlanRules {
 
     // Franges (`DayPeriod`)
@@ -102,43 +95,5 @@ internal object TodayPlanRules {
         return intakes.firstOrNull {
             it.medicationId == medication.id && it.scheduledAt.truncatedTo(ChronoUnit.MINUTES) == minute
         }
-    }
-
-    // Repeticions (`PlanItemRecurrence`)
-
-    fun createsBatch(recurrence: PlanItemRecurrence): Boolean =
-        recurrence == PlanItemRecurrence.DAILY_UNTIL_WEEK_END || recurrence == PlanItemRecurrence.DAILY_UNTIL_MONTH_END
-
-    fun nextDay(recurrence: PlanItemRecurrence, after: Instant, zone: ZoneId): Instant? = when (recurrence) {
-        PlanItemRecurrence.WEEKLY -> after.atZone(zone).plusWeeks(1).toInstant()
-        PlanItemRecurrence.MONTHLY -> after.atZone(zone).plusMonths(1).toInstant()
-        else -> null
-    }
-
-    /// Dies addicionals de la sèrie, sense repetir el primer. La setmana acaba on la fa acabar la
-    /// configuració regional, com `Calendar.dateInterval(of: .weekOfYear)` de l'iPhone.
-    fun additionalDays(recurrence: PlanItemRecurrence, start: Instant, zone: ZoneId, locale: Locale): List<Instant> {
-        if (!createsBatch(recurrence)) return emptyList()
-        val first: ZonedDateTime = start.atZone(zone).truncatedTo(ChronoUnit.DAYS)
-        val last: ZonedDateTime = when (recurrence) {
-            PlanItemRecurrence.DAILY_UNTIL_WEEK_END -> {
-                val firstDay: DayOfWeek = WeekFields.of(locale).firstDayOfWeek
-                first.with(TemporalAdjusters.nextOrSame(firstDay.minus(1)))
-            }
-            else -> first.with(TemporalAdjusters.lastDayOfMonth())
-        }
-        val days = mutableListOf<Instant>()
-        var current = first.plusDays(1)
-        while (!current.isAfter(last)) {
-            days += current.toInstant()
-            current = current.plusDays(1)
-        }
-        return days
-    }
-
-    /// L'hora d'una còpia: la mateixa hora i minut, en un altre dia.
-    fun sameTime(time: Instant?, day: Instant, zone: ZoneId): Instant? = time?.let {
-        val original = it.atZone(zone)
-        day.atZone(zone).withHour(original.hour).withMinute(original.minute).withSecond(0).withNano(0).toInstant()
     }
 }
