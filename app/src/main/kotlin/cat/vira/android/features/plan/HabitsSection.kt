@@ -100,8 +100,8 @@ fun HabitsSection(snapshot: PlanSnapshot, actions: PlanActions, chrome: PlanChro
     val progress = remember(snapshot.habitLogs, today, firstDay) { HabitProgress(snapshot.habitLogs, today, firstDay = firstDay) }
 
     LaunchedEffect(chrome.adding) {
-        if (chrome.adding) {
-            chrome.adding = false
+        if (chrome.adding == PlanSection.Habits) {
+            chrome.adding = null
             creating = true
         }
     }

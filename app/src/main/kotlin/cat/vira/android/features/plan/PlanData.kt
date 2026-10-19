@@ -65,6 +65,8 @@ class PlanActions(
     private val scope: CoroutineScope,
     private val host: PlanHost,
     private val zone: ZoneId = ZoneId.systemDefault(),
+    /// El primer dia de la setmana de l'idioma de l'app, el mateix que pinta el calendari.
+    private val firstDay: java.time.DayOfWeek = PlanDay.firstDayOfWeek(),
 ) {
     private fun write(block: suspend ViraStore.() -> Unit) {
         val store = store ?: return
@@ -84,6 +86,7 @@ class PlanActions(
             write {
                 val current = db.planItems().byId(item.id) ?: return@write
                 save(db.planItems(), current.copy(statusRaw = PlanItemStatus.PENDING.raw, completedAt = null))
+                host.onScheduleChanged()
             }
             host.undo(id)
         } else {
@@ -99,6 +102,7 @@ class PlanActions(
                     create(db.planItems(), it)
                     nextId = it.id
                 }
+                host.onScheduleChanged()
             }
             host.present(
                 PendingCompletion(
@@ -110,6 +114,7 @@ class PlanActions(
                                 save(db.planItems(), it.copy(statusRaw = PlanItemStatus.PENDING.raw, completedAt = null))
                             }
                             nextId?.let { db.planItems().byId(it) }?.let { delete(it) }
+                            host.onScheduleChanged()
                         }
                     },
                 ),
@@ -120,7 +125,10 @@ class PlanActions(
     /// Obre la captura ràpida del dia, amb la franja si s'hi arriba des d'un "Afegir aquí".
     fun capture(day: LocalDate, period: DayPeriod?) = host.onCapture(day, period)
 
-    fun delete(item: PlanItem) = write { delete(item) }
+    fun delete(item: PlanItem) = write {
+        delete(item)
+        host.onScheduleChanged()
+    }
 
     /// Només l'ordre: la resta de la fila es llegeix d'ara, perquè una sincronització entremig no es perdi.
     fun move(changed: List<PlanItem>) = write {
@@ -131,22 +139,30 @@ class PlanActions(
 
     /// Desa l'edició. Canviar l'hora o el dia refà l'ordre a partir del rellotge; si només canvia
     /// el títol o la icona, l'ordre no es toca.
+    ///
+    /// Sobre la fila d'ara, no sobre la que va obrir l'editor: només hi entra el que l'editor ha
+    /// canviat, i el que una sincronització hagi portat entremig es queda.
     fun save(original: PlanItem, edited: PlanItem, recurrence: PlanItemRecurrence) = write {
+        val current = db.planItems().byId(original.id) ?: return@write
+        val merged = PlanEditMerge.merge(original, edited, current)
         val reordered = if (original.time != edited.time || original.day != edited.day) {
-            edited.copy(sortIndex = PlanItemOrder.defaultRank(edited.time, zone))
+            merged.copy(sortIndex = PlanItemOrder.defaultRank(merged.time, zone))
         } else {
-            edited
+            merged
         }
-        val (item, copies) = PlanItemCompletion.applyRecurrence(reordered, recurrence, zone)
+        val selected = if (recurrence.raw == original.recurrenceRaw) PlanItemRecurrence.from(current.recurrenceRaw) else recurrence
+        val (item, copies) = PlanItemCompletion.applyRecurrence(reordered, selected, zone, firstDay)
         save(db.planItems(), item)
         copies.forEach { create(db.planItems(), it) }
+        host.onScheduleChanged()
     }
 
     /// Un ítem nou (el pont de la captura ràpida): amb la repetició, com en desar.
     fun create(item: PlanItem, recurrence: PlanItemRecurrence) = write {
-        val (first, copies) = PlanItemCompletion.applyRecurrence(item, recurrence, zone)
+        val (first, copies) = PlanItemCompletion.applyRecurrence(item, recurrence, zone, firstDay)
         create(db.planItems(), first)
         copies.forEach { create(db.planItems(), it) }
+        host.onScheduleChanged()
     }
 
     // Hàbits
@@ -155,17 +171,17 @@ class PlanActions(
     /// d'hàbits fets) arriba només si ningú ho desfà.
     fun toggle(habit: Habit, day: LocalDate, progress: HabitProgress) {
         val id = PlanCompletionIds.habit(habit, day, zone)
-        val existing = progress.log(habit, day)
-        if (existing != null) {
+        // La pantalla decideix què ensenya; la base de dades, què hi ha. Dos tocs abans que la
+        // pantalla es refresqui no fan dos registres, i desfer s'emporta el del dia, sigui quin sigui.
+        if (progress.log(habit, day) != null) {
             write {
-                delete(existing)
+                logs(habit, day).forEach { delete(it) }
                 host.onScheduleChanged()
             }
             host.undo(id)
         } else {
-            val log = HabitLog(day = PlanDay.start(day, zone), habitId = habit.id)
             write {
-                create(db.habitLogs(), log)
+                if (logs(habit, day).isEmpty()) create(db.habitLogs(), HabitLog(day = PlanDay.start(day, zone), habitId = habit.id))
                 host.onScheduleChanged()
             }
             host.present(
@@ -174,7 +190,7 @@ class PlanActions(
                     reason = CoinReason.HABIT,
                     onUndo = {
                         write {
-                            db.habitLogs().byId(log.id)?.let { delete(it) }
+                            logs(habit, day).forEach { delete(it) }
                             host.onScheduleChanged()
                         }
                     },
@@ -186,6 +202,9 @@ class PlanActions(
             )
         }
     }
+
+    private suspend fun ViraStore.logs(habit: Habit, day: LocalDate) =
+        db.habitLogs().all().filter { it.habitId == habit.id && PlanDay.date(it.day, zone) == day }
 
     fun save(habit: Habit, isNew: Boolean) = write {
         if (isNew) create(db.habits(), habit) else save(db.habits(), habit)
@@ -201,7 +220,10 @@ class PlanActions(
 
     /// Registrar no dona res i no treu res: només deixa constància.
     fun record(status: IntakeStatus, slot: MedicationSchedule.Slot) = write {
-        when (val change = ViraMedication.record(status, slot)) {
+        // La presa d'ara: dos tocs abans que la pantalla es refresqui no en fan dues.
+        val own = db.medicationIntakes().all().filter { it.medicationId == slot.medication.id }
+        val current = slot.copy(intake = MedicationSchedule.intake(own, slot.scheduledAt))
+        when (val change = ViraMedication.record(status, current)) {
             is ViraMedication.Change.Create -> create(db.medicationIntakes(), change.intake)
             is ViraMedication.Change.Save -> save(db.medicationIntakes(), change.intake)
             is ViraMedication.Change.Delete -> delete(change.intake)
@@ -223,6 +245,22 @@ class PlanActions(
     companion object {
         /// Per a les captures i les previsualitzacions: no escriu res.
         fun preview(scope: CoroutineScope) = PlanActions(null, scope, PlanHost())
+    }
+}
+
+/// Una edició aplicada sobre la fila d'ara: de cada camp de l'editor, el valor editat si l'editor
+/// l'ha canviat i, si no, el de la fila d'ara.
+internal object PlanEditMerge {
+    fun merge(original: PlanItem, edited: PlanItem, current: PlanItem): PlanItem {
+        fun <T> pick(field: (PlanItem) -> T): T = if (field(edited) != field(original)) field(edited) else field(current)
+        return current.copy(
+            title = pick { it.title },
+            notes = pick { it.notes },
+            day = pick { it.day },
+            time = pick { it.time },
+            reminderOffsetMinutes = pick { it.reminderOffsetMinutes },
+            symbolName = pick { it.symbolName },
+        )
     }
 }
 

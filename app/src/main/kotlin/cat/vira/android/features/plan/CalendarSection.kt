@@ -93,8 +93,8 @@ fun CalendarSection(
     LaunchedEffect(selection, mode) { chrome.reordering = false }
     // El "+" de la barra obre la captura ràpida del dia triat.
     LaunchedEffect(chrome.adding) {
-        if (chrome.adding) {
-            chrome.adding = false
+        if (chrome.adding == PlanSection.Calendar) {
+            chrome.adding = null
             actions.capture(selection, null)
         }
     }

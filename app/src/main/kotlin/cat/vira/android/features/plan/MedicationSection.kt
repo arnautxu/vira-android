@@ -81,8 +81,8 @@ fun MedicationSection(
     val slots = MedicationSchedule.slots(medications, snapshot.intakes, today, zone)
 
     LaunchedEffect(chrome.adding) {
-        if (chrome.adding) {
-            chrome.adding = false
+        if (chrome.adding == PlanSection.Medication) {
+            chrome.adding = null
             creating = true
         }
     }

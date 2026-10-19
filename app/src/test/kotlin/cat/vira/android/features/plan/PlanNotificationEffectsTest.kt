@@ -10,6 +10,10 @@ import cat.vira.android.core.data.model.Medication
 import cat.vira.android.core.data.model.PlanItem
 import cat.vira.android.core.data.model.PlanItemStatus
 import cat.vira.android.core.data.model.status
+import cat.vira.android.core.data.model.PlanItemRecurrence
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -64,5 +68,14 @@ class PlanNotificationEffectsTest {
         effects.recordIntake(medication.id, at, IntakeStatus.TAKEN)
         assertEquals(IntakeStatus.TAKEN, db.medicationIntakes().all().single().status)
         assertTrue(db.coinTransactions().all().isEmpty())
+    }
+
+    @Test
+    fun dosAvisosAlhoraNoFanDuesRepeticionsNiDuesRecompenses() = runBlocking {
+        val item = PlanItem(title = "Deures", day = PlanDay.start(today, zone), recurrenceRaw = PlanItemRecurrence.WEEKLY.raw)
+        store.create(db.planItems(), item)
+        List(4) { async(Dispatchers.Default) { effects.completePlanItem(item.id) } }.awaitAll()
+        assertEquals(2, db.planItems().all().size)
+        assertEquals(1, db.coinTransactions().all().size)
     }
 }

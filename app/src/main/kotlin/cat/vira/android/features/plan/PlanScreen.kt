@@ -36,6 +36,7 @@ import cat.vira.android.app.LocalViraNavigator
 import cat.vira.android.app.PlanSection
 import cat.vira.android.app.rememberPreference
 import cat.vira.android.core.data.ViraStore
+import cat.vira.android.core.design.viraLocale
 import cat.vira.android.core.design.LocalViraEnvironment
 import cat.vira.android.core.design.components.LocalPresentCompletion
 import cat.vira.android.core.design.components.LocalUndoCompletion
@@ -122,7 +123,8 @@ fun rememberPlanActions(onCapture: (java.time.LocalDate, DayPeriod?) -> Unit = {
     val context = LocalContext.current
     val present = LocalPresentCompletion.current
     val undo = LocalUndoCompletion.current
-    return remember(backend, present, undo) {
+    val firstDay = PlanDay.firstDayOfWeek(viraLocale())
+    return remember(backend, present, undo, firstDay) {
         PlanActions(
             store = ViraStore(backend.db),
             // La cua del "Desfer" és del procés: les seves escriptures no poden morir amb la pantalla.
@@ -133,6 +135,7 @@ fun rememberPlanActions(onCapture: (java.time.LocalDate, DayPeriod?) -> Unit = {
                 onCapture = onCapture,
                 onScheduleChanged = { ViraNotifications.reschedule(context.applicationContext) },
             ),
+            firstDay = firstDay,
         )
     }
 }
@@ -146,8 +149,9 @@ fun PlanItemEditorScreen(item: cat.vira.android.core.data.model.PlanItem, onDism
 /// barra (afegir, reendreçar) són de cada cara però viuen a la fila de dalt, com a l'iPhone.
 @Stable
 class PlanChrome {
-    /// Una petició del "+" o d'un "Afegir aquí", per a la cara que la sap obrir.
-    var adding by mutableStateOf(false)
+    /// Una petició del "+", amb la cara que l'ha de rebre: durant el canvi de cara n'hi ha dues
+    /// a la pantalla, i només una l'ha d'obrir.
+    var adding by mutableStateOf<PlanSection?>(null)
     var reordering by mutableStateOf(false)
     var canReorder by mutableStateOf(false)
     var capture by mutableStateOf<PlanCaptureRequest?>(null)
@@ -189,7 +193,7 @@ fun PlanContent(
                 val next = PlanSection.valueOf(key)
                 if (next != resolved) {
                     chrome.reordering = false
-                    chrome.adding = false
+                    chrome.adding = null
                     onSelect(next)
                 }
             },
@@ -246,7 +250,7 @@ private fun TitleRow(section: PlanSection, chrome: PlanChrome) {
                     PlanSection.Medication -> R.string.medication_new
                 },
             ),
-        ) { chrome.adding = true }
+        ) { chrome.adding = section }
     }
 }
 
