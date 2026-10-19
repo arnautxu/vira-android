@@ -1671,6 +1671,7 @@
     <string name="settings_notifications_detail_medication_hint">L\'avís es veu a la pantalla de bloqueig.</string>
     <string name="settings_notifications_details">Detalls del recordatori</string>
     <string name="settings_notifications_emotion_time">Hora del registre</string>
+    <string name="settings_notifications_exact_off">Els avisos poden arribar uns minuts tard: falten les alarmes exactes als ajustos del telèfon.</string>
     <string name="settings_notifications_reminders">Recordatoris d\'hàbits</string>
     <string name="settings_notifications_section">Notificacions</string>
     <string name="settings_notifications_suggestions">Suggeriments de Viri</string>

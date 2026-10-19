@@ -1671,6 +1671,7 @@
     <string name="settings_notifications_detail_medication_hint">El aviso se ve en la pantalla de bloqueo.</string>
     <string name="settings_notifications_details">Detalles del recordatorio</string>
     <string name="settings_notifications_emotion_time">Hora del registro</string>
+    <string name="settings_notifications_exact_off">Los avisos pueden llegar unos minutos tarde: faltan las alarmas exactas en los ajustes del teléfono.</string>
     <string name="settings_notifications_reminders">Recordatorios de hábitos</string>
     <string name="settings_notifications_section">Notificaciones</string>
     <string name="settings_notifications_suggestions">Sugerencias de Viri</string>
