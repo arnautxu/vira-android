@@ -101,7 +101,7 @@ object FocusNotifications {
         val planned = state.plannedSeconds / 60
         val done = minOf(planned, (state.elapsed(now) / 60).toInt())
         val builder = NotificationCompat.Builder(context, SESSION_CHANNEL)
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(title)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
@@ -112,7 +112,7 @@ object FocusNotifications {
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
             .setPublicVersion(
                 NotificationCompat.Builder(context, SESSION_CHANNEL)
-                    .setSmallIcon(R.mipmap.ic_launcher)
+                    .setSmallIcon(R.drawable.ic_notification)
                     .setContentTitle(context.getString(R.string.focus_title))
                     .build(),
             )
@@ -144,7 +144,7 @@ object FocusNotifications {
         }
         ensureChannels(context)
         val notification = NotificationCompat.Builder(context, ENDED_CHANNEL)
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(context.getString(R.string.notification_generic_title))
             .setContentText(context.getString(R.string.focus_notification_body))
             .setAutoCancel(true)

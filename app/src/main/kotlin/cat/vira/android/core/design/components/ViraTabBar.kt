@@ -4,7 +4,10 @@ import androidx.annotation.DrawableRes
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -20,7 +23,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -76,6 +81,7 @@ object ViraTabBarMetrics {
 /// `onItemBounds` diu on és cada un dels quatre destins (no Concentra't), en coordenades de
 /// l'arrel, cada cop que es mou: és l'àncora del tutorial de la primera obertura
 /// (`.viraTutorialAnchor(tab)` de l'iPhone), que hi obre el forat de la cortina.
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ViraTabBar(
     items: List<ViraTabBarItem>,
@@ -93,12 +99,19 @@ fun ViraTabBar(
     val half = items.size / 2
 
     val destination: @Composable (ViraTabBarItem) -> Unit = { item ->
+        val isSelected = item.key == selectedKey
+        // Quan la barra llisca (lletra gran), la triada es porta a la vista encara que el canvi
+        // vingui de fora: el tutorial canvia de pestanya sol i TalkBack també.
+        val requester = remember { BringIntoViewRequester() }
+        LaunchedEffect(isSelected) { if (isSelected) requester.bringIntoView() }
         TabItem(
             item,
-            item.key == selectedKey,
+            isSelected,
             iconSize,
             inactiveAlpha,
-            Modifier.onGloballyPositioned { onItemBounds(item.key, it.boundsInRoot()) },
+            Modifier
+                .bringIntoViewRequester(requester)
+                .onGloballyPositioned { onItemBounds(item.key, it.boundsInRoot()) },
         ) { onTabTap(item.key) }
     }
     val content: @Composable () -> Unit = {
