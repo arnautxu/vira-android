@@ -48,7 +48,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -75,6 +74,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import cat.vira.android.R
 import cat.vira.android.core.design.viraLocale
+import cat.vira.android.core.data.model.PlanItem
 import cat.vira.android.core.data.model.PlanItemRecurrence
 import cat.vira.android.core.design.LocalViraEnvironment
 import cat.vira.android.core.design.components.ViraActionButton
@@ -89,7 +89,7 @@ import cat.vira.android.core.design.tokens.ViraFont
 import cat.vira.android.core.design.tokens.ViraRadius
 import cat.vira.android.core.design.tokens.ViraSpacing
 import cat.vira.android.core.design.tokens.ViraTouch
-import kotlinx.coroutines.launch
+import cat.vira.android.features.plan.rememberPlanActions
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -132,16 +132,17 @@ fun QuickCaptureScreen(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
     ) {
-        val actions = rememberTodayActions()
-        val scope = rememberCoroutineScope()
-        val locale = viraLocale()
+        // La mateixa escriptura que el Pla: les repeticions, la transacció i els avisos.
+        val actions = rememberPlanActions()
         QuickCaptureContent(
             initialDay = initialDay,
             initialPeriod = initialPeriod,
             onCancel = onDismiss,
             onSave = { title, day, time, symbol, recurrence ->
-                scope.launch {
-                    if (actions.capture(title, day, time, symbol, recurrence, locale) != null) onDismiss()
+                val trimmed = title.trim()
+                if (trimmed.isNotEmpty()) {
+                    actions.create(PlanItem(title = trimmed, day = day, time = time, symbolName = symbol), recurrence)
+                    onDismiss()
                 }
             },
         )

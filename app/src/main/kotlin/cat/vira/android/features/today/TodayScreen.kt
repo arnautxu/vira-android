@@ -22,12 +22,15 @@ import cat.vira.android.app.ViraDestination
 import cat.vira.android.app.ViraFocusLink
 import cat.vira.android.app.rememberPreference
 import cat.vira.android.core.data.ViraStore
-import cat.vira.android.core.data.model.CoinReason
+import cat.vira.android.core.data.model.IntakeStatus
 import cat.vira.android.core.data.model.PlanItem
 import cat.vira.android.core.design.components.LocalActiveCompletion
-import cat.vira.android.core.design.components.LocalPresentCompletion
 import cat.vira.android.core.design.components.LocalUndoCompletion
-import cat.vira.android.core.design.components.PendingCompletion
+import cat.vira.android.core.notifications.ViraNotifications
+import cat.vira.android.features.plan.HabitProgress
+import cat.vira.android.features.plan.MedicationSchedule
+import cat.vira.android.features.plan.PlanItemEditorScreen
+import cat.vira.android.features.plan.rememberPlanActions
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -49,7 +52,6 @@ internal object TodayKeys {
 fun TodayScreen() {
     val backend = LocalViraBackend.current
     val navigator = LocalViraNavigator.current
-    val present = LocalPresentCompletion.current
     val undoCompletion = LocalUndoCompletion.current
     val active = LocalActiveCompletion.current
     val context = LocalContext.current
@@ -57,6 +59,7 @@ fun TodayScreen() {
     val prefs = backend.preferences
     val zone = remember { ZoneId.systemDefault() }
     val actions = rememberTodayActions()
+    val planActions = rememberPlanActions()
     // Escriure no ha de morir amb la pantalla: un «Desfer» que arriba quan ja s'ha canviat de
     // pestanya encara ha de desfer.
     val scope = ProcessLifecycleOwner.get().lifecycleScope
@@ -101,6 +104,7 @@ fun TodayScreen() {
 
     var moved by remember { mutableStateOf<PlanItem?>(null) }
     var captureTomorrow by remember { mutableStateOf<Boolean?>(null) }
+    var editing by remember { mutableStateOf<PlanItem?>(null) }
 
     val data = TodayData(
         now = now,
@@ -118,19 +122,17 @@ fun TodayScreen() {
     )
 
     val callbacks = TodayCallbacks(
+        // Les escriptures són les del Pla (`PlanActions`): la mateixa transacció, el mateix
+        // «Desfer» i els avisos refets. Avui només decideix què toca.
         onToggle = { entry ->
             when (val kind = entry.kind) {
-                is AgendaEntry.Kind.Plan -> scope.launch {
-                    val id = entry.id
-                    if (actions.toggle(kind.item)) {
-                        present(PendingCompletion(id, CoinReason.PLAN_ITEM, onUndo = { scope.launch { actions.reopen(kind.item) } }))
-                    } else {
-                        undoCompletion(id)
-                    }
-                }
+                is AgendaEntry.Kind.Plan -> planActions.toggle(kind.item)
                 // Un toc: la presa. Sense «Desfer» ni recompensa: la medicació no en dona cap, i
                 // tornar-la a tocar ja la desmarca a l'instant.
-                is AgendaEntry.Kind.Medication -> entry.time?.let { at -> scope.launch { actions.recordTaken(kind.medication, at) } }
+                is AgendaEntry.Kind.Medication -> entry.time?.let { at ->
+                    val intake = TodayPlanRules.intake(kind.medication, intakes, at)
+                    planActions.record(IntakeStatus.TAKEN, MedicationSchedule.Slot(kind.medication, at, intake))
+                }
                 is AgendaEntry.Kind.Calendar -> {
                     TodayCalendar.toggleLocalCompletion(prefs, kind.event, today, zone)
                     calendarReads += 1
@@ -138,34 +140,29 @@ fun TodayScreen() {
             }
         },
         onToggleHabit = { habit ->
+            val date = today.atZone(zone).toLocalDate()
+            planActions.toggle(habit, date, HabitProgress(habitLogs, date, zone))
+        },
+        onEdit = { item -> editing = item },
+        // Sense confirmació: esborrar ja demana premuda llarga i triar l'opció d'un menú.
+        onDelete = { item -> planActions.delete(item) },
+        onCapture = { tomorrow -> captureTomorrow = tomorrow },
+        onMoveToTomorrow = { item ->
             scope.launch {
-                val id = data.habitCompletionId(habit)
-                val log = actions.toggle(habit, today)
-                if (log != null) {
-                    present(
-                        PendingCompletion(
-                            id = id,
-                            reason = CoinReason.HABIT,
-                            onUndo = { scope.launch { actions.undo(log) } },
-                            onCommit = { actions.countHabitCompleted() },
-                            title = habit.title,
-                        ),
-                    )
-                } else {
-                    undoCompletion(id)
-                }
+                moved = actions.moveToTomorrow(item)
+                // L'avís de la tasca ha de canviar de dia amb ella.
+                ViraNotifications.reschedule(context.applicationContext)
             }
         },
-        // L'editor d'una tasca és del Pla; mentre no hi sigui, s'obre el calendari, on és.
-        onEdit = { navigator.navigate(ViraDestination.Plan(PlanSection.Calendar)) },
-        // Sense confirmació: esborrar ja demana premuda llarga i triar l'opció d'un menú.
-        onDelete = { item -> scope.launch { actions.delete(item) } },
-        onCapture = { tomorrow -> captureTomorrow = tomorrow },
-        onMoveToTomorrow = { item -> scope.launch { moved = actions.moveToTomorrow(item) } },
         onUndoMove = {
             val original = moved
             moved = null
-            if (original != null) scope.launch { actions.undoMove(original) }
+            if (original != null) {
+                scope.launch {
+                    actions.undoMove(original)
+                    ViraNotifications.reschedule(context.applicationContext)
+                }
+            }
         },
         onStartFocus = { item -> navigator.startFocus(ViraFocusLink(item.title, item.id)) },
         onOpenCalendar = { navigator.navigate(ViraDestination.Plan(PlanSection.Calendar)) },
@@ -189,9 +186,10 @@ fun TodayScreen() {
             initialDay = if (forTomorrow) data.tomorrow else null,
         )
     }
+    editing?.let { item -> PlanItemEditorScreen(item, onDismiss = { editing = null }) }
 }
 
-/// Les escriptures d'Avui i de la captura ràpida, sobre les dades de l'execució.
+/// «Passa a demà», l'única escriptura que és només d'Avui.
 @Composable
 internal fun rememberTodayActions(): TodayActions {
     val backend = LocalViraBackend.current
