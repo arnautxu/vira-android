@@ -87,6 +87,8 @@ class PlanActions(
             PlanWrites.lock.withLock {
                 if (generation() != account) return@withLock
                 val completion = store.db.withTransaction { store.block() }
+                // Els avisos es refan aquí, i no esperant l'observador: una alarma vella podria sonar abans.
+                host.onScheduleChanged()
                 completion?.let { withContext(Dispatchers.Main.immediate) { host.present(it) } }
             }
         }
