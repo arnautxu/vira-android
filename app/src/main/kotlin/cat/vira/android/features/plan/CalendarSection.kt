@@ -1,5 +1,6 @@
 package cat.vira.android.features.plan
 
+import cat.vira.android.app.PlanSection
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement

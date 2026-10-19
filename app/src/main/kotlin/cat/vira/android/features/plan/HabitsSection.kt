@@ -1,5 +1,6 @@
 package cat.vira.android.features.plan
 
+import cat.vira.android.app.PlanSection
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
