@@ -225,7 +225,8 @@ class PlanActions(
     }
 
     fun archive(habit: Habit) = write {
-        save(db.habits(), habit.copy(isArchived = true))
+        val current = db.habits().byId(habit.id) ?: return@write
+        save(db.habits(), current.copy(isArchived = true))
         host.onScheduleChanged()
     }
 
@@ -269,7 +270,8 @@ class PlanActions(
     }
 
     fun end(medication: Medication) = write {
-        save(db.medications(), ViraMedication.end(medication))
+        val current = db.medications().byId(medication.id) ?: return@write
+        save(db.medications(), ViraMedication.end(current))
         host.onScheduleChanged()
     }
 
@@ -280,13 +282,17 @@ class PlanActions(
 }
 
 /// La propera repetició d'un ítem que es tanca, si no hi és ja: reobrir-lo i tornar-lo a tancar
-/// no en fa una segona per al mateix dia. Torna l'identificador de la nova, si se n'ha fet cap.
+/// no en fa una segona per al mateix dia. "Ja hi és" vol dir una pendent idèntica en tot el que
+/// es copia (títol, notes, hora, icona, avís i repetició): dues sèries que difereixen en res no
+/// es tapen. Torna l'identificador de la nova, si se n'ha fet cap.
 internal suspend fun ViraStore.createNextOccurrence(item: PlanItem, zone: ZoneId): java.util.UUID? {
     val next = PlanItemCompletion.nextOccurrence(item, zone) ?: return null
     val date = PlanDay.date(next.day, zone)
     val exists = db.planItems().all().any {
-        it.id != item.id && it.title == next.title && it.recurrenceRaw == next.recurrenceRaw &&
-            PlanDay.date(it.day, zone) == date
+        it.id != item.id && it.status == PlanItemStatus.PENDING && PlanDay.date(it.day, zone) == date &&
+            it.title == next.title && it.notes == next.notes && it.time == next.time &&
+            it.symbolName == next.symbolName && it.reminderOffsetMinutes == next.reminderOffsetMinutes &&
+            it.recurrenceRaw == next.recurrenceRaw
     }
     if (exists) return null
     create(db.planItems(), next)
