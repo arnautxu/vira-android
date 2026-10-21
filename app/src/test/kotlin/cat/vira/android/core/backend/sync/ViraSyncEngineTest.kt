@@ -97,6 +97,7 @@ class ViraSyncEngineTest {
         serverConsent = when (serverSays) {
             ViraConsentStatus.GRANTED -> """[{"status":"granted"}]"""
             ViraConsentStatus.PENDING -> """[{"status":"pending"}]"""
+            ViraConsentStatus.DECLINED -> """[{"status":"declined"}]"""
             ViraConsentStatus.MISSING -> "[]"
         }
         val config = ViraBackendConfig.Values(server.url("/").toString().trimEnd('/'), "anon")

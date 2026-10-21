@@ -6,6 +6,7 @@ import cat.vira.android.core.backend.sync.ViraSyncEngine
 import cat.vira.android.core.data.ViraDatabase
 import cat.vira.android.core.data.ViraPreferences
 import cat.vira.android.core.notifications.ViraNotifications
+import cat.vira.android.core.resources.ViraLanguage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
@@ -30,6 +31,7 @@ class ViraBackend(context: Context) {
         preferences = preferences,
         // Cap avís del compte d'abans: s'han programat amb les seves dades.
         alsoEraseOnAccountSwitch = { ViraNotifications.cancelEverything(appContext) },
+        language = { ViraLanguage.current(appContext) },
     )
     val engine = ViraSyncEngine(session, db, preferences)
 

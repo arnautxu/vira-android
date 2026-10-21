@@ -95,6 +95,8 @@ fun EntryFlow(
     val prefs = services.prefs
     val state by services.state.collectAsState()
     val isRecovering by services.isRecoveringPassword.collectAsState()
+    // Es llegeix aquí perquè la frase i el posat de Viri del permís canviïn quan surt el correu.
+    services.guardianReceipt.collectAsState().value
     val finish by rememberUpdatedState(onFinish)
     fun navigator() = EntryNavigator(
         steps = steps,
@@ -104,6 +106,7 @@ fun EntryFlow(
         onFinish = { finish() },
         initialStep = initialStep,
         initialOutcome = initialOutcome,
+        guardianReceipt = { services.guardianReceipt.value },
     )
     // Sobreviu a la recreació de l'activitat: vegeu `EntryNavigator.snapshot`.
     val nav = rememberSaveable(
@@ -145,7 +148,7 @@ fun EntryFlow(
             // Per a TalkBack la capçalera va **al final**: frase de Viri → títol → controls → acció → saltar.
             EntryHeader(nav, Modifier.statusBarsPadding().semantics { traversalIndex = 1f })
             EntryStage(
-                pose = nav.step.viriPose(nav.intent),
+                pose = nav.stagePose,
                 line = if (lineOnStage) line else null,
                 celebrates = nav.step == EntryStep.DONE && prefs.celebrationsEnabled.value,
                 reaction = nav.reaction,

@@ -66,6 +66,29 @@ class ViraRestClient(
     suspend fun rpc(function: String, body: JsonElement, accessToken: String): String =
         send("POST", values().rpc(function), emptyList(), accessToken, body.toString(), emptyMap())
 
+    /// La resposta d'una funció de Supabase tal com arriba, sense traduir: cada funció posa el seu
+    /// motiu a `error` (`same_email`, `rate_limited`) i qui la crida decideix què vol dir.
+    data class Reply(val status: Int, val body: String)
+
+    /// Una funció de Supabase (`/functions/v1`). Només llança si no hi ha xarxa.
+    suspend fun function(method: String, name: String, body: JsonElement?, accessToken: String): Reply =
+        withContext(Dispatchers.IO) {
+            val config = values()
+            val request = Request.Builder()
+                .url("${config.baseUrl}/functions/v1/$name")
+                .method(method, body?.toString()?.toRequestBody(jsonType))
+                .header("apikey", config.anonKey)
+                .header("Authorization", "Bearer $accessToken")
+                .header("Accept", "application/json")
+                .build()
+            val response = try {
+                http.newCall(request).execute()
+            } catch (error: IOException) {
+                throw ViraBackendException(ViraBackendError.fromNetwork(error), error)
+            }
+            response.use { Reply(it.code, it.body?.string().orEmpty()) }
+        }
+
     private fun values() = config ?: throw ViraBackendException(ViraBackendError.NOT_CONFIGURED)
 
     private suspend fun send(

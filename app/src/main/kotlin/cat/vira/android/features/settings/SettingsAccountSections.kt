@@ -95,14 +95,17 @@ fun SettingsSyncSection() {
     }
 }
 
-/// Entrada al panell de pares (`PRIVACY_AND_SAFETY.md` §4.5b, D-38). La vinculació real queda
-/// fora de les builds públiques fins que es resolgui D-29: la fila hi és per explicar-ne l'estat.
+/// Entrada al panell de pares (`PRIVACY_AND_SAFETY.md` §4.5b, D-38). Oberta a totes les builds des
+/// del 2026-10-18 (Arnau), com a l'iPhone; **D-29 segueix sense resoldre's**.
+///
+/// La vinculació viu al servidor: sense sessió (l'app sense backend) la secció no surt, perquè no hi
+/// ha res a vincular.
 @Composable
-fun SettingsParentPanelSection(isAvailable: Boolean, onOpen: () -> Unit) {
+fun SettingsParentPanelSection(onOpen: () -> Unit) {
+    rememberSettingsUser() ?: return
     val title = stringResource(R.string.settings_parent_panel_title)
-    val hint = if (isAvailable) null else stringResource(R.string.settings_parent_panel_pending_short)
     SettingsGroup(header = stringResource(R.string.settings_parent_panel_section)) {
-        row { SettingsNavigationRow(onOpen) { SettingsLabel(title, pictogram = R.drawable.picto_habit_friends, hint = hint) } }
+        row { SettingsNavigationRow(onOpen) { SettingsLabel(title, pictogram = R.drawable.picto_habit_friends) } }
     }
 }
 

@@ -75,11 +75,6 @@ fun EntryAccountStep(
     }
 
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(ViraSpacing.s)) {
-        // El pare o la mare ho ha de saber **abans** de crear un compte que en aquesta versió
-        // encara no podrà vincular.
-        if (role == ViraAccountRole.PARENT) {
-            Text(stringResource(R.string.account_role_parent_pending_message), style = ViraFont.body, color = ink)
-        }
         EntryField(
             label = stringResource(R.string.account_email_field),
             value = email,

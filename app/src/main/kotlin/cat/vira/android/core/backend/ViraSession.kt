@@ -30,6 +30,8 @@ class ViraSession(
     private val clock: () -> Long = System::currentTimeMillis,
     /// El que els altres fils hagin de netejar quan entra un altre compte (avisos, widgets).
     private val alsoEraseOnAccountSwitch: suspend () -> Unit = {},
+    /// L'idioma de l'app (`ViraLanguage`), per al correu del permís del tutor.
+    language: () -> String = { "en" },
 ) {
 
     sealed interface State {
@@ -61,7 +63,12 @@ class ViraSession(
     private var stored: ViraStoredSession? = null
     private val transitions = Mutex()
 
-    private val guardianConsent = ViraGuardianConsent(rest)
+    private val guardianConsent = ViraGuardianConsent(rest, language)
+
+    /// El correu al tutor que s'acaba de demanar des del pas del permís, fins que es toca «Continua»
+    /// (2026-10-20). Mentre hi és, `ViraAuthGate` no tapa el pas amb l'app encara que el permís ja
+    /// sigui pendent: la pantalla «Correu enviat» s'ha de poder veure.
+    val guardianReceipt = MutableStateFlow<ViraGuardianRequest?>(null)
 
     /// El permís del tutor **tal com l'ha dit el servidor** en aquesta execució
     /// (`guardian_consents`). `null` mentre no s'hagi preguntat: llavors no s'obre res.
@@ -259,6 +266,39 @@ class ViraSession(
         applyVerifiedConsent(status)
     }
 
+    /// Demana el permís per correu a la persona adulta (2026-10-20). Amb `guardianEmail`, el declara i
+    /// envia; sense, torna a enviar a qui ja hi era. L'estat que torna és el del servidor, i es desa
+    /// igual que el de `declareConsent`.
+    ///
+    /// Amb `showingReceipt`, el rebut es desa **abans** que la pista passi a pendent: `ViraAuthGate`
+    /// ensenya el pas mentre falta el permís o hi ha rebut, i en l'ordre contrari l'app sortiria un
+    /// moment per sota (el flux d'entrada; Ajustos no ho fa servir).
+    suspend fun requestGuardianConsent(guardianEmail: String?, showingReceipt: Boolean = false): ViraGuardianRequest {
+        val generation = dataGeneration
+        val request = guardianConsent.request(guardianEmail, accessToken())
+        if (generation != dataGeneration) throw CancellationException("Ha canviat el compte")
+        if (showingReceipt) guardianReceipt.value = request
+        applyVerifiedConsent(request.status)
+        try {
+            updateConsentHint(request.status)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (_: Exception) {
+        }
+        applyVerifiedConsent(request.status)
+        return request
+    }
+
+    /// On és el permís, per a Ajustos. També posa al dia l'estat verificat: si la persona adulta ja
+    /// ha respost, la targeta ho diu sense esperar la sincronització.
+    suspend fun guardianConsentSummary(): ViraGuardianRequest {
+        val generation = dataGeneration
+        val summary = guardianConsent.summary(accessToken())
+        if (generation != dataGeneration) throw CancellationException("Ha canviat el compte")
+        applyVerifiedConsent(summary.status)
+        return summary
+    }
+
     /// Sessió invalidada des de fora (testimoni revocat, compte esborrat en un altre telèfon).
     ///
     /// Amb `onlyIf`, només si la sessió segueix sent la d'aquella generació: mentre s'esperava el
@@ -339,6 +379,7 @@ class ViraSession(
         dataGeneration = UUID.randomUUID()
         stored = null
         verifiedConsent = null
+        guardianReceipt.value = null
         setRecovering(false)
         _state.value = if (auth != null) State.SignedOut else State.Unconfigured
     }

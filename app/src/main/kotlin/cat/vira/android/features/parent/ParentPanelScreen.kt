@@ -30,11 +30,9 @@ import androidx.compose.ui.unit.dp
 import cat.vira.android.R
 import cat.vira.android.core.backend.ViraBackendError
 import cat.vira.android.core.design.components.ViraActionButton
-import cat.vira.android.core.design.components.ViraEmptyState
 import cat.vira.android.core.design.components.ViraInlineError
 import cat.vira.android.core.design.components.ViraPageTitle
 import cat.vira.android.core.design.components.ViraPictogram
-import cat.vira.android.core.design.components.ViraTabTitle
 import cat.vira.android.core.design.components.viraPressable
 import cat.vira.android.core.design.components.viraSectionBackground
 import cat.vira.android.core.design.tokens.ViraArea
@@ -44,8 +42,7 @@ import cat.vira.android.core.design.tokens.ViraSpacing
 import kotlinx.coroutines.launch
 
 /// El panell de pares tal com el veu el fill o la filla (`ParentPanelView` de l'iPhone), des
-/// d'Ajustos. Qui el posa decideix si la build el porta (`ViraReleaseGate.parentPanel`) i si hi ha
-/// sessió; si no, ensenya `ParentPanelPlaceholder`.
+/// d'Ajustos, a totes les builds (Arnau, 2026-10-18). Ajustos només l'ofereix amb sessió.
 ///
 /// L'ordre de la pantalla és el de qui mana: primer el codi —que és l'única manera que algú
 /// entri—, després qui hi ha connectat i què veu, i al final el que li han enviat. Trencar el
@@ -180,36 +177,5 @@ private fun NavigationRow(label: String, withIcon: Boolean = false, onClick: () 
         if (withIcon) ViraPictogram(R.drawable.picto_habit_friends, size = 28.dp, scalesWithText = true)
         Text(label, style = ViraFont.body, color = ViraColor.textPrimary, modifier = Modifier.weight(1f))
         ParentChevron()
-    }
-}
-
-/// El que veu qui no té el panell: una build pública (D-29 obert) o sense sessió
-/// (`ParentPanelReleasePlaceholder` i `PendingFeatureContent` de l'iPhone). No consulta cap
-/// vinculació ni cap dada del menor; si se li dona `onAccount`, deixa obrir el compte perquè
-/// ningú quedi atrapat en una sessió que no pot fer servir.
-@Composable
-fun ParentPanelPlaceholder(onAccount: (() -> Unit)? = null, onClose: (() -> Unit)? = null) {
-    Column(Modifier.fillMaxSize().viraSectionBackground(ViraArea.Today)) {
-        if (onClose != null) ParentBackBar(stringResource(R.string.action_settings), onClose)
-        Column(
-            Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .then(if (onClose == null) Modifier.padding(top = ViraSpacing.xxl) else Modifier)
-                .navigationBarsPadding()
-                .padding(horizontal = ViraSpacing.screenMargin),
-            verticalArrangement = Arrangement.spacedBy(ViraSpacing.sectionGap),
-        ) {
-            // Com un compte de pare o mare no té pestanyes, el títol el posa aquí.
-            if (onAccount != null) ViraTabTitle(stringResource(R.string.parent_title))
-            ViraEmptyState(
-                title = stringResource(R.string.settings_parent_panel_title),
-                message = stringResource(R.string.settings_parent_panel_pending_message),
-                icon = { ViraPictogram(R.drawable.picto_habit_friends, size = 64.dp) },
-            )
-            if (onAccount != null) {
-                ParentGroup(rows = { row { NavigationRow(stringResource(R.string.account_settings_title), onClick = onAccount) } })
-            }
-        }
     }
 }
