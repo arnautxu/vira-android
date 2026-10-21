@@ -28,6 +28,9 @@ enum class ViraConsentStatus(val raw: String) {
     GRANTED("granted"),
     /// Demanat, encara sense resposta.
     PENDING("pending"),
+    /// La persona adulta ha dit que no des de vira.com.es (2026-10-20). Tanca el mateix que
+    /// `PENDING`; la diferència és que Ajustos ofereix demanar-ho a una altra persona.
+    DECLINED("declined"),
     /// Ni demanat.
     MISSING("missing");
 
@@ -39,6 +42,7 @@ enum class ViraConsentStatus(val raw: String) {
         fun fromServer(status: String?) = when (status) {
             "granted", "not_required" -> GRANTED
             "pending" -> PENDING
+            "declined" -> DECLINED
             else -> MISSING
         }
     }

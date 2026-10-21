@@ -22,6 +22,7 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
 import cat.vira.android.core.backend.ViraAccountRole
 import cat.vira.android.core.backend.ViraConsentStatus
+import cat.vira.android.core.backend.ViraGuardianRequest
 import cat.vira.android.core.backend.ViraUser
 import cat.vira.android.core.design.ViraCapture
 import cat.vira.android.core.design.ViraScreenCaptures
@@ -53,8 +54,14 @@ private fun Capture(
     user: ViraUser? = null,
     values: Map<String, Any> = mapOf(EntryPreferenceKeys.ENTRY_START_INTENT to "organize", EntryPreferenceKeys.AGE_RANGE to "12-15"),
     outcome: EntryFirstActionOutcome? = null,
+    receipt: ViraGuardianRequest? = null,
 ) = Owners {
-    val services = EntryServices.preview(requiresAccount = true, user = user, prefs = EntryPreferences.inMemory(values))
+    val services = EntryServices.preview(
+        requiresAccount = true,
+        user = user,
+        prefs = EntryPreferences.inMemory(values),
+        guardianReceipt = receipt,
+    )
     EntryFlow(steps = steps, onFinish = {}, services = services, initialStep = step, initialOutcome = outcome)
 }
 
@@ -100,6 +107,27 @@ fun EntryNewPassword() = Capture(EntryStep.NEW_PASSWORD, steps = listOf(EntrySte
 
 @PreviewTest @ViraScreenCaptures @Composable
 fun EntryConsent() = Capture(EntryStep.CONSENT, user = teen)
+
+/// Després d'«Envia-li»: a qui ha anat el correu (`EntryConsentSentPanel`).
+@PreviewTest @ViraScreenCaptures @Composable
+fun EntryConsentSent() = Capture(
+    EntryStep.CONSENT,
+    user = teen.copy(consent = ViraConsentStatus.PENDING),
+    receipt = ViraGuardianRequest(
+        ViraConsentStatus.PENDING,
+        guardian = "ma•••@gmail.com",
+        canResend = true,
+        delivery = ViraGuardianRequest.Delivery.SENT,
+    ),
+)
+
+/// La funció del correu no ha respost: el permís és desat, però la fulla no diu «enviat».
+@PreviewTest @ViraScreenCaptures @Composable
+fun EntryConsentUnsent() = Capture(
+    EntryStep.CONSENT,
+    user = teen.copy(consent = ViraConsentStatus.PENDING),
+    receipt = ViraGuardianRequest.unsent("mama.garcia@gmail.com"),
+)
 
 @PreviewTest @ViraScreenCaptures @Composable
 fun EntryNickname() = Capture(EntryStep.NICKNAME, user = teen.copy(consent = ViraConsentStatus.PENDING))

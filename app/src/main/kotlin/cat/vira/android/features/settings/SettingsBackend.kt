@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.compose.runtime.collectAsState
 import cat.vira.android.core.backend.ViraBackend
+import cat.vira.android.core.backend.ViraConsentStatus
+import cat.vira.android.core.backend.ViraGuardianRequest
 import cat.vira.android.core.backend.ViraSession
 import cat.vira.android.core.backend.sync.ViraSyncEngine
 import cat.vira.android.core.data.ViraDataEraser
@@ -49,6 +51,13 @@ interface SettingsBackend {
     suspend fun archive(profile: FocusProfile)
     suspend fun exportJson(): File
     suspend fun exportPdf(): File
+    /// El resum que es veu abans de preguntar-lo: cap a l'app, el de mostra a les captures, que només
+    /// dibuixen el primer fotograma.
+    val initialGuardianSummary: ViraGuardianRequest? get() = null
+    /// On és el permís del tutor (`ViraSession.guardianConsentSummary`).
+    suspend fun guardianConsentSummary(): ViraGuardianRequest
+    /// Amb `email`, demana el permís a aquesta adreça; sense, torna a enviar a qui ja hi era.
+    suspend fun requestGuardianConsent(email: String?): ViraGuardianRequest
 }
 
 /// La de l'app, sobre les peces de dades d'aquesta execució.
@@ -109,6 +118,10 @@ class ViraSettingsBackend(private val context: Context, private val backend: Vir
     override suspend fun exportPdf(): File = ViraDataExportPdf.writeSnapshotFile(context, db, exportDirectory(), appVersion)
 
     private fun exportDirectory() = File(context.cacheDir, "exports")
+
+    override suspend fun guardianConsentSummary() = backend.session.guardianConsentSummary()
+
+    override suspend fun requestGuardianConsent(email: String?) = backend.session.requestGuardianConsent(email)
 }
 
 /// La de les captures: un estat fix i cap efecte.
@@ -119,7 +132,9 @@ class PreviewSettingsBackend(
     name: String = "",
     skin: String? = null,
     profiles: List<FocusProfile> = emptyList(),
+    private val guardian: ViraGuardianRequest = ViraGuardianRequest(ViraConsentStatus.MISSING),
 ) : SettingsBackend {
+    override val initialGuardianSummary = guardian
     override val session = MutableStateFlow(sessionState)
     override val syncState = MutableStateFlow(sync)
     override val profileName: Flow<String> = MutableStateFlow(name)
@@ -136,6 +151,8 @@ class PreviewSettingsBackend(
     override suspend fun archive(profile: FocusProfile) = Unit
     override suspend fun exportJson(): File = error("Sense fitxers a les captures")
     override suspend fun exportPdf(): File = error("Sense fitxers a les captures")
+    override suspend fun guardianConsentSummary() = guardian
+    override suspend fun requestGuardianConsent(email: String?) = guardian
 }
 
 /// El valor d'un flux com a estat. Si el flux ja en té un (`StateFlow`), es comença per aquest: les

@@ -176,5 +176,6 @@ val ViraBackendError.entryMessage: Int
         ViraBackendError.NOT_ALLOWED -> R.string.backend_error_not_allowed
         ViraBackendError.CANCELLED -> R.string.backend_error_cancelled
         ViraBackendError.REJECTED -> R.string.backend_error_rejected
+        ViraBackendError.GUARDIAN_IS_YOU -> R.string.backend_error_guardian_is_you
         ViraBackendError.UNAVAILABLE -> R.string.backend_error_unavailable
     }

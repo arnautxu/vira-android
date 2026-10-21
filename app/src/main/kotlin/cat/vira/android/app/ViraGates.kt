@@ -38,15 +38,16 @@ fun ViraOnboardingGate(content: @Composable () -> Unit) {
 ///
 /// No té pantalles pròpies: demana el **tros que falta del mateix flux** d'entrada.
 /// - Sense backend configurat (`Unconfigured`), l'app funciona en local com sempre i deixa passar.
-/// - Un compte de pare o mare no té pla, ni emocions, ni Viri: només el panell (a les builds que
-///   el porten; a Google Play, el marcador).
+/// - Un compte de pare o mare no té pla, ni emocions, ni Viri: només el panell.
 /// - Sense permís del tutor, el flux del permís: no és una pantalla informativa, és la condició de
-///   `ViraSyncScope`.
+///   `ViraSyncScope`. Amb el correu al tutor acabat d'enviar, el pas encara ha d'ensenyar a qui ha
+///   anat (`ViraSession.guardianReceipt`).
 @Composable
 fun ViraAuthGate(content: @Composable () -> Unit) {
     val session = LocalViraBackend.current.session
     val recovering by session.isRecoveringPassword.collectAsStateWithLifecycle()
     val state by session.state.collectAsStateWithLifecycle()
+    val receipt by session.guardianReceipt.collectAsStateWithLifecycle()
 
     if (recovering) {
         ViraFeatureSlots.Entry(ViraEntryRequest.NewPassword, onFinish = {})
@@ -57,9 +58,8 @@ fun ViraAuthGate(content: @Composable () -> Unit) {
         ViraSession.State.Unconfigured -> content()
         ViraSession.State.SignedOut -> ViraFeatureSlots.Entry(ViraEntryRequest.Account, onFinish = {})
         is ViraSession.State.SignedIn -> when {
-            current.user.role == ViraAccountRole.PARENT ->
-                if (ViraReleaseGate.parentPanel) ViraFeatureSlots.ParentRoot() else ViraFeatureSlots.ParentReleasePlaceholder()
-            current.user.consent == ViraConsentStatus.MISSING ->
+            current.user.role == ViraAccountRole.PARENT -> ViraFeatureSlots.ParentRoot()
+            current.user.consent == ViraConsentStatus.MISSING || receipt != null ->
                 ViraFeatureSlots.Entry(ViraEntryRequest.Consent, onFinish = {})
             else -> content()
         }

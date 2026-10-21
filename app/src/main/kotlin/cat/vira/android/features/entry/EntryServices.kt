@@ -7,6 +7,7 @@ import cat.vira.android.core.backend.ViraAccountRole
 import cat.vira.android.core.backend.ViraBackend
 import cat.vira.android.core.backend.ViraBackendError
 import cat.vira.android.core.backend.ViraConsentStatus
+import cat.vira.android.core.backend.ViraGuardianRequest
 import cat.vira.android.core.backend.ViraSession
 import cat.vira.android.core.backend.ViraUser
 import cat.vira.android.core.data.ViraStore
@@ -51,6 +52,11 @@ interface EntryServices {
     suspend fun updatePassword(password: String)
     /// Llança `ViraBackendException` si no es pot.
     suspend fun declareConsent(status: ViraConsentStatus, guardianEmail: String?)
+    /// El correu al tutor que s'acaba de demanar, fins a «Continua» (`ViraSession.guardianReceipt`).
+    val guardianReceipt: MutableStateFlow<ViraGuardianRequest?>
+    /// Demana el permís per correu; sense `guardianEmail`, el torna a enviar. Llança
+    /// `ViraBackendException` si no es pot.
+    suspend fun requestGuardianConsent(guardianEmail: String?, showingReceipt: Boolean = false): ViraGuardianRequest
 
     /// Crea la tasca pel camí de la captura ràpida. Torna el títol desat, o `null` si era buit.
     suspend fun addTask(title: String): String?
@@ -68,7 +74,8 @@ interface EntryServices {
             requiresAccount: Boolean = true,
             user: ViraUser? = null,
             prefs: EntryPreferences = EntryPreferences.inMemory(),
-        ): EntryServices = PreviewEntryServices(requiresAccount, user, prefs)
+            guardianReceipt: ViraGuardianRequest? = null,
+        ): EntryServices = PreviewEntryServices(requiresAccount, user, prefs, guardianReceipt)
     }
 }
 
@@ -105,6 +112,9 @@ private class LiveEntryServices(context: Context, private val backend: ViraBacke
     override suspend fun declareConsent(status: ViraConsentStatus, guardianEmail: String?) {
         session.declareConsent(status, guardianEmail)
     }
+    override val guardianReceipt get() = session.guardianReceipt
+    override suspend fun requestGuardianConsent(guardianEmail: String?, showingReceipt: Boolean) =
+        session.requestGuardianConsent(guardianEmail, showingReceipt)
 
     override suspend fun addTask(title: String): String? {
         val trimmed = title.trim()
@@ -134,6 +144,7 @@ private class PreviewEntryServices(
     override val requiresAccount: Boolean,
     user: ViraUser?,
     override val prefs: EntryPreferences,
+    receipt: ViraGuardianRequest?,
 ) : EntryServices {
     override val state = MutableStateFlow(
         when {
@@ -155,6 +166,9 @@ private class PreviewEntryServices(
     override suspend fun sendPasswordReset(email: String) = Unit
     override suspend fun updatePassword(password: String) = Unit
     override suspend fun declareConsent(status: ViraConsentStatus, guardianEmail: String?) = Unit
+    override val guardianReceipt = MutableStateFlow(receipt)
+    override suspend fun requestGuardianConsent(guardianEmail: String?, showingReceipt: Boolean) =
+        guardianReceipt.value ?: ViraGuardianRequest(ViraConsentStatus.PENDING)
     override suspend fun addTask(title: String) = title.trim().ifEmpty { null }
     override suspend fun rewardSnapshot() = EntryReward.NONE
     override suspend fun focusCompletedSince(since: Instant): Boolean? = null

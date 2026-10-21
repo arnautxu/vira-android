@@ -10,6 +10,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,19 +41,26 @@ import kotlinx.coroutines.launch
 ///   mai sense haver escrit** (`EntryConsentWriter`).
 /// - **Sense tram** (un telèfon nou, un canvi de compte): el tram es demana aquí mateix.
 ///
-/// **No diu que s'hagi enviat cap correu**, perquè no se n'envia cap: només desa a qui s'ha de
-/// demanar.
+/// ## El correu, de debò (Arnau, 2026-10-20)
+/// «Envia-li» crida `guardian-consent`, que desa el permís **i** envia l'enllaç a vira.com.es/permis.
+/// Després, la mateixa fulla diu a qui ha anat (`EntryConsentSentPanel`). Si la funció del correu no
+/// respon, el permís es desa igualment pel camí d'abans i la fulla diu que el correu **no** ha
+/// sortit: mai «enviat» sense haver-ho fet.
 @Composable
 fun EntryConsentStep(services: EntryServices, onContinue: () -> Unit) {
     val scope = rememberCoroutineScope()
     val ageRange = services.prefs.ageRange
-    val writer = remember(services) { EntryConsentWriter(services::declareConsent) }
+    val writer = remember(services) { EntryConsentWriter.live(services) }
+    val receipt by services.guardianReceipt.collectAsState()
     var guardianEmail by rememberSaveable { mutableStateOf("") }
     var isWorking by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<ViraBackendError?>(null) }
     // El tram es demana dins del pas només si hi faltava en entrar-hi: un cop triat, la pantalla
     // no ha de desaparèixer sota el dit de qui l'acaba de triar.
     var asksAge by remember { mutableStateOf(EntryConsentWriter.plan(ageRange.value) == EntryConsentWriter.Plan.NEEDS_AGE) }
+    // «Canvia el correu» des de la fulla de després: torna al camp sense treure el rebut, que és el
+    // que manté el pas a la pantalla quan l'ha obert `ViraAuthGate`.
+    var isChangingEmail by rememberSaveable { mutableStateOf(false) }
     val plan = EntryConsentWriter.plan(ageRange.value)
     val ink = ViraColor.onCard(ViraArea.Rewards)
 
@@ -61,12 +69,34 @@ fun EntryConsentStep(services: EntryServices, onContinue: () -> Unit) {
         error = null
         isWorking = true
         scope.launch {
-            error = writer.submit(ageRange.value, guardianEmail.trim(), onContinue)
+            error = writer.submit(
+                ageRange.value,
+                guardianEmail.trim(),
+                onAsked = {
+                    services.guardianReceipt.value = it
+                    isChangingEmail = false
+                },
+                onWritten = onContinue,
+            )
             isWorking = false
         }
     }
 
     LaunchedEffect(Unit) { if (plan == EntryConsentWriter.Plan.GRANT) submit() }
+
+    val shown = receipt
+    if (shown != null && !isChangingEmail) {
+        EntryConsentSentPanel(
+            services = services,
+            receipt = shown,
+            onChangeEmail = { isChangingEmail = true },
+            onContinue = {
+                services.guardianReceipt.value = null
+                onContinue()
+            },
+        )
+        return
+    }
 
     if (plan == EntryConsentWriter.Plan.GRANT && !asksAge) {
         // 16+: no hi ha res a preguntar. Només es veu si triga o si falla.
@@ -89,7 +119,6 @@ fun EntryConsentStep(services: EntryServices, onContinue: () -> Unit) {
     }
 
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(ViraSpacing.s)) {
-        EntryViriLine(stringResource(R.string.onboarding_viri_guardian))
         EntryHeading(stringResource(EntryStep.CONSENT.title), EntryStep.CONSENT.message?.let { stringResource(it) })
         if (asksAge) {
             Text(stringResource(R.string.onboarding_age_title), style = ViraFont.footnote, color = ink)

@@ -4,6 +4,7 @@ import android.content.res.Configuration
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import cat.vira.android.core.backend.ViraConsentStatus
+import cat.vira.android.core.backend.ViraGuardianRequest
 import cat.vira.android.core.backend.ViraSession
 import cat.vira.android.core.backend.ViraUser
 import cat.vira.android.core.backend.sync.ViraSyncEngine
@@ -28,6 +29,8 @@ private fun backend(session: ViraSession.State = signedIn) = PreviewSettingsBack
     sessionState = session,
     sync = ViraSyncEngine.State.Succeeded(Instant.EPOCH),
     name = "Nora",
+    // Sense dates: «fa 2 dies» canviaria cada dia i la captura deixaria de coincidir.
+    guardian = ViraGuardianRequest(ViraConsentStatus.PENDING, guardian = "ma•••@gmail.com", canResend = true),
     profiles = listOf(
         FocusProfile(name = "Deures", focusMinutes = 30, breakMinutes = 5),
         FocusProfile(name = "Lectura", focusMinutes = 20, breakMinutes = 5, muteViraNotifications = true),

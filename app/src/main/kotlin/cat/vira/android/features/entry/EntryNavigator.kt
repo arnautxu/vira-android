@@ -1,11 +1,13 @@
 package cat.vira.android.features.entry
 
+import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import cat.vira.android.R
 import cat.vira.android.core.backend.ViraAccountRole
+import cat.vira.android.core.backend.ViraGuardianRequest
 import cat.vira.android.core.backend.ViraUser
 
 /// Moviment del flux d'entrada: avançar, saltar, "Ara no", enrere i la recuperació de la
@@ -22,6 +24,9 @@ class EntryNavigator(
     private val onFinish: () -> Unit,
     initialStep: EntryStep? = null,
     initialOutcome: EntryFirstActionOutcome? = null,
+    /// El correu al tutor acabat de demanar (`ViraSession.guardianReceipt`): canvia la frase i el
+    /// posat de Viri al pas del permís.
+    private val guardianReceipt: () -> ViraGuardianRequest? = { null },
 ) {
     var step: EntryStep by mutableStateOf(initialStep ?: steps.firstOrNull() ?: EntryStep.WELCOME)
         private set
@@ -131,7 +136,8 @@ class EntryNavigator(
 
     data class ProgressPosition(val position: Int, val total: Int, val fraction: Double)
 
-    /// La frase de Viri del pas. El compte només en porta per al jove que es registra.
+    /// La frase de Viri del pas. El compte només en porta per al jove que es registra, i el permís
+    /// només quan té pantalla (`consentLine`).
     @get:StringRes
     val viriLine: Int? get() = viriLineFor(step)
 
@@ -144,10 +150,33 @@ class EntryNavigator(
         EntryStep.FIRST_ACTION -> intent.viriLine
         EntryStep.DONE -> R.string.onboarding_viri_done
         EntryStep.ACCOUNT -> if (role == ViraAccountRole.TEEN && isSigningUp) R.string.onboarding_viri_account else null
+        EntryStep.CONSENT -> consentLine
         EntryStep.NICKNAME -> R.string.onboarding_viri_nickname
         EntryStep.NOTIFICATIONS -> R.string.onboarding_viri_reminders
         else -> null
     }
+
+    /// El permís parla només quan té pantalla (12–15 o sense tram): el 16+ passa sol. Després
+    /// d'«Envia-li», la frase diu on som (Arnau, 2026-10-20).
+    @get:StringRes
+    private val consentLine: Int?
+        get() = when (guardianReceipt()?.delivery) {
+            ViraGuardianRequest.Delivery.SENT -> R.string.onboarding_viri_guardian_sent
+            ViraGuardianRequest.Delivery.NOT_SENT, ViraGuardianRequest.Delivery.LIMIT_REACHED ->
+                R.string.onboarding_viri_guardian_unsent
+            null -> if (EntryConsentWriter.plan(prefs.ageRange.value) == EntryConsentWriter.Plan.GRANT) null
+            else R.string.onboarding_viri_guardian
+        }
+
+    /// El posat de l'escenari. Al permís, Viri pensa mentre es demana el correu i fa d'àngel un cop
+    /// enviat (maqueta del 2026-10-20).
+    @get:DrawableRes
+    val stagePose: Int
+        get() = when {
+            step != EntryStep.CONSENT -> step.viriPose(intent)
+            guardianReceipt() == null -> R.drawable.viri_entry_thinking
+            else -> R.drawable.viri_entry_angel
+        }
 
     /// El compte no porta títol (els camps ja diuen què són), el permís el posa ell mateix i la
     /// celebració no en té.

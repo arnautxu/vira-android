@@ -9,7 +9,8 @@ import androidx.compose.runtime.CompositionLocalProvider
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.filterNotNull
 import cat.vira.android.features.parent.ParentRootScreen
-import cat.vira.android.features.parent.ParentPanelPlaceholder
+import cat.vira.android.features.parent.ParentPanelScreen
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import cat.vira.android.features.parent.ParentLinkUrl
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.mutableStateOf
@@ -108,14 +109,6 @@ internal object ViraFeatureSlots {
         ParentRootScreen(account = { onClose -> AccountSettingsScreen(onClose) }, linkCodes = codes)
     }
 
-    /// Fil Panell de pares: el que veu un pare o mare a les builds sense panell (Google Play).
-    @Composable
-    fun ParentReleasePlaceholder() {
-        var showingAccount by rememberSaveable { mutableStateOf(false) }
-        if (showingAccount) AccountSettingsScreen(onClose = { showingAccount = false })
-        else ParentPanelPlaceholder(onAccount = { showingAccount = true })
-    }
-
     /// Fil Concentra't (`features/focus`): la preparació a pantalla completa, sense la barra
     /// (`FocusScreen(onClose = onClose)`); `link` és la tasca triada, si s'hi ha arribat des d'una
     /// fila. La represa des de l'avís fix és `FocusResumeEffect` a `RootScreen`.
@@ -164,7 +157,21 @@ internal object ViraFeatureSlots {
     @Composable
     fun Settings(onClose: () -> Unit) {
         val navigator = LocalViraNavigator.current
-        SettingsScreen(onClose, onEditFocusProfile = { navigator.editFocusProfile(it?.id) })
+        // El panell de pares s'obre des del compte (`SettingsParentPanelSection`) i en tornar s'ha de
+        // ser on s'era: Ajustos es desa mentre el panell el tapa.
+        var showingParentPanel by rememberSaveable { mutableStateOf(false) }
+        val saved = rememberSaveableStateHolder()
+        if (showingParentPanel) {
+            ParentPanelScreen(onClose = { showingParentPanel = false })
+        } else {
+            saved.SaveableStateProvider("settings") {
+                SettingsScreen(
+                    onClose,
+                    onOpenParentPanel = { showingParentPanel = true },
+                    onEditFocusProfile = { navigator.editFocusProfile(it?.id) },
+                )
+            }
+        }
     }
 }
 

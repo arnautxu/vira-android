@@ -18,6 +18,8 @@ enum class ViraBackendError(val messageKey: String) {
     NOT_ALLOWED("backend.error.notAllowed"),
     CANCELLED("backend.error.cancelled"),
     REJECTED("backend.error.rejected"),
+    /// El correu del tutor és el mateix del compte (`guardian-consent`, 2026-10-20).
+    GUARDIAN_IS_YOU("backend.error.guardianIsYou"),
     UNAVAILABLE("backend.error.unavailable");
 
     val isRetryable: Boolean get() = this == OFFLINE || this == UNAVAILABLE || this == TOO_MANY_ATTEMPTS

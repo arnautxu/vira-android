@@ -67,7 +67,7 @@ import cat.vira.android.core.design.tokens.ViraTouch
 ///
 /// Les dues pantalles que són d'altres fils entren com a portes: el panell de pares
 /// (`onOpenParentPanel`) i l'editor de modes de concentració (`onEditFocusProfile`, `null` per a un
-/// mode nou). Sense porta, la fila del panell surt com a pendent i les fitxes de mode no s'obren.
+/// mode nou). Sense porta, les fitxes de mode no s'obren.
 @Composable
 fun SettingsScreen(
     onClose: () -> Unit,
@@ -346,8 +346,9 @@ fun SettingsCategoryPage(
         when (category) {
             // Una sola pantalla: qui ets a dalt, què es copia, la família i, al final, la sessió.
             SettingsCategory.ACCOUNT -> {
+                SettingsGuardianSection()
                 SettingsSyncSection()
-                SettingsParentPanelSection(isAvailable = onOpenParentPanel != null, onOpen = { onOpenParentPanel?.invoke() })
+                SettingsParentPanelSection(onOpen = { onOpenParentPanel?.invoke() })
                 SettingsSessionSection(onFinished = onErased)
             }
             SettingsCategory.NOTIFICATIONS -> SettingsNotificationsSection()

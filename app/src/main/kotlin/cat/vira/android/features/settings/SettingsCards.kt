@@ -110,6 +110,7 @@ fun SettingsAccountHero(modifier: Modifier = Modifier) {
                 val consent = when {
                     user == null || user.role != ViraAccountRole.TEEN -> null
                     user.consent == ViraConsentStatus.PENDING -> R.string.settings_account_consent_pending
+                    user.consent == ViraConsentStatus.DECLINED -> R.string.settings_account_consent_declined
                     user.consent == ViraConsentStatus.MISSING -> R.string.settings_account_consent_missing
                     else -> null
                 }

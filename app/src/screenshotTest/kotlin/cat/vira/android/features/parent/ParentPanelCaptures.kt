@@ -98,5 +98,3 @@ fun TeenParentInbox() = Screen {
     )
 }
 
-@PreviewTest @ViraScreenCaptures @Composable
-fun ParentPlaceholder() = ViraCapture { ViraTheme(reduceMotion = true) { ParentPanelPlaceholder(onAccount = {}) } }
