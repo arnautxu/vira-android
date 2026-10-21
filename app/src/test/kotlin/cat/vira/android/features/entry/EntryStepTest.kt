@@ -184,7 +184,7 @@ class EntryStepTest {
 
     @Test
     fun `Viri diu 15 paraules com a molt a cada pas, en els tres idiomes`() {
-        for (folder in listOf("values", "values-es", "values-en")) {
+        for (folder in listOf("values-ca", "values-es", "values")) {
             val xml = File("src/main/res/$folder/strings_vira.xml").readText()
             val lines = Regex("""<string name="onboarding_viri_[a-z_]+">(.*?)</string>""").findAll(xml).map { it.groupValues[1] }.toList()
             assertEquals(folder, 12, lines.size)

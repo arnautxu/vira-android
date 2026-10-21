@@ -3,8 +3,10 @@
 
 Els textos de Vira no s'escriuen a mà: la font de veritat és el catàleg de l'iPhone
 (`Vira/Resources/Localizable.xcstrings` de arnautxu/VIRA-APP-I-WEB). Aquest script en llegeix
-els tres idiomes i escriu `strings_vira.xml` a `values/` (català, l'idioma de partida),
-`values-es/` i `values-en/`. Els fitxers generats no es toquen a mà: es tornen a generar.
+els tres idiomes i escriu `strings_vira.xml` a `values-ca/`, `values-es/` i `values/` (anglès).
+L'anglès va a `values/` perquè és l'idioma de reserva, com a l'iPhone (Arnau, 2026-10-21): un
+telèfon que no està en català, castellà ni anglès veu Vira en anglès. El català continua sent la
+llengua de partida del catàleg. Els fitxers generats no es toquen a mà: es tornen a generar.
 
     python3 scripts/export-strings.py ../VIRA-APP-I-WEB/Vira/Resources/Localizable.xcstrings \
         ../VIRA-APP-I-WEB/Vira/Features/Emotions/EmotionIntensity.xcstrings
@@ -35,7 +37,7 @@ import sys
 from pathlib import Path
 from xml.sax.saxutils import escape
 
-LANGUAGES = {"ca": "values", "es": "values-es", "en": "values-en"}
+LANGUAGES = {"ca": "values-ca", "es": "values-es", "en": "values"}
 SOURCE_LANGUAGE = "ca"
 OUTPUT_NAME = "strings_vira.xml"
 PLURAL_QUANTITIES = ["zero", "one", "two", "few", "many", "other"]
@@ -216,7 +218,7 @@ def main() -> int:
     if stale:
         print("No estan al dia amb el catàleg de l'iPhone:\n  " + "\n  ".join(stale), file=sys.stderr)
         return 1
-    count = sum(1 for line in files["values"].splitlines() if line.startswith(("    <string ", "    <plurals ")))
+    count = sum(1 for line in files[LANGUAGES[SOURCE_LANGUAGE]].splitlines() if line.startswith(("    <string ", "    <plurals ")))
     print(f"{'Al dia' if args.check else 'Exportats'}: {count} recursos × {len(files)} idiomes")
     return 0
 

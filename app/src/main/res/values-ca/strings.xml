@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Vira</string>
-    <string name="skeleton_pending">This tab has not been copied from the iPhone yet.</string>
+    <string name="skeleton_pending">Aquesta pestanya encara no s\'ha calcat de l\'iPhone.</string>
 </resources>

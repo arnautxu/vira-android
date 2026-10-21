@@ -62,6 +62,11 @@ data class ViraUserMetadata(val role: ViraAccountRole? = null, val consent: Vira
         consent?.let { put("consent", JsonPrimitive(it.raw)) }
     })
 
+    /// Les metadades de l'alta. L'idioma hi va perquè les plantilles de correu de Supabase
+    /// (confirmar l'alta, canviar la contrasenya) triïn català, castellà o anglès
+    /// (`ViraAuthClient.signUp` de l'iPhone, 2026-10-21).
+    fun signUpJson(locale: String): JsonObject = JsonObject(json + ("locale" to JsonPrimitive(locale)))
+
     companion object {
         fun from(json: JsonObject?): ViraUserMetadata = ViraUserMetadata(
             // Un objecte o una llista on hi hauria d'haver un text compta com a absent: una metadada

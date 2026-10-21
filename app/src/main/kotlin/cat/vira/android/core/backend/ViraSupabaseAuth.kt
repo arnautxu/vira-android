@@ -4,6 +4,7 @@ package cat.vira.android.core.backend
 
 import android.content.Context
 import android.net.Uri
+import cat.vira.android.core.resources.ViraLanguage
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.auth.ExternalAuthAction
@@ -35,6 +36,7 @@ class ViraSupabaseAuth(
 ) : ViraAuthBackend {
 
     private val storage = ViraKeystoreSessionManager(ViraKeystore(context))
+    private val appContext = context.applicationContext
 
     val client: SupabaseClient = createSupabaseClient(config.baseUrl, config.anonKey) {
         install(Auth) {
@@ -54,7 +56,7 @@ class ViraSupabaseAuth(
             auth.signUpWith(Email, redirectUrl = ViraBackendConfig.CALLBACK_URL) {
                 this.email = email
                 this.password = password
-                this.data = metadata.json
+                this.data = metadata.signUpJson(ViraLanguage.current(appContext))
             }
             auth.currentSessionOrNull()?.let { it.toVira(fallback = metadata) }
         }

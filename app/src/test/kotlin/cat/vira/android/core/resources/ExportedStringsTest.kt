@@ -10,7 +10,7 @@ import org.w3c.dom.Element
 /// Els textos exportats de l'iPhone han de dir el mateix en els tres idiomes: les mateixes claus
 /// i els mateixos arguments. Si divergeixen, una pantalla petaria només en un idioma.
 class ExportedStringsTest {
-    private val folders = listOf("values", "values-es", "values-en")
+    private val folders = listOf("values-ca", "values-es", "values")
 
     private fun read(folder: String): Map<String, String> {
         val file = File("src/main/res/$folder/strings_vira.xml")
@@ -29,7 +29,7 @@ class ExportedStringsTest {
 
     @Test
     fun elsTresIdiomesTenenLesMateixesClaus() {
-        val catalan = read("values")
+        val catalan = read("values-ca")
         assertTrue("el català no hauria de ser buit", catalan.size > 1000)
         folders.drop(1).forEach { folder ->
             assertEquals("claus de $folder", catalan.keys, read(folder).keys)
@@ -38,7 +38,7 @@ class ExportedStringsTest {
 
     @Test
     fun elsTresIdiomesTenenElsMateixosArguments() {
-        val catalan = read("values")
+        val catalan = read("values-ca")
         folders.drop(1).forEach { folder ->
             val other = read(folder)
             catalan.forEach { (key, text) ->
