@@ -2,6 +2,7 @@ package cat.vira.android.features.emotions
 
 import android.content.Context
 import androidx.annotation.RawRes
+import cat.vira.android.core.resources.ViraLanguage
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -58,17 +59,13 @@ data class MindfulnessScript(
     }
 
     companion object {
-        /// Els idiomes en què hi ha àudio. Un altre idioma del sistema cau al català, que és la
-        /// llengua de partida del catàleg.
-        val languages = listOf("ca", "es", "en")
+        /// Els idiomes en què hi ha àudio, els mateixos que els de l'app.
+        val languages = ViraLanguage.supported
 
         private val json = Json { ignoreUnknownKeys = true }
 
         /// L'idioma en què l'app ja ensenya els textos, perquè veu i pantalla coincideixin.
-        fun currentLanguage(context: Context): String {
-            val code = context.resources.configuration.locales[0].language
-            return if (code in languages) code else "ca"
-        }
+        fun currentLanguage(context: Context): String = ViraLanguage.current(context)
 
         @RawRes
         fun scriptId(context: Context, exercise: MindfulnessExercise, language: String): Int =

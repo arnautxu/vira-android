@@ -24,7 +24,9 @@ Cal `ANDROID_HOME` (o `local.properties` amb `sdk.dir=`) amb la plataforma 35 i 
   contrast 4,5:1, tàctils ≥ 48 dp, mai informació només per color), `VIRI_AND_GAMIFICATION.md`,
   `CONTENT_STRATEGY.md` i `DESIGN_RULES.md`.
 - Els textos **no s'escriuen a mà**: surten de `Localizable.xcstrings` de l'iPhone amb
-  `scripts/export-strings.py` (ca de partida, es, en). Un text que no hi és, es demana.
+  `scripts/export-strings.py` (`values-ca`, `values-es` i, a `values/`, l'anglès, que és l'idioma
+  de reserva com a l'iPhone; `ViraLanguage` el dona al que no és un recurs). Un text que no hi és,
+  es demana.
 - Cap color literal a les pantalles: sempre tokens de `core/design`.
 
 ## Estructura i amos
