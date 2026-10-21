@@ -187,7 +187,7 @@ class EntryStepTest {
         for (folder in listOf("values-ca", "values-es", "values")) {
             val xml = File("src/main/res/$folder/strings_vira.xml").readText()
             val lines = Regex("""<string name="onboarding_viri_[a-z_]+">(.*?)</string>""").findAll(xml).map { it.groupValues[1] }.toList()
-            assertEquals(folder, 12, lines.size)
+            assertEquals(folder, 14, lines.size)
             for (line in lines) assertTrue("$folder: $line", line.trim().split(Regex("\\s+")).size <= 15)
         }
     }
