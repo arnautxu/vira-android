@@ -38,6 +38,8 @@ import cat.vira.android.core.design.tokens.ViraGradient
 import cat.vira.android.core.design.tokens.ViraRadius
 import cat.vira.android.core.design.tokens.ViraSpacing
 import cat.vira.android.core.design.tokens.ViraTouch
+import cat.vira.android.features.progress.RewardsPill
+import cat.vira.android.features.progress.RewardsProgressBar
 
 /// Una fitxa d'«Els meus premis» (`PersonalRewardTile`): regal a dalt, nom, preu en píndola i, al
 /// peu, l'acció o el que falta.

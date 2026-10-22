@@ -50,6 +50,8 @@ import cat.vira.android.core.design.tokens.ViraColor
 import cat.vira.android.core.design.tokens.ViraFont
 import cat.vira.android.core.design.tokens.ViraSpacing
 import cat.vira.android.core.design.tokens.ViraTouch
+import cat.vira.android.features.progress.RewardsPill
+import cat.vira.android.features.progress.RewardsSceneCard
 import kotlinx.coroutines.launch
 
 /// «Els meus premis» (`PersonalRewardsView`, `USER_FLOWS.md` F20): l'usuari es posa les seves

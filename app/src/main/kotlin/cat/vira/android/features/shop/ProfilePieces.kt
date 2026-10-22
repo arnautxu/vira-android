@@ -19,6 +19,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.Dp
@@ -82,7 +85,13 @@ fun PinnedBadgesShelfContent(pinnedKeys: List<String>, onCustomize: () -> Unit, 
             .defaultMinSize(minHeight = ViraTouch.minimum)
             .background(ViraColor.surfaceElevated.copy(alpha = 0.45f), RoundedCornerShape(ViraRadius.m))
             .viraPressable(onClick = onCustomize)
-            .clearAndSetSemantics { contentDescription = label; stateDescription = state }
+            // Un sol botó per a TalkBack: el nom, què hi ha fixat i l'acció (clearAndSet esborraria la del clic).
+            .clearAndSetSemantics {
+                contentDescription = label
+                stateDescription = state
+                role = Role.Button
+                onClick { onCustomize(); true }
+            }
             .padding(horizontal = ViraSpacing.xs, vertical = ViraSpacing.xxs),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(ViraSpacing.xs),
