@@ -20,7 +20,6 @@ import androidx.compose.ui.text.input.ImeAction
 import cat.vira.android.R
 import cat.vira.android.core.backend.ViraBackendError
 import cat.vira.android.core.backend.ViraBackendException
-import cat.vira.android.core.design.tokens.ViraArea
 import cat.vira.android.core.design.tokens.ViraColor
 import cat.vira.android.core.design.tokens.ViraFont
 import cat.vira.android.core.design.tokens.ViraSpacing
@@ -39,7 +38,7 @@ fun EntryPasswordResetStep(services: EntryServices, email: String, onEmailChange
     var localError by remember { mutableStateOf<ViraBackendError?>(null) }
     var isWorking by remember { mutableStateOf(false) }
     var isSent by remember { mutableStateOf(false) }
-    val ink = ViraColor.onCard(ViraArea.Rewards)
+    val ink = ViraColor.textPrimary
     val isValid = email.contains("@") && email.length > 4
 
     fun send() {
@@ -104,7 +103,7 @@ fun EntryNewPasswordStep(services: EntryServices, onDone: () -> Unit) {
     var confirmation by remember { mutableStateOf("") }
     var isWorking by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<ViraBackendError?>(null) }
-    val ink = ViraColor.onCard(ViraArea.Rewards)
+    val ink = ViraColor.textPrimary
     // Vuit caràcters és el mínim de Supabase per defecte, igual que a l'alta.
     val isValid = password.length >= 8 && password == confirmation
 

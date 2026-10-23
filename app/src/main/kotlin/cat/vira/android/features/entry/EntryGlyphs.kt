@@ -22,10 +22,10 @@ import androidx.compose.ui.unit.dp
 
 /// Els símbols de sistema que l'iPhone fa servir al flux (`chevron.left`, `checkmark`,
 /// `checkmark.circle.fill`, `sparkle`, `envelope`, `hand.raised`, `doc.text`,
-/// `arrow.triangle.2.circlepath`, `lock`, `info.circle`), dibuixats: Android
+/// `arrow.triangle.2.circlepath`, `lock`, `info.circle`, `hand.tap`), dibuixats: Android
 /// no els té, i el sistema de disseny tampoc fa servir icones de Material. Sempre amagats a
 /// TalkBack: acompanyen un text, no en diuen res de nou.
-enum class EntryGlyph { BACK, CHECK, CHECK_CIRCLE, SPARKLE, ENVELOPE, PRIVACY, DOCUMENT, SYNC, LOCK, INFO }
+enum class EntryGlyph { BACK, CHECK, CHECK_CIRCLE, SPARKLE, ENVELOPE, PRIVACY, DOCUMENT, SYNC, LOCK, INFO, TAP }
 
 /// `side` escala amb la lletra si `scalesWithText`, com un símbol de sistema al costat d'un text.
 @Composable
@@ -98,6 +98,12 @@ private fun DrawScope.draw(glyph: EntryGlyph, color: Color) {
             drawArc(color, 180f, 180f, false, Offset(w * 0.3f, w * 0.1f), Size(w * 0.4f, w * 0.4f), style = stroke)
             drawLine(color, Offset(w * 0.3f, w * 0.3f), Offset(w * 0.3f, w * 0.44f), strokeWidth = w * 0.11f)
             drawLine(color, Offset(w * 0.7f, w * 0.3f), Offset(w * 0.7f, w * 0.44f), strokeWidth = w * 0.11f)
+        }
+        // Un toc: el punt on cau el dit i dues ones que se n'allunyen.
+        EntryGlyph.TAP -> {
+            drawCircle(color, radius = w * 0.14f, center = Offset(w * 0.5f, w * 0.62f))
+            drawArc(color, 200f, 140f, false, Offset(w * 0.24f, w * 0.36f), Size(w * 0.52f, w * 0.52f), style = stroke)
+            drawArc(color, 205f, 130f, false, Offset(w * 0.06f, w * 0.18f), Size(w * 0.88f, w * 0.88f), style = stroke)
         }
         EntryGlyph.INFO -> {
             drawCircle(color, radius = w * 0.44f, style = stroke)

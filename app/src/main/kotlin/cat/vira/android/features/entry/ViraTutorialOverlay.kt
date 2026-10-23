@@ -1,160 +1,180 @@
 package cat.vira.android.features.entry
 
-import androidx.compose.animation.core.animateRectAsState
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.foundation.focusable
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.CompositingStrategy
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import cat.vira.android.R
 import cat.vira.android.core.design.LocalViraEnvironment
-import cat.vira.android.core.design.tokens.ViraArea
 import cat.vira.android.core.design.tokens.ViraColor
-import cat.vira.android.core.design.tokens.ViraFont
-import cat.vira.android.core.design.tokens.ViraMotion
+import cat.vira.android.core.design.tokens.ViraRadius
 import cat.vira.android.core.design.tokens.ViraSpacing
-import cat.vira.android.core.design.tokens.viraSpec
+import kotlin.math.roundToInt
 
-/// El tutorial dibuixat (`ViraTutorialOverlay.swift`): cortina fosca amb un forat sobre la icona
-/// que toca, i la pastilla groga a sobre. Darrere hi ha l'app de debò, no el degradat.
+/// Una peça il·luminada, ja numerada, en coordenades de la capa.
+data class ViraTutorialSpot(val number: Int, val target: ViraTutorialTarget, val line: ViraTutorialLine, val rect: Rect)
+
+/// El tomb dibuixat (`ViraTutorialOverlay.swift`, Arnau, 2026-10-21): cortina fosca, **un forat per
+/// peça amb el seu número**, la pestanya que brilla amb «Toca aquí», i la targeta blanca amb Viri de
+/// guia (`ViraTutorialCard`) a la franja lliure més gran (`ViraTutorialPlacement`).
 ///
-/// - El forat es buida de la cortina (`BlendMode.Clear` dins d'una capa pròpia); l'anella blanca
-///   s'hi dibuixa després, o el forat se l'enduria.
-/// - Amb contrast alt, la cortina més opaca i l'anella més gruixuda: el que assenyala és una
-///   **forma**, no només la diferència de foscor.
-/// - La cortina s'empassa els tocs: la barra del darrere no respon encara que se'n vegi un tros.
-/// - Amb Reduir moviment el forat salta al lloc; la pastilla sí que fon.
-///
-/// `spotlight` és on és la icona, en coordenades d'aquesta capa; `null` a integracions i widgets.
+/// - Els forats es buiden de la cortina (`BlendMode.Clear` dins d'una capa pròpia); les anelles
+///   s'hi dibuixen a part, o el forat se les enduria.
+/// - Amb contrast alt la cortina va més opaca i l'anella es fa més gruixuda: el que assenyala és
+///   una **forma** i un **número**, no només la foscor.
+/// - Una peça que no ha dit on és no té forat **ni frase**: la targeta només parla del que es veu.
+/// - La cortina s'empassa tots els tocs menys el de la pestanya il·luminada, que fa «Següent», i el
+///   del cercle de «Prova-ho». Per a TalkBack no hi són: la targeta ja té el botó.
 @Composable
 fun ViraTutorialOverlay(
     step: ViraTutorialStep,
-    spotlight: Rect?,
+    route: ViraTutorialRoute,
+    frames: Map<ViraTutorialTarget, Rect>,
     prefs: EntryPreferences,
     onNext: () -> Unit,
     onSkip: () -> Unit,
     modifier: Modifier = Modifier,
+    context: ViraTutorialContext = ViraTutorialContext(),
+    onTry: () -> Unit = {},
 ) {
     val environment = LocalViraEnvironment.current
-    val highContrast = environment.increasedContrast
     val density = LocalDensity.current
-    val halo = with(density) { 6.dp.toPx() }
-    val target = spotlight?.inflate(halo)
-    val animatedHole by animateRectAsState(
-        targetValue = target ?: Rect.Zero,
-        animationSpec = viraSpec(ViraMotion.settle(), decorative = true),
-        label = "tutorialHole",
+    // Ha tocat el cercle d'Avui en aquesta parada: la frase passa a dir que ja és fet.
+    var didTry by remember(step) { mutableStateOf(false) }
+    var origin by remember { mutableStateOf(Offset.Zero) }
+    val spots = tutorialSpots(step, frames, context.copy(didTry = didTry), origin)
+    val tryCircle = tryCircle(step, spots, frames, context, didTry, origin)
+    val scrim = ViraColor.shadow.copy(
+        alpha = when {
+            environment.increasedContrast -> 0.82f
+            environment.isDark -> 0.74f
+            else -> 0.62f
+        },
     )
-    val hole = if (target == null) null else if (environment.reduceMotion) target else animatedHole
-    val curtain = ViraColor.shadow.copy(alpha = if (highContrast) 0.82f else 0.62f)
-    val ringColor = ViraColor.lightArtworkVeil
-    val ringWidth = with(density) { (if (highContrast) 3.dp else 2.dp).toPx() }
+    val tabRadius = CornerRadius(with(density) { 999.dp.toPx() })
+    val radius = CornerRadius(with(density) { ViraRadius.l.toPx() })
 
-    BoxWithConstraints(modifier.fillMaxSize()) {
+    BoxWithConstraints(modifier.fillMaxSize().onGloballyPositioned { origin = it.boundsInRoot().topLeft }) {
         Canvas(
             Modifier
                 .fillMaxSize()
                 .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                // Empassa els tocs: la pantalla del darrere no respon encara que se'n vegi un tros.
                 .pointerInput(Unit) { detectTapGestures { } }
                 .clearAndSetSemantics { },
         ) {
-            drawRect(curtain)
-            if (hole != null) {
-                val radius = CornerRadius(hole.height / 2f)
-                drawRoundRect(curtain, hole.topLeft, hole.size, radius, blendMode = BlendMode.Clear)
-                drawRoundRect(
-                    ringColor,
-                    hole.topLeft + Offset(ringWidth / 2f, ringWidth / 2f),
-                    hole.size.copy(hole.width - ringWidth, hole.height - ringWidth),
-                    radius,
-                    style = Stroke(ringWidth),
-                )
+            drawRect(scrim)
+            spots.forEach { spot ->
+                val corner = if (spot.target.isTab) CornerRadius(minOf(tabRadius.x, spot.rect.height / 2f)) else radius
+                drawRoundRect(scrim, spot.rect.topLeft, spot.rect.size, corner, blendMode = BlendMode.Clear)
+            }
+        }
+        spots.forEach { ViraTutorialSpotRing(it, maxWidth) }
+        spots.firstOrNull { it.target.isTab }?.let { ViraTutorialTapHint(it.rect, maxWidth, isCircle = false, onTap = onNext) }
+        tryCircle?.let { rect ->
+            ViraTutorialTapHint(rect, maxWidth, isCircle = true) {
+                didTry = true
+                onTry()
             }
         }
 
         val heightPx = with(density) { maxHeight.toPx() }
-        // La pastilla seu **just per damunt** del forat quan n'hi ha, i al mig quan no. No pot créixer
-        // per sobre del forat ni sortir de la pantalla: amb el sostre es fa desplaçable.
-        val bottomInset = if (spotlight == null) 0.dp else with(density) { (heightPx - spotlight.top).coerceAtLeast(0f).toDp() } + ViraSpacing.m
-        val band = if (spotlight == null) maxHeight * 0.8f else maxOf(180.dp, with(density) { spotlight.top.toDp() } - ViraSpacing.xxl - ViraSpacing.m)
-        val focus = remember { FocusRequester() }
-        LaunchedEffect(step) { runCatching { focus.requestFocus() } }
-
+        val top = WindowInsets.statusBars.getTop(density) + with(density) { ViraSpacing.s.toPx() }
+        val bottom = heightPx - WindowInsets.navigationBars.getBottom(density) - with(density) { ViraSpacing.s.toPx() }
+        val placement = placement(spots, top, bottom)
+        val cardHeight = with(density) { placement.height.toDp() }
         Box(
             Modifier
-                .fillMaxSize()
-                .padding(bottom = bottomInset),
-            contentAlignment = if (spotlight == null) Alignment.Center else Alignment.BottomCenter,
+                .fillMaxWidth()
+                .height(cardHeight)
+                .offset { IntOffset(0, placement.minY.roundToInt()) },
+            contentAlignment = when (placement.anchor) {
+                ViraTutorialPlacement.Anchor.TOP -> Alignment.TopCenter
+                ViraTutorialPlacement.Anchor.BOTTOM -> Alignment.BottomCenter
+                ViraTutorialPlacement.Anchor.CENTER -> Alignment.Center
+            },
         ) {
-            Box(Modifier.heightIn(max = band).verticalScroll(rememberScrollState())) {
-                EntryCard(
-                    Modifier
-                        .padding(horizontal = ViraSpacing.screenMargin, vertical = ViraSpacing.s)
-                        .focusRequester(focus)
-                        .focusable(),
-                ) {
-                    val ink = ViraColor.onCard(ViraArea.Rewards)
-                    EntryHeading(stringResource(step.title), stringResource(step.message))
-                    if (step == ViraTutorialStep.INTEGRATIONS) {
-                        EntryConnectionToggles(prefs)
-                        EntryTogglesFootnote()
-                        Text(stringResource(R.string.tutorial_integrations_outside), style = ViraFont.footnote, color = ink)
-                    }
-                    // Els widgets no tenen interruptor: s'afegeixen des de la pantalla d'inici.
-                    if (step == ViraTutorialStep.WIDGETS) {
-                        Text(stringResource(R.string.tutorial_widgets_how), style = ViraFont.footnote, color = ink)
-                    }
-                    ViraTutorialDots(step)
-                    EntryPrimaryButton(stringResource(step.action), onNext)
-                    if (step.next != null) EntryLinkButton(stringResource(R.string.action_skip), onSkip)
-                }
-            }
+            ViraTutorialCard(step, route, spots, prefs, onNext, onSkip)
         }
     }
 }
 
-/// Els punts de progrés. Purament visuals: el títol de cada parada ja diu on ets.
+/// Les peces que han dit on són, numerades en ordre, amb el forat una mica més gran que la peça.
 @Composable
-private fun ViraTutorialDots(current: ViraTutorialStep) {
-    Row(
-        Modifier.fillMaxWidth().padding(top = ViraSpacing.xxs).clearAndSetSemantics { },
-        horizontalArrangement = Arrangement.spacedBy(ViraSpacing.xxs),
-    ) {
-        ViraTutorialStep.entries.forEach { step ->
-            val color = if (step == current) ViraColor.accent(ViraArea.Today) else ViraColor.onCard(ViraArea.Rewards).copy(alpha = 0.3f)
-            Box(Modifier.size(6.dp).background(color, CircleShape))
+private fun tutorialSpots(
+    step: ViraTutorialStep,
+    frames: Map<ViraTutorialTarget, Rect>,
+    context: ViraTutorialContext,
+    origin: Offset,
+): List<ViraTutorialSpot> {
+    val density = LocalDensity.current
+    val halo = with(density) { 6.dp.toPx() }
+    return step.targets.zip(step.lines(context))
+        .mapNotNull { (target, line) -> frames[target]?.let { Triple(target, line, it) } }
+        .mapIndexed { index, (target, line, frame) ->
+            var rect = frame.translate(-origin)
+            target.maxHeight?.let { max ->
+                val limit = with(density) { max.toPx() }
+                if (rect.height > limit) rect = Rect(rect.left, rect.top, rect.right, rect.top + limit)
+            }
+            ViraTutorialSpot(index + 1, target, line, rect.inflate(halo))
         }
-    }
+}
+
+/// El cercle de la tasca que es pot provar, si cau dins del forat d'«El teu dia» i encara no s'ha tocat.
+private fun tryCircle(
+    step: ViraTutorialStep,
+    spots: List<ViraTutorialSpot>,
+    frames: Map<ViraTutorialTarget, Rect>,
+    context: ViraTutorialContext,
+    didTry: Boolean,
+    origin: Offset,
+): Rect? {
+    if (step != ViraTutorialStep.TODAY || didTry || context.tryTitle == null) return null
+    val frame = frames[ViraTutorialTarget.TodayCircle]?.translate(-origin) ?: return null
+    val day = spots.firstOrNull { it.target == ViraTutorialTarget.TodayDay } ?: return null
+    return if (day.rect.contains(frame.center)) frame else null
+}
+
+/// On va la targeta: les peces i, a sobre de la pestanya, l'espai de «Toca aquí».
+@Composable
+private fun placement(spots: List<ViraTutorialSpot>, top: Float, bottom: Float): ViraTutorialPlacement {
+    val density = LocalDensity.current
+    val hintRoom = with(density) { 52.dp.toPx() }
+    val obstacles = spots.map { it.rect } + listOfNotNull(
+        spots.firstOrNull { it.target.isTab }?.rect?.let { Rect(it.left, it.top - hintRoom, it.right, it.top) },
+    )
+    return ViraTutorialPlacement.place(
+        obstacles,
+        top = top,
+        bottom = bottom,
+        margin = with(density) { ViraSpacing.m.toPx() },
+        minimum = with(density) { 260.dp.toPx() },
+    )
 }

@@ -26,6 +26,8 @@ class EntryNavigator(
     /// El correu al tutor acabat de demanar (`ViraSession.guardianReceipt`): canvia la frase i el
     /// posat de Viri al pas del permís.
     private val guardianReceipt: () -> ViraGuardianRequest? = { null },
+    /// Les captures obren el compte en mode registre, com el veu el jove que ve de «Fet».
+    initialSigningUp: Boolean = false,
 ) {
     var step: EntryStep by mutableStateOf(initialStep ?: steps.firstOrNull() ?: EntryStep.WELCOME)
         private set
@@ -40,7 +42,7 @@ class EntryNavigator(
         private set
 
     /// Entrar o registrar-se: el commuta el botó de la capçalera, no una altra pantalla.
-    var isSigningUp: Boolean by mutableStateOf(false)
+    var isSigningUp: Boolean by mutableStateOf(initialSigningUp)
         private set
 
     /// S'ha entrat per "Ja tinc compte": després del compte només li pot quedar el permís.

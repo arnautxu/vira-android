@@ -41,6 +41,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import cat.vira.android.R
+import cat.vira.android.core.design.LocalViraEnvironment
 import cat.vira.android.core.design.tokens.ViraArea
 import cat.vira.android.core.design.tokens.ViraColor
 import cat.vira.android.core.design.tokens.ViraFont
@@ -58,7 +59,8 @@ enum class EntryNotificationStatus { NOT_DETERMINED, DENIED, AUTHORIZED }
 /// A dalt, la vista prèvia d'un avís. El pas diu el que passa de debò:
 /// - **Sense respondre encara** → "Activa", i el flux espera el diàleg del sistema.
 /// - **Denegat** → ho diu i ofereix els Ajustos del sistema, l'únic lloc on es pot canviar.
-/// - **Ja concedit** → les categories i "Continua". Hàbits i medicació només surten amb el mòdul encès.
+/// - **Ja concedit** → els mateixos interruptors que Ajustos › Avisos (Arnau, 2026-10-23): «Avisos» i,
+///   si el mòdul de medicació s'ha quedat encès, «Avisos de medicació». Res més es personalitza.
 ///
 /// "Ara no" **no dispara mai el diàleg**: només "Activa" el dispara.
 @Composable
@@ -94,17 +96,21 @@ fun EntryNotificationsStep(prefs: EntryPreferences, taskTitle: String?, onContin
         if (granted) ViraNotificationWorker.request(context) else onContinue()
     }
     val canAsk = status == EntryNotificationStatus.NOT_DETERMINED
-    val ink = ViraColor.onCard(ViraArea.Rewards)
+    val authorized = status == EntryNotificationStatus.AUTHORIZED
 
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(ViraSpacing.l)) {
-        EntryNotificationPreview(taskTitle)
+        Column(verticalArrangement = Arrangement.spacedBy(ViraSpacing.xs)) {
+            EntryNotificationPreview(taskTitle)
+            // Amb els interruptors a la vista, el mateix peu ja va a sota d'ells.
+            if (!authorized) EntryTogglesFootnote()
+        }
         if (status == EntryNotificationStatus.DENIED) {
             Column(verticalArrangement = Arrangement.spacedBy(ViraSpacing.xxs)) {
-                Text(stringResource(R.string.habits_reminder_denied), style = ViraFont.footnote, color = ink)
+                Text(stringResource(R.string.habits_reminder_denied), style = ViraFont.footnote, color = ViraColor.textPrimary)
                 EntryLinkButton(stringResource(R.string.action_open_settings), { context.openNotificationSettings() }, centered = false)
             }
         }
-        if (status == EntryNotificationStatus.AUTHORIZED) EntryNotificationCategories(prefs)
+        if (authorized) EntryNotificationCategories(prefs)
         Column(verticalArrangement = Arrangement.spacedBy(ViraSpacing.s)) {
             EntryPrimaryButton(
                 stringResource(if (canAsk) R.string.action_activate else R.string.action_continue),
@@ -129,30 +135,26 @@ fun EntryNotificationsStep(prefs: EntryPreferences, taskTitle: String?, onContin
 @Composable
 private fun EntryNotificationCategories(prefs: EntryPreferences) {
     val reminders = prefs.boolean(EntryPreferenceKeys.REMINDERS_ENABLED, true)
-    val habitsModule = prefs.boolean(EntryPreferenceKeys.MODULE_HABITS_ENABLED, true)
     val medicationModule = prefs.boolean(EntryPreferenceKeys.MODULE_MEDICATION_ENABLED, true)
-    val habits = prefs.boolean(EntryPreferenceKeys.REMINDERS_HABITS_ENABLED, true)
     val medication = prefs.boolean(EntryPreferenceKeys.REMINDERS_MEDICATION_ENABLED, true)
-    val plan = prefs.boolean(EntryPreferenceKeys.REMINDERS_PLAN_ENABLED, true)
-    val emotion = prefs.boolean(EntryPreferenceKeys.REMINDERS_EMOTION_ENABLED, true)
-    val viri = prefs.boolean(EntryPreferenceKeys.VIRI_MESSAGES_ENABLED, true)
 
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(ViraSpacing.s)) {
-        Text(stringResource(R.string.onboarding_notifications_categories), style = ViraFont.footnote, color = ViraColor.onCard(ViraArea.Rewards))
+        Text(stringResource(R.string.onboarding_notifications_categories), style = ViraFont.footnote, color = ViraColor.textPrimary)
         Column(verticalArrangement = Arrangement.spacedBy(ViraSpacing.xs)) {
-            EntryToggleRow(stringResource(R.string.settings_notifications_reminders), reminders.value, { reminders.value = it })
-            if (reminders.value) {
-                if (habitsModule.value) EntryToggleRow(stringResource(R.string.settings_notifications_category_habits), habits.value, { habits.value = it })
-                if (medicationModule.value) EntryToggleRow(stringResource(R.string.settings_notifications_category_medication), medication.value, { medication.value = it })
-                EntryToggleRow(stringResource(R.string.settings_notifications_category_plan), plan.value, { plan.value = it })
-                EntryToggleRow(stringResource(R.string.settings_notifications_category_emotion), emotion.value, { emotion.value = it })
-            }
             EntryToggleRow(
-                stringResource(R.string.settings_notifications_viri),
-                viri.value,
-                { viri.value = it },
-                hint = stringResource(R.string.settings_notifications_viri_hint),
+                stringResource(R.string.settings_notifications_master),
+                reminders.value,
+                { prefs.setNotifications(it) },
+                hint = stringResource(R.string.settings_notifications_master_footer),
             )
+            if (medicationModule.value) {
+                EntryToggleRow(
+                    stringResource(R.string.settings_notifications_medication),
+                    medication.value,
+                    { medication.value = it },
+                    hint = stringResource(R.string.settings_notifications_medication_hint),
+                )
+            }
         }
         EntryTogglesFootnote()
     }
@@ -172,7 +174,7 @@ fun EntryNotificationPreview(taskTitle: String?) {
         verticalAlignment = Alignment.Top,
         modifier = Modifier
             .fillMaxWidth()
-            .background(ViraColor.surfaceElevated, RoundedCornerShape(ViraRadius.l))
+            .background(ViraColor.backgroundGrouped, RoundedCornerShape(ViraRadius.l))
             .clearAndSetSemantics { contentDescription = label }
             .padding(ViraSpacing.s),
     ) {
@@ -184,7 +186,9 @@ fun EntryNotificationPreview(taskTitle: String?) {
         )
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(ViraSpacing.xxs)) {
             Text("Vira", style = ViraFont.headline, color = ViraColor.textPrimary)
-            Text(body, style = ViraFont.callout, color = ViraColor.textSecondary, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            // Dues línies com un avís de debò; a mides d'accessibilitat, senceres.
+            val full = LocalViraEnvironment.current.isAccessibilitySize
+            Text(body, style = ViraFont.callout, color = ViraColor.textSecondary, maxLines = if (full) Int.MAX_VALUE else 2, overflow = TextOverflow.Ellipsis)
         }
     }
 }

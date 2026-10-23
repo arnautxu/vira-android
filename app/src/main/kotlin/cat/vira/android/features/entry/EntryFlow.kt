@@ -92,7 +92,7 @@ fun rememberLiveEntryServices(): EntryServices {
 /// 86 % amb lletra gran); per sobre, es desplaça. Dins de la fulla l'ordre és **títol → controls →
 /// acció principal**; a mides d'accessibilitat hi tornen també el «2 de 9» i la frase de Viri.
 ///
-/// `initialStep` i `initialOutcome` són per a les captures: un pas amb tot l'escenari.
+/// `initialStep`, `initialOutcome` i `initialSigningUp` són per a les captures: un pas amb tot l'escenari.
 @Composable
 fun EntryFlow(
     steps: List<EntryStep> = EntryStep.full,
@@ -100,6 +100,7 @@ fun EntryFlow(
     services: EntryServices = rememberLiveEntryServices(),
     initialStep: EntryStep? = null,
     initialOutcome: EntryFirstActionOutcome? = null,
+    initialSigningUp: Boolean = false,
 ) {
     val prefs = services.prefs
     val state by services.state.collectAsState()
@@ -116,6 +117,7 @@ fun EntryFlow(
         initialStep = initialStep,
         initialOutcome = initialOutcome,
         guardianReceipt = { services.guardianReceipt.value },
+        initialSigningUp = initialSigningUp,
     )
     // Sobreviu a la recreació de l'activitat: vegeu `EntryNavigator.snapshot`.
     val nav = rememberSaveable(

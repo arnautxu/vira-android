@@ -11,6 +11,11 @@ import cat.vira.android.core.data.ViraPreferences
 object EntryPreferenceKeys {
     const val ONBOARDING_COMPLETED = ViraPreferences.ONBOARDING_COMPLETED
     const val TUTORIAL_COMPLETED = ViraPreferences.TUTORIAL_COMPLETED
+    /// El tomb es va saltar abans de l'última parada: les pistes de Pla i Emocions només surten a
+    /// qui no les ha vistes. Com `tutorialCompleted`, és estat del telèfon.
+    const val TUTORIAL_SKIPPED = "settings.tutorialSkipped"
+    /// «Aquí és Viri» ja s'ha vist en aquest telèfon (`ViriTabTip`).
+    const val VIRI_TAB_TIP_SEEN = "settings.viriTabTipSeen"
     const val CELEBRATIONS_ENABLED = ViraPreferences.CELEBRATIONS_ENABLED
     const val BIOMETRIC_LOCK_ENABLED = ViraPreferences.BIOMETRIC_LOCK_ENABLED
     const val REMINDERS_ENABLED = ViraPreferences.REMINDERS_ENABLED
@@ -30,6 +35,7 @@ object EntryPreferenceKeys {
     const val REMINDERS_PLAN_ENABLED = "settings.remindersPlanEnabled"
     const val REMINDERS_EMOTION_ENABLED = "settings.remindersEmotionEnabled"
     const val VIRI_MESSAGES_ENABLED = "settings.viriMessagesEnabled"
+    const val STREAK_LIVE_ACTIVITY_ENABLED = "settings.streakLiveActivityEnabled"
     const val CALENDAR_ENABLED = "settings.calendarEnabled"
     /// Android no diu si el permís d'avisos s'ha demanat mai: aquesta marca ho recorda. És del
     /// telèfon, no de la persona.
@@ -76,6 +82,15 @@ class EntryPreferences(private val store: Store) {
     val onboardingCompleted get() = boolean(EntryPreferenceKeys.ONBOARDING_COMPLETED, false)
     val celebrationsEnabled get() = boolean(EntryPreferenceKeys.CELEBRATIONS_ENABLED, true)
     val progressVisible get() = boolean(EntryPreferenceKeys.PROGRESS_VISIBLE, true)
+
+    /// L'interruptor d'«Avisos» amb tot el que el segueix: els missatges de Viri i la Live Activity
+    /// de la ratxa (`ViraSimpleSettings.setNotifications`). Ajustos i l'entrada no poden quedar
+    /// desaparellats.
+    fun setNotifications(isOn: Boolean) {
+        boolean(EntryPreferenceKeys.REMINDERS_ENABLED, true).value = isOn
+        boolean(EntryPreferenceKeys.VIRI_MESSAGES_ENABLED, true).value = isOn
+        boolean(EntryPreferenceKeys.STREAK_LIVE_ACTIVITY_ENABLED, true).value = isOn
+    }
 
     companion object {
         fun shared(preferences: SharedPreferences) = EntryPreferences(object : Store {

@@ -22,7 +22,6 @@ import cat.vira.android.core.backend.ViraConsentStatus
 import cat.vira.android.core.backend.ViraGuardianRequest
 import cat.vira.android.core.backend.ViraGuardianRequest.Delivery
 import cat.vira.android.core.design.LocalViraEnvironment
-import cat.vira.android.core.design.tokens.ViraArea
 import cat.vira.android.core.design.tokens.ViraColor
 import cat.vira.android.core.design.tokens.ViraFont
 import cat.vira.android.core.design.tokens.ViraSpacing
@@ -53,7 +52,7 @@ fun EntryConsentSentPanel(
     var resent by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<ViraBackendError?>(null) }
     val guardian = receipt.guardian.orEmpty()
-    val ink = ViraColor.onCard(ViraArea.Rewards)
+    val ink = ViraColor.textPrimary
     val again = stringResource(R.string.account_consent_sent_again)
 
     /// Torna a enviar a la mateixa adreça. El rebut nou substitueix l'antic, i la fulla canvia sola
