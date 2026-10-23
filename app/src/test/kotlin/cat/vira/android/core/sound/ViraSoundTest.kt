@@ -1,6 +1,7 @@
 package cat.vira.android.core.sound
 
 import androidx.test.core.app.ApplicationProvider
+import android.app.Application
 import android.content.Context
 import cat.vira.android.core.design.components.ViraSceneFraming
 import org.junit.Assert.assertEquals
@@ -10,10 +11,12 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
 
 /// Els sons de Vira (`ViraSoundTests` de l'iPhone): un fitxer que falta, un so freqüent que
 /// s'escola amb «Només celebracions» o l'escala que no torna a començar no fan soroll.
 @RunWith(RobolectricTestRunner::class)
+@Config(application = Application::class)
 class ViraSoundTest {
 
     private val context: Context = ApplicationProvider.getApplicationContext()
