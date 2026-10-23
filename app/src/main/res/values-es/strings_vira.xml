@@ -1621,7 +1621,6 @@
     <string name="onboarding_personalization_title">¿Cómo te llamamos?</string>
     <string name="onboarding_privacy_fact_sensitive">Emociones y medicación, solo con el permiso necesario.</string>
     <string name="onboarding_privacy_fact_sync">Con una cuenta, el plan y el progreso se guardan y se sincronizan.</string>
-    <string name="onboarding_privacy_message">Con una cuenta, el plan y el progreso se sincronizan. Las emociones y la medicación, solo con el permiso necesario.</string>
     <string name="onboarding_privacy_title">Tus datos</string>
     <string name="onboarding_progress">Paso %1$d de %2$d</string>
     <string name="onboarding_progress_short">%1$d de %2$d</string>
@@ -1656,10 +1655,6 @@
     <string name="onboarding_viri_start">Tres preguntas y empezamos.</string>
     <string name="onboarding_viri_task">Una cosa para hoy. Solo una.</string>
     <string name="onboarding_viri_welcome">¡Hola! Soy Viri.</string>
-    <string name="onboarding_welcome_cta_emotions">controlar mis emociones</string>
-    <string name="onboarding_welcome_cta_focus">concentrarme</string>
-    <string name="onboarding_welcome_cta_organize">organizarme</string>
-    <string name="onboarding_welcome_cta_prefix">Quiero empezar a</string>
     <string name="onboarding_welcome_headline">Tu día, más fácil</string>
     <string name="onboarding_welcome_message">Te ayudo a organizar el día, saber cómo estás y concentrarte.</string>
     <string name="onboarding_welcome_start">Vamos</string>
@@ -2540,7 +2535,6 @@
     <string name="tutorial_action_next">Siguiente</string>
     <string name="tutorial_action_start">Empezamos</string>
     <string name="tutorial_emotions_faces">Toca una cara y queda apuntado. Ni días buenos ni malos.</string>
-    <string name="tutorial_emotions_message">Registra cómo te sientes y mira cómo ha ido la semana.</string>
     <string name="tutorial_emotions_title">Cómo estás</string>
     <string name="tutorial_how_it_works">¿Cómo funciona?</string>
     <string name="tutorial_integrations_message">Vira puede trabajar con lo que ya usas.</string>
@@ -2549,10 +2543,7 @@
     <string name="tutorial_intro_message">Cuatro sitios y ya lo tienes todo. Puedes volver a verlo en Ajustes.</string>
     <string name="tutorial_intro_title">¿Hacemos un recorrido?</string>
     <string name="tutorial_plan_add">Con el + añades lo que sea.</string>
-    <string name="tutorial_plan_message">Calendario, hábitos y medicación. Todo lo que tiene una hora está aquí.</string>
     <string name="tutorial_plan_sections">Calendario, hábitos y medicación, cada cosa en su sitio.</string>
-    <string name="tutorial_plan_title">Tu plan</string>
-    <string name="tutorial_profile_message">La racha, los premios y la tienda. No se pierde nada por el camino.</string>
     <string name="tutorial_profile_more">Más abajo, la tienda y las cartas.</string>
     <string name="tutorial_profile_streak">La racha. Si un día no puedes, tienes días guardados.</string>
     <string name="tutorial_profile_title">Viri y el progreso</string>
@@ -2568,9 +2559,7 @@
     <string name="tutorial_today_title">Tu día</string>
     <string name="tutorial_today_tried">Hecho. Si te has equivocado, toca el círculo otra vez.</string>
     <string name="tutorial_today_try">Pruébalo: toca el círculo de «%1$s».</string>
-    <string name="tutorial_widgets_how">Mantén pulsada la pantalla de inicio o la de bloqueo, toca Editar y busca Vira.</string>
     <string name="tutorial_widgets_lead">Tu día y la racha, en la pantalla de inicio.</string>
-    <string name="tutorial_widgets_message">El plan del día y la racha, en la pantalla de inicio. Puedes marcar una tarea sin abrir la app.</string>
     <string name="tutorial_widgets_step1">Mantén pulsada la pantalla de inicio.</string>
     <string name="tutorial_widgets_step2">Toca Editar y luego Añadir widget.</string>
     <string name="tutorial_widgets_step3">Busca Vira y elige uno. Puedes marcar sin abrir la app.</string>

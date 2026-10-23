@@ -1621,7 +1621,6 @@
     <string name="onboarding_personalization_title">Com et diem?</string>
     <string name="onboarding_privacy_fact_sensitive">Emocions i medicació, només amb el permís necessari.</string>
     <string name="onboarding_privacy_fact_sync">Amb compte, el pla i el progrés es guarden i se sincronitzen.</string>
-    <string name="onboarding_privacy_message">Amb compte, el pla i el progrés se sincronitzen. Emocions i medicació, només amb el permís necessari.</string>
     <string name="onboarding_privacy_title">Les teves dades</string>
     <string name="onboarding_progress">Pas %1$d de %2$d</string>
     <string name="onboarding_progress_short">%1$d de %2$d</string>
@@ -1656,10 +1655,6 @@
     <string name="onboarding_viri_start">Tres preguntes i comencem.</string>
     <string name="onboarding_viri_task">Una cosa per avui. Només una.</string>
     <string name="onboarding_viri_welcome">Hola! Sóc Viri.</string>
-    <string name="onboarding_welcome_cta_emotions">controlar les meves emocions</string>
-    <string name="onboarding_welcome_cta_focus">concentrar-me</string>
-    <string name="onboarding_welcome_cta_organize">organitzar-me</string>
-    <string name="onboarding_welcome_cta_prefix">Vull començar a</string>
     <string name="onboarding_welcome_headline">El teu dia, més fàcil</string>
     <string name="onboarding_welcome_message">T\'ajudo a portar el dia, saber com estàs i concentrar-te.</string>
     <string name="onboarding_welcome_start">Som-hi</string>
@@ -2540,7 +2535,6 @@
     <string name="tutorial_action_next">Següent</string>
     <string name="tutorial_action_start">Comencem</string>
     <string name="tutorial_emotions_faces">Toca una cara i queda apuntat. Ni dies bons ni dolents.</string>
-    <string name="tutorial_emotions_message">Registra com et sents i mira com ha anat la setmana.</string>
     <string name="tutorial_emotions_title">Com estàs</string>
     <string name="tutorial_how_it_works">Com funciona?</string>
     <string name="tutorial_integrations_message">Vira pot treballar amb el que ja fas servir.</string>
@@ -2549,10 +2543,7 @@
     <string name="tutorial_intro_message">Quatre llocs i ja ho tens tot. Ho pots tornar a veure a Ajustos.</string>
     <string name="tutorial_intro_title">Et faig un tomb?</string>
     <string name="tutorial_plan_add">Amb el + hi afegeixes el que sigui.</string>
-    <string name="tutorial_plan_message">Calendari, hàbits i medicació. Tot el que té una hora és aquí.</string>
     <string name="tutorial_plan_sections">Calendari, hàbits i medicació, cada cosa al seu lloc.</string>
-    <string name="tutorial_plan_title">El teu pla</string>
-    <string name="tutorial_profile_message">La ratxa, els premis i la botiga. Res es perd pel camí.</string>
     <string name="tutorial_profile_more">Més avall, la botiga i les cartes.</string>
     <string name="tutorial_profile_streak">La ratxa. Si un dia no pots, tens dies guardats.</string>
     <string name="tutorial_profile_title">Viri i el progrés</string>
@@ -2568,9 +2559,7 @@
     <string name="tutorial_today_title">El teu dia</string>
     <string name="tutorial_today_tried">Fet. Si t\'has equivocat, toca el cercle un altre cop.</string>
     <string name="tutorial_today_try">Prova-ho: toca el cercle de «%1$s».</string>
-    <string name="tutorial_widgets_how">Mantén premuda la pantalla d\'inici o la de bloqueig, toca Edita i busca Vira.</string>
     <string name="tutorial_widgets_lead">El teu dia i la ratxa, a la pantalla d\'inici.</string>
-    <string name="tutorial_widgets_message">El pla del dia i la ratxa, a la pantalla d\'inici. Pots marcar una tasca sense obrir l\'app.</string>
     <string name="tutorial_widgets_step1">Mantén premuda la pantalla d\'inici.</string>
     <string name="tutorial_widgets_step2">Toca Edita i després Afegeix un widget.</string>
     <string name="tutorial_widgets_step3">Busca Vira i tria\'n un. Pots marcar sense obrir l\'app.</string>
