@@ -142,6 +142,7 @@ fun AddedList(items: List<AddedTask>, today: java.time.LocalDate, onUndo: () -> 
 @Composable
 fun AddRepeatRow(recurrence: PlanItemRecurrence, onSelect: (PlanItemRecurrence) -> Unit) {
     var open by remember { mutableStateOf(false) }
+    val stacked = LocalViraEnvironment.current.isAccessibilitySize
     Box(Modifier.fillMaxWidth()) {
         Row(
             Modifier
@@ -158,8 +159,10 @@ fun AddRepeatRow(recurrence: PlanItemRecurrence, onSelect: (PlanItemRecurrence) 
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(ViraSpacing.hairline)) {
                 Text(stringResource(R.string.add_task_repeat), style = ViraFont.headline, color = ViraColor.textPrimary)
                 Text(stringResource(R.string.add_task_repeat_hint), style = ViraFont.footnote, color = ViraColor.textSecondary)
+                // Amb lletra gran el valor baixa a sota: al costat, el títol es partiria lletra a lletra.
+                if (stacked) Text(stringResource(recurrence.titleRes), style = ViraFont.body, color = ViraColor.textSecondary)
             }
-            Text(stringResource(recurrence.titleRes), style = ViraFont.body, color = ViraColor.textSecondary, textAlign = TextAlign.End)
+            if (!stacked) Text(stringResource(recurrence.titleRes), style = ViraFont.body, color = ViraColor.textSecondary, textAlign = TextAlign.End)
             Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = ViraColor.textSecondary, modifier = Modifier.size(20.dp))
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
