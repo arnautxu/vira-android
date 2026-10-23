@@ -24,6 +24,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import cat.vira.android.R
@@ -147,7 +148,7 @@ private fun ViraTipClose(onClose: () -> Unit) {
         Modifier
             .size(ViraTouch.minimum)
             .viraPressable(onClickLabel = label, role = Role.Button, onClick = onClose)
-            .semantics { androidx.compose.ui.semantics.contentDescription = label },
+            .semantics { contentDescription = label },
         contentAlignment = Alignment.Center,
     ) {
         Canvas(Modifier.size(12.dp)) {
