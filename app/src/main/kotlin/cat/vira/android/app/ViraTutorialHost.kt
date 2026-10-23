@@ -116,7 +116,6 @@ class ViraTutorialState internal constructor(
     private fun show(step: ViraTutorialStep, route: ViraTutorialRoute, origin: ViraTab?) {
         lastStep = step
         saved.value = listOfNotNull(step.name, route.stops.joinToString(",") { it.name }, origin?.name)
-            .let { if (origin == null) it.take(2) else it }
         when (step.screen) {
             ViraTab.Plan -> navigator.navigate(ViraDestination.Plan(PlanSection.Calendar))
             ViraTab.Emotions -> navigator.navigate(ViraDestination.Emotions(EmotionsSection.CheckIn))
@@ -136,8 +135,9 @@ fun rememberViraTutorial(navigator: ViraNavigator): ViraTutorialState {
         ViraTutorialState(navigator, backend.preferences, saved, EntryPreferences.shared(backend.preferences))
     }
     val completed by rememberPreference(backend.preferences, ViraPreferences.TUTORIAL_COMPLETED, false)
-    // La primera lectura decideix si és el tomb curt; un canvi a `false` després, el sencer.
-    val firstLook = remember { mutableStateOf(true) }
+    // La primera lectura decideix si és el tomb curt; un canvi a `false` després (Ajustos, que tapa
+    // les pestanyes un moment), el sencer. Per això sobreviu mentre Ajustos és a sobre.
+    val firstLook = rememberSaveable { mutableStateOf(true) }
     LaunchedEffect(completed) {
         val isFirst = firstLook.value
         firstLook.value = false

@@ -56,6 +56,9 @@ fun ViraEmptyState(
     actionTitle: String? = null,
     onAction: (() -> Unit)? = null,
     icon: (@Composable () -> Unit)? = null,
+    /// «Com funciona?»: una parada del tomb, per a qui el va saltar (`helpStop` a l'iPhone).
+    helpTitle: String? = null,
+    onHelp: (() -> Unit)? = null,
 ) {
     Column(
         modifier = modifier.fillMaxWidth().padding(ViraSpacing.xl),
@@ -75,6 +78,9 @@ fun ViraEmptyState(
         }
         if (actionTitle != null && onAction != null) {
             ViraActionButton(actionTitle, onAction, modifier = Modifier.padding(top = ViraSpacing.xs))
+        }
+        if (helpTitle != null && onHelp != null) {
+            ViraActionButton(helpTitle, onHelp, hierarchy = ViraActionHierarchy.Textual)
         }
     }
 }

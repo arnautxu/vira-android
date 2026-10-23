@@ -94,6 +94,9 @@ object ViraDataEraser {
         ViraPreferences.APPEARANCE,
         ViraPreferences.ONBOARDING_COMPLETED,
         ViraPreferences.TUTORIAL_COMPLETED,
+        // El tomb saltat i «Aquí és Viri» ja vist: estat del telèfon, com el tomb (iPhone, 2026-10-22).
+        "settings.tutorialSkipped",
+        "settings.viriTabTipSeen",
     )
 
     val ownPrefixes = listOf("settings.", "cards.", "account.", "suggestions.", "sync.")

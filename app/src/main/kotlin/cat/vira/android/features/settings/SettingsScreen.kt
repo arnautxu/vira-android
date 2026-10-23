@@ -320,7 +320,7 @@ fun SettingsCategoryPage(
                 SettingsPrivacySection()
                 SettingsDataSection(onErased)
             }
-            SettingsCategory.ABOUT -> SettingsAboutSection()
+            SettingsCategory.ABOUT -> SettingsAboutSection(onReplayTour = onErased)
         }
     }
 }

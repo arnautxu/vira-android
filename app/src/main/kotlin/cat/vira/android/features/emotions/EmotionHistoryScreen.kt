@@ -64,6 +64,8 @@ import kotlinx.coroutines.launch
 import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
+import cat.vira.android.features.entry.ViraTutorialStep
+import cat.vira.android.features.entry.LocalViraShowTutorialStop
 
 /// Historial emocional: què has registrat i quan (`EmotionHistoryView` de l'iPhone).
 ///
@@ -155,11 +157,14 @@ internal fun EmotionHistoryContent(
 
 @Composable
 private fun HistoryEmpty(message: Int, modifier: Modifier = Modifier) {
+    val showTutorialStop = LocalViraShowTutorialStop.current
     ViraEmptyState(
         title = stringResource(R.string.emotions_empty_title),
         message = stringResource(message),
         modifier = modifier,
         icon = { ViraPictogram(R.drawable.picto_journal, size = 56.dp) },
+        helpTitle = stringResource(R.string.tutorial_how_it_works),
+        onHelp = { showTutorialStop(ViraTutorialStep.EMOTIONS) },
     )
 }
 
