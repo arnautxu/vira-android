@@ -1,28 +1,28 @@
 {
  "id": "phoneSleep",
  "language": "en",
- "duration": 298.7,
+ "duration": 300.71,
  "steps": 0,
  "segments": [
   {
    "start": 0.6,
-   "end": 6.94,
+   "end": 7.12,
    "kind": "line",
    "step": null,
    "stepTitle": null,
    "text": "mindfulness.phoneSleep.line1"
   },
   {
-   "start": 6.94,
-   "end": 293.83,
+   "start": 7.12,
+   "end": 294.22,
    "kind": "line",
    "step": null,
    "stepTitle": null,
    "text": "mindfulness.phoneSleep.line2"
   },
   {
-   "start": 293.83,
-   "end": 298.66,
+   "start": 294.22,
+   "end": 300.71,
    "kind": "line",
    "step": null,
    "stepTitle": null,

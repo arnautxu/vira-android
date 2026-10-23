@@ -1,20 +1,20 @@
 {
  "id": "breatheSlow",
  "language": "en",
- "duration": 60.7,
+ "duration": 62.62,
  "steps": 0,
  "segments": [
   {
    "start": 0.6,
-   "end": 6.03,
+   "end": 6.24,
    "kind": "line",
    "step": null,
    "stepTitle": null,
    "text": "mindfulness.breatheSlow.line1"
   },
   {
-   "start": 6.03,
-   "end": 10.03,
+   "start": 6.24,
+   "end": 10.24,
    "kind": "breath",
    "step": null,
    "stepTitle": null,
@@ -22,8 +22,8 @@
    "text": "help.breathe.inhale"
   },
   {
-   "start": 10.03,
-   "end": 12.03,
+   "start": 10.24,
+   "end": 12.24,
    "kind": "breath",
    "step": null,
    "stepTitle": null,
@@ -31,8 +31,8 @@
    "text": "help.breathe.hold"
   },
   {
-   "start": 12.03,
-   "end": 16.03,
+   "start": 12.24,
+   "end": 16.24,
    "kind": "breath",
    "step": null,
    "stepTitle": null,
@@ -40,8 +40,8 @@
    "text": "help.breathe.exhale"
   },
   {
-   "start": 16.03,
-   "end": 20.03,
+   "start": 16.24,
+   "end": 20.24,
    "kind": "breath",
    "step": null,
    "stepTitle": null,
@@ -49,8 +49,8 @@
    "text": "help.breathe.inhale"
   },
   {
-   "start": 20.03,
-   "end": 22.03,
+   "start": 20.24,
+   "end": 22.24,
    "kind": "breath",
    "step": null,
    "stepTitle": null,
@@ -58,8 +58,8 @@
    "text": "help.breathe.hold"
   },
   {
-   "start": 22.03,
-   "end": 26.03,
+   "start": 22.24,
+   "end": 26.24,
    "kind": "breath",
    "step": null,
    "stepTitle": null,
@@ -67,8 +67,8 @@
    "text": "help.breathe.exhale"
   },
   {
-   "start": 26.03,
-   "end": 30.03,
+   "start": 26.24,
+   "end": 30.24,
    "kind": "breath",
    "step": null,
    "stepTitle": null,
@@ -76,8 +76,8 @@
    "text": "help.breathe.inhale"
   },
   {
-   "start": 30.03,
-   "end": 32.03,
+   "start": 30.24,
+   "end": 32.24,
    "kind": "breath",
    "step": null,
    "stepTitle": null,
@@ -85,8 +85,8 @@
    "text": "help.breathe.hold"
   },
   {
-   "start": 32.03,
-   "end": 36.03,
+   "start": 32.24,
+   "end": 36.24,
    "kind": "breath",
    "step": null,
    "stepTitle": null,
@@ -94,8 +94,8 @@
    "text": "help.breathe.exhale"
   },
   {
-   "start": 36.03,
-   "end": 40.03,
+   "start": 36.24,
+   "end": 40.24,
    "kind": "breath",
    "step": null,
    "stepTitle": null,
@@ -103,8 +103,8 @@
    "text": "help.breathe.inhale"
   },
   {
-   "start": 40.03,
-   "end": 42.03,
+   "start": 40.24,
+   "end": 42.24,
    "kind": "breath",
    "step": null,
    "stepTitle": null,
@@ -112,8 +112,8 @@
    "text": "help.breathe.hold"
   },
   {
-   "start": 42.03,
-   "end": 46.03,
+   "start": 42.24,
+   "end": 46.24,
    "kind": "breath",
    "step": null,
    "stepTitle": null,
@@ -121,8 +121,8 @@
    "text": "help.breathe.exhale"
   },
   {
-   "start": 46.03,
-   "end": 50.03,
+   "start": 46.24,
+   "end": 50.24,
    "kind": "breath",
    "step": null,
    "stepTitle": null,
@@ -130,8 +130,8 @@
    "text": "help.breathe.inhale"
   },
   {
-   "start": 50.03,
-   "end": 52.03,
+   "start": 50.24,
+   "end": 52.24,
    "kind": "breath",
    "step": null,
    "stepTitle": null,
@@ -139,8 +139,8 @@
    "text": "help.breathe.hold"
   },
   {
-   "start": 52.03,
-   "end": 56.03,
+   "start": 52.24,
+   "end": 56.24,
    "kind": "breath",
    "step": null,
    "stepTitle": null,
@@ -148,8 +148,8 @@
    "text": "help.breathe.exhale"
   },
   {
-   "start": 56.03,
-   "end": 60.66,
+   "start": 56.24,
+   "end": 62.62,
    "kind": "line",
    "step": null,
    "stepTitle": null,
