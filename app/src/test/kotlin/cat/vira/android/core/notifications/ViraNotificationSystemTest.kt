@@ -279,7 +279,9 @@ class ViraNotificationSystemTest {
         app.streak = ViraStreakState(isVisible = true, dayIsOpen = true)
         val viri = viriNudge()
         assertTrue(ViraNotifications.isStillPending(app, viri, ZoneId.of("UTC"), now))
-        ViraPreferences.open(app).edit().putInt(ViraNotificationPreferences.VIRI_MESSAGE_HOUR, 21).commit()
+        // Tres dies tancats a les 22:00 fan que Viri aprengui les 21:00.
+        val p = ViraPreferences.open(app)
+        (1..3).forEach { ViraEveningHour.noteDayClosed(p, now.minus(java.time.Duration.ofDays(it.toLong())).atZone(ZoneId.of("UTC")).withHour(22).toInstant(), ZoneId.of("UTC")) }
         assertFalse("l'hora de Viri ha canviat", ViraNotifications.isStillPending(app, viri, ZoneId.of("UTC"), now))
     }
 

@@ -30,6 +30,14 @@ object ViraNotificationPreferences {
     const val EMOTION_DEFAULT_HOUR = 19
     const val EMOTION_DEFAULT_MINUTE = 0
 
+    /// L'avís del matí, «El teu dia» (`ViraMorningNotification`). Neix **encès**; sense hora
+    /// desada, les 8:00. Des de 2026-10-23 l'hora ja no es tria (`ViraSimpleSettings`).
+    const val REMINDERS_MORNING_ENABLED = "settings.remindersMorningEnabled"
+    const val MORNING_REMINDER_HOUR = "settings.morningReminderHour"
+    const val MORNING_REMINDER_MINUTE = "settings.morningReminderMinute"
+    const val MORNING_DEFAULT_HOUR = 8
+    const val MORNING_DEFAULT_MINUTE = 0
+
     /// El nom de l'hàbit o el títol de la tasca dins de l'avís. **Neix encès** (Arnau,
     /// 2026-08-13): un recordatori que diu «Tens un recordatori» no recorda res.
     const val NOTIFICATION_DETAIL_ENABLED = ViraPreferences.NOTIFICATION_DETAIL_ENABLED
@@ -39,8 +47,9 @@ object ViraNotificationPreferences {
     /// la veu qualsevol que passi pel costat: no pot penjar del mateix commutador que l'hàbit.
     const val NOTIFICATION_DETAIL_MEDICATION_ENABLED = "settings.notificationDetailMedicationEnabled"
 
-    /// La veu de Viri (`VIRI_AND_GAMIFICATION.md` §3.5). Va **a part** de `REMINDERS_ENABLED`:
-    /// és gamificació i s'ha de poder apagar sense perdre cap recordatori. Neix encesa.
+    /// La veu de Viri (`VIRI_AND_GAMIFICATION.md` §3.5). Des de 2026-10-23 segueix l'interruptor
+    /// d'«Avisos» (`ViraSimpleSettings`). Neix encesa. L'hora ja no es llegeix d'aquí: l'aprèn el
+    /// telèfon (`ViraEveningHour`).
     const val VIRI_MESSAGES_ENABLED = "settings.viriMessagesEnabled"
     const val VIRI_MESSAGE_HOUR = "settings.viriMessageHour"
     const val VIRI_MESSAGE_MINUTE = "settings.viriMessageMinute"
@@ -55,6 +64,8 @@ object ViraNotificationPreferences {
         REMINDERS_ENABLED, REMINDERS_HABITS_ENABLED, REMINDERS_MEDICATION_ENABLED, REMINDERS_PLAN_ENABLED,
         REMINDERS_EMOTION_ENABLED, EMOTION_REMINDER_HOUR, EMOTION_REMINDER_MINUTE, NOTIFICATION_DETAIL_ENABLED,
         NOTIFICATION_DETAIL_MEDICATION_ENABLED, VIRI_MESSAGES_ENABLED, VIRI_MESSAGE_HOUR, VIRI_MESSAGE_MINUTE,
+        REMINDERS_MORNING_ENABLED, MORNING_REMINDER_HOUR, MORNING_REMINDER_MINUTE,
+        ViraViriQuiet.QUIET_UNTIL,
     )
 
     fun remindersEnabled(p: SharedPreferences) = p.getBoolean(REMINDERS_ENABLED, true)
@@ -62,6 +73,7 @@ object ViraNotificationPreferences {
     fun medicationEnabled(p: SharedPreferences) = p.getBoolean(REMINDERS_MEDICATION_ENABLED, true)
     fun planEnabled(p: SharedPreferences) = p.getBoolean(REMINDERS_PLAN_ENABLED, true)
     fun emotionEnabled(p: SharedPreferences) = p.getBoolean(REMINDERS_EMOTION_ENABLED, true)
+    fun morningEnabled(p: SharedPreferences) = p.getBoolean(REMINDERS_MORNING_ENABLED, true)
     fun detailEnabled(p: SharedPreferences) = p.getBoolean(NOTIFICATION_DETAIL_ENABLED, true)
     fun medicationDetailEnabled(p: SharedPreferences) = p.getBoolean(NOTIFICATION_DETAIL_MEDICATION_ENABLED, false)
     fun viriMessagesEnabled(p: SharedPreferences) = p.getBoolean(VIRI_MESSAGES_ENABLED, true)
@@ -71,10 +83,13 @@ object ViraNotificationPreferences {
         p.getInt(EMOTION_REMINDER_MINUTE, EMOTION_DEFAULT_MINUTE),
     )
 
-    fun viriTime(p: SharedPreferences) = ViraClock(
-        p.getInt(VIRI_MESSAGE_HOUR, VIRI_DEFAULT_HOUR),
-        p.getInt(VIRI_MESSAGE_MINUTE, VIRI_DEFAULT_MINUTE),
+    fun morningTime(p: SharedPreferences) = ViraClock(
+        p.getInt(MORNING_REMINDER_HOUR, MORNING_DEFAULT_HOUR),
+        p.getInt(MORNING_REMINDER_MINUTE, MORNING_DEFAULT_MINUTE),
     )
+
+    /// L'hora de l'avís de Viri: l'apresa (`ViraEveningHour`).
+    fun viriTime(p: SharedPreferences) = ViraEveningHour.time(p)
 }
 
 /// Una hora del dia, sense dia.

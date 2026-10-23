@@ -30,8 +30,9 @@ class StreakNotificationTest {
     @Test
     fun laFinestraEsDUnAvisPerDia() {
         val slots = ViraStreakNotifications.slots(beforeTheSlot, time, zone)
-        assertEquals("set dies de finestra, un avís cada dia", 7, slots.size)
-        assertEquals("mai dos avisos el mateix dia", 7, slots.map { LocalDate.ofInstant(it, zone) }.toSet().size)
+        // Sense absència registrada, la finestra va fins al comiat: 0, 1, 2, 3, 6, 9, 12 i 14.
+        assertEquals("un avís per dia fins al comiat", 8, slots.size)
+        assertEquals("mai dos avisos el mateix dia", 8, slots.map { LocalDate.ofInstant(it, zone) }.toSet().size)
         assertEquals("cronològic", slots.sorted(), slots)
     }
 
@@ -40,7 +41,7 @@ class StreakNotificationTest {
         val after = beforeTheSlot.plusSeconds(2 * 3600)
         val slots = ViraStreakNotifications.slots(after, time, zone)
         assertTrue(slots.all { it.isAfter(after) })
-        assertEquals(6, slots.size)
+        assertEquals(7, slots.size)
     }
 
     @Test
@@ -55,7 +56,7 @@ class StreakNotificationTest {
     fun unDiaObertRepLAvisDelVespre() {
         val planned = requests(null, dayIsOpen = true)
         assertTrue(planned.any(::isToday))
-        assertTrue("el pressupost de 5 no es pot passar: 26 + 14 + 8 + 3 + 5 = 56 de 64", planned.size <= 5)
+        assertTrue("el pressupost de 8 no es pot passar", planned.size <= ViraStreakNotifications.BUDGET)
     }
 
     @Test

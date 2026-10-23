@@ -48,6 +48,7 @@ object ViraNotifications {
         ViraNotificationPlanner.MEDICATION_PREFIX,
         ViraNotificationPlanner.PLAN_PREFIX,
         ViraNotificationPlanner.EMOTION_PREFIX,
+        ViraNotificationPlanner.MORNING_PREFIX,
     )
     private val streakPrefixes = listOf(ViraStreakNotifications.PREFIX)
 
@@ -68,8 +69,9 @@ object ViraNotifications {
     suspend fun reschedule(context: Context, now: Instant = Instant.now(), zone: ZoneId = ZoneId.systemDefault()) {
         val host = context.notificationHost ?: return
         passes.withLock {
-            rescheduleReminders(context, host.notificationDatabase, now, zone)
-            rescheduleStreak(context, host, now, zone)
+            val state = host.notificationEffects.streakState(now)
+            rescheduleReminders(context, host.notificationDatabase, now, zone, viriSpeaks = viriSpeaks(context, state))
+            rescheduleStreak(context, host, state, now, zone)
         }
     }
 
@@ -95,14 +97,20 @@ object ViraNotifications {
 
     /// Si l'avís encara el vol l'usuari en el moment de sonar. Un «Més tard» o una alarma
     /// endarrerida poden sonar després d'apagar-ne la categoria: aleshores no surt.
+    ///
+    /// «Avisos» apaga tot el que no és medicació (Arnau, 2026-10-23): la medicació té el seu
+    /// interruptor i és l'única cosa que es personalitza (`ViraSimpleSettings`).
     fun isWanted(context: Context, notification: ViraPlannedNotification): Boolean {
         val p = ViraPreferences.open(context)
+        if (notification.channel == ViraNotificationChannel.MEDICATION) return ViraNotificationPreferences.medicationEnabled(p)
         if (notification.channel == ViraNotificationChannel.VIRI) return ViraNotificationPreferences.viriMessagesEnabled(p)
         if (!ViraNotificationPreferences.remindersEnabled(p)) return false
         return when (notification.channel) {
-            ViraNotificationChannel.MEDICATION -> ViraNotificationPreferences.medicationEnabled(p)
+            ViraNotificationChannel.MEDICATION -> true
             ViraNotificationChannel.HABITS -> ViraNotificationPreferences.habitsEnabled(p)
-            ViraNotificationChannel.PLAN -> ViraNotificationPreferences.planEnabled(p)
+            ViraNotificationChannel.PLAN ->
+                if (notification.actions == ViraActionSet.DAY) ViraNotificationPreferences.morningEnabled(p)
+                else ViraNotificationPreferences.planEnabled(p)
             ViraNotificationChannel.EMOTION -> ViraNotificationPreferences.emotionEnabled(p)
             ViraNotificationChannel.VIRI -> true
         }
@@ -121,15 +129,28 @@ object ViraNotifications {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) null
         else Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:${context.packageName}"))
 
-    suspend fun rescheduleReminders(context: Context, db: ViraDatabase, now: Instant, zone: ZoneId) {
+    /// Si Viri pot parlar al vespre: el recordatori emocional li cedeix el lloc
+    /// (`ViraStreakNotifications.speaks`). Sense saber res de la ratxa, calla i l'emocional segueix.
+    private fun viriSpeaks(context: Context, state: ViraStreakState?): Boolean =
+        canPost(context) && ViraNotificationPreferences.viriMessagesEnabled(ViraPreferences.open(context)) &&
+            state?.isVisible == true
+
+    suspend fun rescheduleReminders(
+        context: Context,
+        db: ViraDatabase,
+        now: Instant,
+        zone: ZoneId,
+        viriSpeaks: Boolean = false,
+    ) {
         val scheduler = ViraNotificationScheduler(context)
         val preferences = ViraPreferences.open(context)
-        if (!canPost(context) || !ViraNotificationPreferences.remindersEnabled(preferences)) {
+        if (!canPost(context)) {
             scheduler.cancelAll(reminderPrefixes)
             refreshShown(context, reminderPrefixes) { true }
             return
         }
         val settings = ViraNotificationSettings(
+            general = ViraNotificationPreferences.remindersEnabled(preferences),
             habits = ViraNotificationPreferences.habitsEnabled(preferences),
             medication = ViraNotificationPreferences.medicationEnabled(preferences),
             plan = ViraNotificationPreferences.planEnabled(preferences),
@@ -137,6 +158,13 @@ object ViraNotifications {
             detail = ViraNotificationPreferences.detailEnabled(preferences),
             medicationDetail = ViraNotificationPreferences.medicationDetailEnabled(preferences),
             emotionTime = ViraNotificationPreferences.emotionTime(preferences),
+            morning = ViraNotificationPreferences.morningEnabled(preferences),
+            morningTime = ViraNotificationPreferences.morningTime(preferences),
+            since = ViraAbsence.lastOpened(preferences),
+            quietUntil = ViraViriQuiet.until(preferences),
+            young = ViraRestHours.isYoung(preferences),
+            viriSpeaks = viriSpeaks,
+            locale = context.resources.configuration.locales[0],
         )
         val inputs = snapshot(db)
         val planned = ViraNotificationPlanner.plan(inputs, settings, now, zone, text(context))
@@ -156,10 +184,18 @@ object ViraNotifications {
         }
     }
 
-    private suspend fun rescheduleStreak(context: Context, host: ViraNotificationHost, now: Instant, zone: ZoneId) {
+    private suspend fun rescheduleStreak(
+        context: Context,
+        host: ViraNotificationHost,
+        state: ViraStreakState?,
+        now: Instant,
+        zone: ZoneId,
+    ) {
         val scheduler = ViraNotificationScheduler(context)
         val preferences = ViraPreferences.open(context)
-        val state = host.notificationEffects.streakState(now)
+        // Abans de cap condició: l'hora en què el dia compta és el que aprèn l'hora de l'avís
+        // (`ViraEveningHour`), i s'ha d'apuntar encara que avui els avisos estiguin apagats.
+        if (state != null && !state.dayIsOpen) ViraEveningHour.noteDayClosed(preferences, now, zone)
         // Amagar la ratxa se n'emporta també els avisos: si no es veu a la pantalla, no pot
         // sortir a la pantalla bloquejada.
         if (!canPost(context) || !ViraNotificationPreferences.viriMessagesEnabled(preferences) ||
@@ -183,6 +219,9 @@ object ViraNotifications {
             zone = zone,
             text = text(context),
             eventStamp = eventStamp,
+            since = ViraAbsence.lastOpened(preferences),
+            quietUntil = ViraViriQuiet.until(preferences),
+            young = ViraRestHours.isYoung(preferences),
         )
         // Un avís de Viri endarrerit no surt si el dia ja compta: diria que encara és obert.
         scheduler.replace(streakPrefixes, planned, now) {
@@ -346,7 +385,9 @@ object ViraNotifications {
         val p = ViraPreferences.open(context)
         val detail = when (notification.channel) {
             ViraNotificationChannel.MEDICATION -> ViraNotificationPreferences.medicationDetailEnabled(p)
-            ViraNotificationChannel.HABITS, ViraNotificationChannel.PLAN -> ViraNotificationPreferences.detailEnabled(p)
+            // «El teu dia» ja no porta el títol de la tasca sense el detall.
+            ViraNotificationChannel.PLAN -> notification.actions == ViraActionSet.DAY || ViraNotificationPreferences.detailEnabled(p)
+            ViraNotificationChannel.HABITS -> ViraNotificationPreferences.detailEnabled(p)
             ViraNotificationChannel.EMOTION, ViraNotificationChannel.VIRI -> true
         }
         return if (detail) notification

@@ -140,8 +140,10 @@ class ViraNotificationAlarmReceiver : BroadcastReceiver() {
                                         )
                                         .build()
                                 }
+                        is ViraNotificationActions.ViriButton.Quiet -> action(context, n, button.action, button.label)
                     }
                 }
+                ViraActionSet.DAY -> emptyList()
             }
 
         private fun action(context: Context, n: ViraPlannedNotification, action: String, label: Int): NotificationCompat.Action {

@@ -25,8 +25,9 @@ class ViraNotificationPlannerTest {
     private val today = LocalDate.of(2027, 1, 15)
     private val now: Instant = today.atTime(8, 0).atZone(zone).toInstant()
     private val text = ViraNotificationText { id, args -> "$id|${args.joinToString()}" }
-    // El registre emocional s'encén només a les seves proves: sinó, sumaria tres avisos a cada una.
-    private val settings = ViraNotificationSettings(emotion = false)
+    // El registre emocional i l'avís del matí s'encenen només a les seves proves: sinó, sumarien
+    // tres avisos a cada una.
+    private val settings = ViraNotificationSettings(emotion = false, morning = false)
 
     private fun at(day: LocalDate, hour: Int, minute: Int = 0) = day.atTime(hour, minute).atZone(zone).toInstant()
 
@@ -126,13 +127,17 @@ class ViraNotificationPlannerTest {
     }
 
     @Test
-    fun elsPressupostosSumen51() {
+    fun elsPressupostosSumen56() {
         assertEquals(
-            51,
+            48,
             ViraNotificationPlanner.MEDICATION_BUDGET + ViraNotificationPlanner.HABIT_BUDGET +
                 ViraNotificationPlanner.PLAN_BUDGET + ViraNotificationPlanner.EMOTION_BUDGET,
         )
-        assertEquals(56, 51 + ViraStreakNotifications.BUDGET)
+        // Viri i l'emocional comparteixen les 8: quan l'un parla, l'altre calla.
+        assertEquals(
+            56,
+            48 - ViraNotificationPlanner.EMOTION_BUDGET + ViraNotificationPlanner.MORNING_BUDGET + ViraStreakNotifications.BUDGET,
+        )
     }
 
     @Test

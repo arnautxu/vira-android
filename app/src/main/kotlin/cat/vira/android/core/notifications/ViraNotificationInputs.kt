@@ -9,6 +9,7 @@ import cat.vira.android.core.data.model.Medication
 import cat.vira.android.core.data.model.MedicationIntake
 import cat.vira.android.core.data.model.PlanItem
 import java.time.Instant
+import java.util.Locale
 
 /// Els textos, separats de `Context` perquè el càlcul es pugui provar sense pantalla.
 fun interface ViraNotificationText {
@@ -26,8 +27,11 @@ data class ViraNotificationInputs(
     val focusSessions: List<FocusSession> = emptyList(),
 )
 
-/// Els interruptors d'Ajustos d'aquell moment (`ViraNotificationPreferences`).
+/// Els interruptors d'Ajustos d'aquell moment (`ViraNotificationPreferences`) i el que decideix
+/// els avisos que ningú no ha demanat (absència, «Avui no», descans de 12–15).
 data class ViraNotificationSettings(
+    /// «Avisos». Apagat, només queda la medicació.
+    val general: Boolean = true,
     val habits: Boolean = true,
     val medication: Boolean = true,
     val plan: Boolean = true,
@@ -37,6 +41,22 @@ data class ViraNotificationSettings(
     val emotionTime: ViraClock = ViraClock(
         ViraNotificationPreferences.EMOTION_DEFAULT_HOUR, ViraNotificationPreferences.EMOTION_DEFAULT_MINUTE,
     ),
+    /// «El teu dia», a les 8:00.
+    val morning: Boolean = true,
+    val morningTime: ViraClock = ViraClock(
+        ViraNotificationPreferences.MORNING_DEFAULT_HOUR, ViraNotificationPreferences.MORNING_DEFAULT_MINUTE,
+    ),
+    /// L'últim cop que es va obrir l'app (`ViraAbsence`). Sense valor, ara.
+    val since: Instant? = null,
+    /// Fins quan calla Viri (`ViraViriQuiet`).
+    val quietUntil: Instant? = null,
+    /// El tram de 12 a 15 (`ViraRestHours`).
+    val young: Boolean = false,
+    /// Els missatges de Viri són encesos i la ratxa es veu: el vespre ja té el seu avís si l'absència
+    /// i «Avui no» ho deixen (`ViraStreakNotifications.speaks`).
+    val viriSpeaks: Boolean = false,
+    /// L'idioma de la pantalla, per a l'hora que surt a l'avís del matí.
+    val locale: Locale = Locale.getDefault(),
 )
 
 /// Un interval `[start, end)`, com el `Range<Date>` de Swift.

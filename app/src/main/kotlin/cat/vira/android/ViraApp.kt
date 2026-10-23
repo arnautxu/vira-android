@@ -11,7 +11,9 @@ import cat.vira.android.app.processCompletionQueue
 import cat.vira.android.core.backend.ViraBackend
 import cat.vira.android.core.backend.sync.ViraSyncWorker
 import cat.vira.android.core.data.ViraDatabase
+import cat.vira.android.core.data.ViraPreferences
 import cat.vira.android.core.data.ViraStore
+import cat.vira.android.core.notifications.ViraAbsence
 import cat.vira.android.core.notifications.ViraNotificationChannel
 import cat.vira.android.core.notifications.ViraNotificationEffects
 import cat.vira.android.core.notifications.ViraNotificationHost
@@ -77,6 +79,8 @@ class ViraApp : Application(), ViraNotificationHost {
 
         override fun onStart(owner: LifecycleOwner) {
             loop = owner.lifecycleScope.launch(Dispatchers.Default) { backend.syncWhileVisible() }
+            // Abans de refer cap finestra d'avisos: torna a començar el compte de l'absència.
+            ViraAbsence.noteOpened(ViraPreferences.open(this@ViraApp))
             // Cada tornada a primer pla torna a fer la finestra d'avisos, com a l'iPhone.
             owner.lifecycleScope.launch(Dispatchers.Default) { ViraNotifications.reschedule(this@ViraApp) }
         }
