@@ -56,7 +56,6 @@ import cat.vira.android.core.design.tokens.ViraRadius
 import cat.vira.android.core.design.tokens.ViraSpacing
 import cat.vira.android.core.design.tokens.ViraTouch
 import cat.vira.android.features.progress.RewardsSceneCard
-import cat.vira.android.features.today.QuickCapturePeriod
 import cat.vira.android.features.today.QuickCaptureScreen
 import java.time.LocalDate
 import java.time.ZoneId
@@ -122,7 +121,8 @@ fun CalendarSection(
         QuickCaptureScreen(
             onDismiss = { chrome.capture = null },
             initialDay = PlanDay.start(request.day, zone),
-            initialPeriod = request.period?.let { QuickCapturePeriod.valueOf(it.name) },
+            initialPeriod = request.period,
+            zone = zone,
         )
     }
 }

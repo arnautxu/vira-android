@@ -44,6 +44,8 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import cat.vira.android.core.design.viraLocale
 import cat.vira.android.R
+import cat.vira.android.features.add.ViraAddKind
+import cat.vira.android.features.add.ViraAddSheet
 import cat.vira.android.core.data.model.IntakeStatus
 import cat.vira.android.core.data.model.Medication
 import cat.vira.android.core.data.model.form
@@ -119,7 +121,7 @@ fun MedicationSection(
         )
     }
 
-    if (creating) MedicationEditor(null, actions, onDismiss = { creating = false })
+    if (creating) ViraAddSheet(onDismiss = { creating = false }, kind = ViraAddKind.Medication)
     editing?.let { MedicationEditor(it, actions, onDismiss = { editing = null }) }
 }
 

@@ -173,6 +173,22 @@ class PlanActions(
         copies.forEach { create(db.planItems(), it) }
     }
 
+    /// Com `create`, però torna tots els ítems que s'escriuran, l'original i les còpies d'una sèrie
+    /// (`ViraQuickCapture.addAll`): el «Desfer» del full «Afegir» se'ls emporta tots.
+    fun createAll(item: PlanItem, recurrence: PlanItemRecurrence): List<PlanItem> {
+        val (first, copies) = PlanItemCompletion.applyRecurrence(item, recurrence, zone, firstDay)
+        write {
+            create(db.planItems(), first)
+            copies.forEach { create(db.planItems(), it) }
+        }
+        return listOf(first) + copies
+    }
+
+    /// El «Desfer» del full «Afegir»: la tasca acabada de crear, amb la seva sèrie.
+    fun deleteAll(items: List<PlanItem>) = write {
+        items.forEach { item -> db.planItems().byId(item.id)?.let { delete(it) } }
+    }
+
     // Hàbits
 
     /// `HabitCompletion.toggle`: el registre s'insereix a l'instant i la recompensa (i el comptador

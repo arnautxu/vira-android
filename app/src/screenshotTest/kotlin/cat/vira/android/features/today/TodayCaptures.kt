@@ -23,11 +23,6 @@ import java.time.ZoneId
 @Preview(name = "lletra-gran", widthDp = 393, heightDp = 4600, locale = "es", fontScale = 2f)
 annotation class TodayCaptures
 
-@Preview(name = "clar", widthDp = 393, heightDp = 852, locale = "ca")
-@Preview(name = "fosc", widthDp = 393, heightDp = 852, locale = "ca", uiMode = Configuration.UI_MODE_NIGHT_YES or Configuration.UI_MODE_TYPE_NORMAL)
-@Preview(name = "lletra-gran", widthDp = 393, heightDp = 2000, locale = "es", fontScale = 2f)
-annotation class CaptureCaptures
-
 private val zone: ZoneId = ZoneId.of("Europe/Madrid")
 private fun at(hour: Int, minute: Int = 0): Instant = LocalDateTime.of(2026, 10, 19, hour, minute).atZone(zone).toInstant()
 private val day = at(0)
@@ -90,12 +85,3 @@ fun TodayEmpty() = ViraCapture { ViraTheme(reduceMotion = true) {
     )
 } }
 
-@PreviewTest @CaptureCaptures @Composable
-fun QuickCapture() = ViraCapture { ViraTheme(reduceMotion = true) {
-    QuickCaptureContent(initialDay = null, initialPeriod = null, onCancel = {}, onSave = { _, _, _, _, _ -> }, zone = zone, now = at(9))
-} }
-
-@PreviewTest @CaptureCaptures @Composable
-fun QuickCaptureFromPlan() = ViraCapture { ViraTheme(reduceMotion = true) {
-    QuickCaptureContent(initialDay = tomorrow, initialPeriod = QuickCapturePeriod.Night, onCancel = {}, onSave = { _, _, _, _, _ -> }, zone = zone, now = at(9))
-} }
