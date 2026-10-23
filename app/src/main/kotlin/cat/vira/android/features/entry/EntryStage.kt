@@ -9,208 +9,231 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.scaleIn
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.foundation.layout.weight
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.isTraversalGroup
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import cat.vira.android.R
 import cat.vira.android.core.design.LocalViraEnvironment
 import cat.vira.android.core.design.tokens.ViraArea
 import cat.vira.android.core.design.tokens.ViraColor
 import cat.vira.android.core.design.tokens.ViraMotion
 import cat.vira.android.core.design.tokens.ViraSpacing
 import cat.vira.android.core.design.tokens.viraSpec
+import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToInt
 
-/// L'escenari del flux: **Viri, de cos sencer, dret a sobre de la fulla groga** (Arnau, 2026-10-10).
+/// L'escena del pas (`EntryScene.swift`): una il·lustració sencera del món de Viri, a sang, que omple
+/// l'espai que la fulla deixa lliure, també per sota de la capçalera, i hi queda una mica per sota
+/// (`EntrySheetOverlap`).
 ///
-/// - **Un posat per pas** (`EntryStep.viriPose`).
-/// - Viri **no queda tapat**: ocupa l'espai que la fulla deixa lliure i hi seu a sobre.
-/// - La **bombolla surt d'ell**, a sobre del cap.
-/// - **Moviment**: en canviar de pas Viri cau, rebota i s'aixafa una mica en tocar la fulla; quan
-///   l'usuari tria una opció fa un saltet. Amb Reduir moviment, només un fos.
+/// La il·lustració **es centra a la part que es veu** (`coveredTop`, `coveredBottom`): si no, la
+/// píndola del progrés tapava el cap de Viri i la bombolla, la boca. Si la franja que queda és més
+/// estreta que `minimumRoom` (lletra gran, on la fulla ho ocupa gairebé tot), hi queda només el color.
 ///
-/// Cap text sobre el degradat ni sobre la il·lustració: la bombolla és una superfície. I segueix
-/// sent **una sola aparició expressiva** per pantalla.
+/// És decoració: TalkBack no la llegeix. En canviar de pas es fon amb la següent i s'assenta amb un
+/// zoom molt lleu; quan l'usuari tria alguna cosa, fa un batec. Amb Reduir moviment, només el fos.
+/// No es vesteix amb la skin: el flux d'entrada mai porta skin.
 @Composable
-fun EntryStage(
-    @DrawableRes pose: Int,
+fun EntryScene(
+    @DrawableRes scene: Int,
     modifier: Modifier = Modifier,
-    line: String? = null,
+    coveredTop: Dp = 0.dp,
+    coveredBottom: Dp = 0.dp,
+    minimumRoom: Dp = 0.dp,
     celebrates: Boolean = false,
     reaction: Int = 0,
 ) {
     val reduceMotion = LocalViraEnvironment.current.reduceMotion
-    Box(modifier) {
-        EntryStageLight(celebrates, Modifier.matchParentSize())
-        Column(
-            Modifier.fillMaxSize().padding(top = ViraSpacing.xs),
-            verticalArrangement = Arrangement.spacedBy(ViraSpacing.xs),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            if (line != null) {
-                EntryViriLine(line, tailOnTop = false, modifier = Modifier.padding(horizontal = ViraSpacing.screenMargin))
-            }
-            BoxWithConstraints(Modifier.fillMaxWidth().weight(1f).clearAndSetSemantics { }) {
-                val width = maxWidth
-                val height = maxHeight
-                // L'ombra als peus, on Viri toca la fulla.
-                Canvas(
-                    Modifier
-                        .align(Alignment.BottomCenter)
-                        .offset(y = 6.dp)
-                        .size(width = min(width.value * 0.5f, height.value * 0.6f).dp, height = 18.dp)
-                        .blur(8.dp),
-                ) { drawOval(ViraColor.shadow.copy(alpha = 0.22f)) }
-
-                AnimatedContent(
-                    targetState = pose,
-                    transitionSpec = {
-                        if (reduceMotion) {
-                            fadeIn(ViraMotion.reduced()) togetherWith fadeOut(ViraMotion.reduced())
-                        } else {
-                            (slideInVertically(ViraMotion.settle()) { -it / 6 } + fadeIn(ViraMotion.settle())) togetherWith
-                                (slideOutHorizontally(ViraMotion.settle()) { -it / 6 } + fadeOut(ViraMotion.settle()))
-                        }
-                    },
-                    contentAlignment = Alignment.BottomCenter,
-                    modifier = Modifier.align(Alignment.BottomCenter),
-                    label = "entryPose",
-                ) { shown ->
+    Box(modifier.background(ViraColor.cardFill(ViraArea.Today)).clearAndSetSemantics { }) {
+        AnimatedContent(
+            targetState = scene,
+            transitionSpec = {
+                if (reduceMotion) {
+                    fadeIn(ViraMotion.reduced()) togetherWith fadeOut(ViraMotion.reduced())
+                } else {
+                    (fadeIn(ViraMotion.standard()) + scaleIn(ViraMotion.standard(), initialScale = 1.04f)) togetherWith
+                        fadeOut(ViraMotion.standard())
+                }
+            },
+            modifier = Modifier.fillMaxSize(),
+            label = "entryScene",
+        ) { shown ->
+            BoxWithConstraints(Modifier.fillMaxSize().clipToBounds()) {
+                val top = coveredTop
+                val bottom = maxHeight - coveredBottom
+                if (bottom - top >= minimumRoom) {
+                    val center = (top + bottom) / 2
+                    val half = maxOf(center, maxHeight - center)
                     Image(
                         painter = painterResource(shown),
                         contentDescription = null,
-                        contentScale = ContentScale.Fit,
+                        contentScale = ContentScale.Crop,
                         modifier = Modifier
-                            .sizeIn(maxWidth = width * 0.82f, maxHeight = height)
-                            .entryHop(key = shown to reaction, enabled = !reduceMotion),
+                            // Un marc centrat a la part visible i prou alt per cobrir de dalt a baix:
+                            // la imatge hi omple a sang.
+                            .layout { measurable, constraints ->
+                                val width = constraints.maxWidth
+                                val height = (half * 2).roundToPx()
+                                val placeable = measurable.measure(Constraints.fixed(width, height))
+                                layout(width, constraints.maxHeight) {
+                                    placeable.place(0, (center - half).roundToPx())
+                                }
+                            }
+                            .entryBeat(reaction, enabled = !reduceMotion),
                     )
                 }
             }
         }
+        EntryCelebrationLayer(celebrates, Modifier.matchParentSize())
     }
 }
 
-/// El saltet de Viri: puja, s'aixafa en tocar la fulla i rebota. Ancorat als peus, perquè
-/// l'aixafada sembli que toca terra i no que s'encongeix sencer.
+/// El batec de l'escena quan es tria una opció: creix un 3 % i torna. Ara Viri és dins de l'escena
+/// i el que reacciona és tota la casa.
 @Composable
-private fun Modifier.entryHop(key: Any, enabled: Boolean): Modifier {
-    val lift = remember { Animatable(0f) }
-    val squash = remember { Animatable(1f) }
-    val density = LocalDensity.current
-    LaunchedEffect(key, enabled) {
-        if (!enabled) return@LaunchedEffect
-        val peak = with(density) { 22.dp.toPx() }
-        squash.animateTo(1.04f, tween(180, easing = FastOutSlowInEasing))
-        lift.animateTo(peak, spring(dampingRatio = 0.8f, stiffness = 500f))
-        lift.animateTo(0f, spring(dampingRatio = 0.8f, stiffness = 500f))
-        squash.animateTo(0.9f, tween(140, easing = FastOutSlowInEasing))
-        squash.animateTo(1f, spring(dampingRatio = 0.45f, stiffness = 300f))
+private fun Modifier.entryBeat(trigger: Int, enabled: Boolean): Modifier {
+    val scale = remember { Animatable(1f) }
+    LaunchedEffect(trigger, enabled) {
+        if (!enabled || trigger == 0) return@LaunchedEffect
+        scale.animateTo(1.03f, tween(140, easing = FastOutSlowInEasing))
+        scale.animateTo(1f, spring(dampingRatio = 0.5f, stiffness = 300f))
     }
     return graphicsLayer {
-        transformOrigin = TransformOrigin(0.5f, 1f)
-        scaleX = 2f - squash.value
-        scaleY = squash.value
-        translationY = -lift.value
+        scaleX = scale.value
+        scaleY = scale.value
     }
 }
 
-/// Llum de focus darrere de Viri, uns quants estels i, a la celebració, anelles i confeti. És
-/// decoració pura: res no porta informació, i TalkBack no la veu.
+/// L'escenari del flux (`EntryStage.swift`): l'espai de l'escena que la fulla deixa lliure, amb la
+/// **bombolla de Viri** (Arnau, 2026-10-21).
+///
+/// - La bombolla va **a baix**, tocant la fulla, amb la cua cap amunt cap a Viri. A la benvinguda
+///   va **a dalt a la dreta**, amb la cua avall, perquè Viri hi és sencer i saluda.
+/// - **Cap text sobre la il·lustració**: la bombolla és una superfície (`EntryViriLine`).
+/// - Segueix sent **una sola aparició expressiva** per pantalla: l'escena.
+///
+/// `onLineHeight` diu quant ocupa la bombolla amb el seu marge, perquè l'escena centri Viri fora
+/// d'ella. A mides d'accessibilitat la bombolla torna a dins de la fulla (`EntryFlow`).
 @Composable
-private fun EntryStageLight(celebrates: Boolean, modifier: Modifier) {
-    val isDark = LocalViraEnvironment.current.isDark
+fun EntryStage(line: String?, onTop: Boolean, modifier: Modifier = Modifier, onLineHeight: (Int) -> Unit = {}) {
+    Column(
+        modifier
+            .padding(horizontal = ViraSpacing.screenMargin)
+            .padding(top = if (onTop) EntryStageTopInset else ViraSpacing.xs, bottom = ViraSpacing.s)
+            .semantics { isTraversalGroup = true },
+    ) {
+        if (!onTop) Spacer(Modifier.weight(1f))
+        Box(Modifier.fillMaxWidth().onSizeChanged { onLineHeight(it.height) }) {
+            if (line != null) {
+                // Que la bombolla no faci tota l'amplada: és una frase, no una franja.
+                EntryViriLine(
+                    line,
+                    tailOnTop = !onTop,
+                    alignEnd = onTop,
+                    modifier = Modifier.padding(start = if (onTop) ViraSpacing.xxl * 2 else 0.dp, end = if (onTop) 0.dp else ViraSpacing.xxl * 2),
+                )
+            }
+        }
+        if (onTop) Spacer(Modifier.weight(1f))
+    }
+}
+
+/// Marge de dalt de la bombolla a la benvinguda, on va a sobre de Viri.
+val EntryStageTopInset = ViraSpacing.xxl * 2
+
+/// L'escena de cada pas (Arnau, 2026-10-21). La primera acció la tria segons el que s'ha triat a
+/// "Per on comencem?".
+@DrawableRes
+fun EntryStep.scene(intent: EntryStartIntent): Int = when (this) {
+    EntryStep.WELCOME -> R.drawable.viri_home_morning
+    EntryStep.START -> R.drawable.viri_suggest_capture_1
+    EntryStep.AGE -> R.drawable.viri_scene_friends
+    EntryStep.PRIVACY, EntryStep.CONSENT -> R.drawable.viri_scene_privacy
+    EntryStep.FIRST_ACTION -> when (intent) {
+        EntryStartIntent.ORGANIZE -> R.drawable.viri_suggest_habit_1
+        EntryStartIntent.EMOTIONS -> R.drawable.viri_suggest_check_in_1
+        EntryStartIntent.FOCUS -> R.drawable.viri_suggest_focus_1
+    }
+    EntryStep.DONE -> R.drawable.viri_scene_launch
+    EntryStep.ACCOUNT, EntryStep.PASSWORD_RESET, EntryStep.NEW_PASSWORD -> R.drawable.viri_scene_plan_empty
+    EntryStep.NOTIFICATIONS -> R.drawable.viri_suggest_wind_down_1
+    EntryStep.NICKNAME, EntryStep.CONNECTIONS -> R.drawable.viri_scene_calendar
+}
+
+/// La celebració del pas «Fet», a sobre de l'escena (`EntryCelebrationLayer.swift`): dues anelles
+/// que s'obren i confeti. Decoració pura; amb les celebracions apagades no es dibuixa res, i amb
+/// Reduir moviment surt ja obert.
+@Composable
+private fun EntryCelebrationLayer(celebrates: Boolean, modifier: Modifier) {
+    val reduceMotion = LocalViraEnvironment.current.reduceMotion
     val veil = ViraColor.lightArtworkVeil
-    val veilAlpha = if (isDark) 0.12f else 0.38f
     val open by animateFloatAsState(
         targetValue = if (celebrates) 1f else 0f,
         animationSpec = viraSpec(ViraMotion.settle(), decorative = true),
         label = "entryCelebration",
     )
+    val shown = if (celebrates && reduceMotion) 1f else open
     val confettiColors = CONFETTI.map { ViraColor.cardFill(it.area) }
     Canvas(modifier.clearAndSetSemantics { }) {
+        if (shown <= 0f) return@Canvas
         val side = min(size.width, size.height) * 1.1f
-        val center = Offset(size.width / 2f, size.height * 0.55f)
-        drawCircle(
-            Brush.radialGradient(listOf(veil.copy(alpha = veilAlpha), Color.Transparent), center, side / 2f),
-            radius = side / 2f,
-            center = center,
-        )
-        SPARKLES.forEach { (x, y, s) ->
-            val px = s * density
-            drawPath(sparkle(Offset(size.width * x, size.height * y), px), veil.copy(alpha = 0.75f))
+        val center = Offset(size.width / 2f, size.height * 0.5f)
+        listOf(0.62f, 0.9f).forEach { ratio ->
+            val alpha = if (ratio < 0.8f) 0.5f else 0.25f
+            drawCircle(
+                veil.copy(alpha = alpha * shown),
+                radius = side * ratio / 2f * (0.4f + 0.6f * shown),
+                center = center,
+                style = Stroke(width = 3.dp.toPx()),
+            )
         }
-        if (open > 0f) {
-            listOf(0.62f, 0.9f).forEach { ratio ->
-                val alpha = if (ratio < 0.8f) 0.5f else 0.25f
-                drawCircle(
-                    veil.copy(alpha = alpha * open),
-                    radius = side * ratio / 2f * (0.4f + 0.6f * open),
-                    center = center,
-                    style = Stroke(width = 3.dp.toPx()),
+        CONFETTI.forEachIndexed { index, piece ->
+            val target = Offset(size.width * piece.x, size.height * piece.y)
+            val at = center + (target - center) * shown
+            val pieceSize = Size(8.dp.toPx(), (if (piece.long) 18 else 10).dp.toPx())
+            rotate(piece.angle * shown, at) {
+                drawRoundRect(
+                    confettiColors[index].copy(alpha = max(0f, shown)),
+                    topLeft = at - Offset(pieceSize.width / 2f, pieceSize.height / 2f),
+                    size = pieceSize,
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(2.dp.toPx()),
                 )
-            }
-            CONFETTI.forEachIndexed { index, piece ->
-                val target = Offset(size.width * piece.x, size.height * piece.y)
-                val at = center + (target - center) * open
-                val pieceSize = Size(8.dp.toPx(), (if (piece.long) 18 else 10).dp.toPx())
-                rotate(piece.angle * open, at) {
-                    drawRoundRect(
-                        confettiColors[index].copy(alpha = open),
-                        topLeft = at - Offset(pieceSize.width / 2f, pieceSize.height / 2f),
-                        size = pieceSize,
-                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(2.dp.toPx()),
-                    )
-                }
             }
         }
     }
 }
-
-private fun sparkle(center: Offset, size: Float): Path = Path().apply {
-    val r = size / 2f
-    moveTo(center.x, center.y - r)
-    quadraticTo(center.x, center.y, center.x + r, center.y)
-    quadraticTo(center.x, center.y, center.x, center.y + r)
-    quadraticTo(center.x, center.y, center.x - r, center.y)
-    quadraticTo(center.x, center.y, center.x, center.y - r)
-    close()
-}
-
-private val SPARKLES = listOf(
-    Triple(0.12f, 0.3f, 18f), Triple(0.86f, 0.42f, 14f), Triple(0.8f, 0.86f, 20f), Triple(0.16f, 0.78f, 12f),
-)
 
 /// Rectangles petits amb els quatre colors de mòdul que ja té el sistema.
 private data class ConfettiPiece(val x: Float, val y: Float, val angle: Float, val area: ViraArea, val long: Boolean)

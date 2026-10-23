@@ -7,7 +7,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -35,17 +35,18 @@ import cat.vira.android.core.design.components.viraPressable
 import cat.vira.android.core.design.tokens.ViraArea
 import cat.vira.android.core.design.tokens.ViraColor
 import cat.vira.android.core.design.tokens.ViraFont
-import cat.vira.android.core.design.tokens.ViraGradient
 import cat.vira.android.core.design.tokens.ViraRadius
 import cat.vira.android.core.design.tokens.ViraSpacing
 import cat.vira.android.core.design.tokens.ViraTouch
 
 /// Fila de tria de la fulla, amb pictograma opcional ("Per on comencem?", edat) (`EntryChoiceTile.swift`).
 ///
-/// - **Sense triar**: sense farciment, contorn `controlBorder(on = onCard(Rewards))`. Amb
-///   contrast alt, la tinta sencera.
-/// - **Triada**: farciment `accent(Today)`, text `onAccent` i una ✓ en cercle. La selecció mai
-///   depèn només del color.
+/// Des del 2026-10-21, fitxes grans sobre la fulla blanca, com les maquetes aprovades:
+///
+/// - **Sense triar**: farciment `backgroundGrouped` i un cercle buit (`controlBorder`, ≥3:1) a la
+///   dreta. Amb contrast alt, la fitxa porta a més un contorn `textPrimary`.
+/// - **Triada**: farciment `surface(Today)`, contorn `accent(Today)` de 2 dp i el cercle ple amb la
+///   marca. La selecció mai depèn només del color: el cercle canvia de forma.
 @Composable
 fun EntryChoiceTile(
     title: String,
@@ -57,15 +58,20 @@ fun EntryChoiceTile(
     val environment = LocalViraEnvironment.current
     val haptics = LocalHapticFeedback.current
     val shape = RoundedCornerShape(ViraRadius.m)
-    val ink = if (isSelected) ViraColor.onAccent else ViraColor.onCard(ViraArea.Rewards)
-    val border = if (environment.increasedContrast) ViraColor.onCard(ViraArea.Rewards) else ViraColor.controlBorder(on = ViraColor.onCard(ViraArea.Rewards))
     val pictogramSide = 40.dp * LocalDensity.current.fontScale.coerceAtMost(2f)
 
     val surface = Modifier
         .fillMaxWidth()
         .defaultMinSize(minHeight = ViraTouch.comfortable)
         .clip(shape)
-        .then(if (isSelected) Modifier.background(ViraGradient.accent(ViraArea.Today), shape) else Modifier.border(1.5.dp, border, shape))
+        .background(if (isSelected) ViraColor.surface(ViraArea.Today) else ViraColor.backgroundGrouped, shape)
+        .then(
+            when {
+                isSelected -> Modifier.border(2.dp, ViraColor.accent(ViraArea.Today), shape)
+                environment.increasedContrast -> Modifier.border(1.5.dp, ViraColor.textPrimary, shape)
+                else -> Modifier
+            },
+        )
         .viraPressable {
             haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
             onClick()
@@ -80,13 +86,11 @@ fun EntryChoiceTile(
     }
     val labels: @Composable (Modifier) -> Unit = { modifier ->
         Column(modifier, verticalArrangement = Arrangement.spacedBy(ViraSpacing.xxs)) {
-            Text(title, style = ViraFont.headline, color = ink)
-            if (detail != null) Text(detail, style = ViraFont.footnote, color = ink)
+            Text(title, style = ViraFont.headline, color = ViraColor.textPrimary)
+            if (detail != null) Text(detail, style = ViraFont.footnote, color = ViraColor.textSecondary)
         }
     }
-    val check: @Composable RowScope.() -> Unit = {
-        if (isSelected) EntryGlyphIcon(EntryGlyph.CHECK_CIRCLE, ViraColor.onAccent, side = 20.dp)
-    }
+    val check: @Composable () -> Unit = { EntryChoiceMark(isSelected) }
 
     // Amb lletra d'accessibilitat el pictograma puja a sobre del títol: al costat, es menjava
     // l'amplada i "Organitzar-me" es partia lletra a lletra.
@@ -108,11 +112,22 @@ fun EntryChoiceTile(
     }
 }
 
+/// El cercle de la dreta: buit sense triar, ple amb la marca un cop triat.
+@Composable
+private fun EntryChoiceMark(isSelected: Boolean) {
+    val side = 26.dp * LocalDensity.current.fontScale.coerceAtMost(2f)
+    if (isSelected) {
+        EntryGlyphIcon(EntryGlyph.CHECK_CIRCLE, ViraColor.accent(ViraArea.Today), side = 26.dp)
+    } else {
+        Box(Modifier.size(side).padding(2.dp).border(2.dp, ViraColor.controlBorder, CircleShape))
+    }
+}
+
 /// Píndola de tria: l'alternativa compacta a una llista quan les opcions són poques i curtes (els
 /// tres suggeriments de la primera tasca). La triada va plena, en negreta i amb ✓.
 @Composable
 fun EntryChip(title: String, isSelected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    val ink = if (isSelected) ViraColor.onAccent else ViraColor.onCard(ViraArea.Rewards)
+    val ink = if (isSelected) ViraColor.onAccent else ViraColor.textPrimary
     Row(
         horizontalArrangement = Arrangement.spacedBy(ViraSpacing.xxs, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically,
@@ -121,7 +136,7 @@ fun EntryChip(title: String, isSelected: Boolean, onClick: () -> Unit, modifier:
             .clip(CircleShape)
             .then(
                 if (isSelected) Modifier.background(ViraColor.accent(ViraArea.Today), CircleShape)
-                else Modifier.border(1.5.dp, ViraColor.controlBorder(on = ViraColor.onCard(ViraArea.Rewards)), CircleShape),
+                else Modifier.border(1.5.dp, ViraColor.controlBorder, CircleShape),
             )
             .viraPressable(onClick = onClick)
             .semantics(mergeDescendants = true) { selected = isSelected }

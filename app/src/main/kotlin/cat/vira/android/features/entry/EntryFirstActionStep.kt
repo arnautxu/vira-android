@@ -227,7 +227,6 @@ private fun EntryPendingHost(onClose: () -> Unit) {
             stringResource(R.string.action_close),
             onClose,
             Modifier.align(Alignment.TopEnd).padding(ViraSpacing.s),
-            bold = true,
         )
     }
 }

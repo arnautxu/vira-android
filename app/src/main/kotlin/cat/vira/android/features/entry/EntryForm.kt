@@ -35,7 +35,7 @@ import cat.vira.android.R
 import cat.vira.android.core.backend.ViraBackendError
 import cat.vira.android.core.design.components.ViraInlineError
 import cat.vira.android.core.design.components.viraPressable
-import cat.vira.android.core.design.tokens.ViraArea
+import cat.vira.android.core.design.LocalViraEnvironment
 import cat.vira.android.core.design.tokens.ViraColor
 import cat.vira.android.core.design.tokens.ViraFont
 import cat.vira.android.core.design.tokens.ViraRadius
@@ -61,7 +61,7 @@ fun EntryField(
     imeAction: ImeAction = ImeAction.Done,
     onSubmit: () -> Unit = {},
 ) {
-    val ink = ViraColor.onCard(ViraArea.Rewards)
+    val ink = ViraColor.textPrimary
     val isSecret = kind == EntryFieldKind.PASSWORD || kind == EntryFieldKind.NEW_PASSWORD
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(ViraSpacing.xxs)) {
         Text(label, style = if (labelBold) ViraFont.headline else ViraFont.footnote, color = ink)
@@ -96,7 +96,7 @@ fun EntryField(
                         .padding(ViraSpacing.m),
                 ) {
                     if (value.isEmpty() && placeholder != null) {
-                        Text(placeholder, style = ViraFont.body, color = ink.copy(alpha = 0.6f))
+                        Text(placeholder, style = ViraFont.body, color = ViraColor.textSecondary)
                     }
                     inner()
                 }
@@ -109,15 +109,22 @@ fun EntryField(
 /// tercer pas del mateix formulari. El text es llegeix a TalkBack: és la mateixa informació.
 @Composable
 fun EntryMethodsDivider(text: String) {
-    val ink = ViraColor.onCard(ViraArea.Rewards)
+    // A mides d'accessibilitat, sense línies: el text necessita tota l'amplada.
+    val stacked = LocalViraEnvironment.current.isAccessibilitySize
     Row(
         Modifier.fillMaxWidth().padding(top = ViraSpacing.xxs),
         horizontalArrangement = Arrangement.spacedBy(ViraSpacing.xs),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(Modifier.weight(1f).height(1.dp).background(ink.copy(alpha = 0.35f)))
-        Text(text, style = ViraFont.footnote, color = ink, textAlign = TextAlign.Center)
-        Box(Modifier.weight(1f).height(1.dp).background(ink.copy(alpha = 0.35f)))
+        if (!stacked) Box(Modifier.weight(1f).height(1.dp).background(ViraColor.separator))
+        Text(
+            text,
+            style = ViraFont.footnote,
+            color = ViraColor.textSecondary,
+            textAlign = TextAlign.Center,
+            modifier = if (stacked) Modifier.weight(1f) else Modifier,
+        )
+        if (!stacked) Box(Modifier.weight(1f).height(1.dp).background(ViraColor.separator))
     }
 }
 
@@ -142,7 +149,7 @@ fun EntryProviderButton(text: String, onClick: () -> Unit, enabled: Boolean = tr
     }
 }
 
-/// Missatge d'error del pas, sobre la fulla groga.
+/// Missatge d'error del pas, a la fulla.
 @Composable
 fun EntryErrorText(error: ViraBackendError?) {
     if (error == null) return

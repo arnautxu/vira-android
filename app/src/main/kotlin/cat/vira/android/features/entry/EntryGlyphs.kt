@@ -21,10 +21,11 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /// Els símbols de sistema que l'iPhone fa servir al flux (`chevron.left`, `checkmark`,
-/// `checkmark.circle.fill`, `sparkle`, `envelope`, `hand.raised`, `doc.text`), dibuixats: Android
+/// `checkmark.circle.fill`, `sparkle`, `envelope`, `hand.raised`, `doc.text`,
+/// `arrow.triangle.2.circlepath`, `lock`, `info.circle`), dibuixats: Android
 /// no els té, i el sistema de disseny tampoc fa servir icones de Material. Sempre amagats a
 /// TalkBack: acompanyen un text, no en diuen res de nou.
-enum class EntryGlyph { BACK, CHECK, CHECK_CIRCLE, SPARKLE, ENVELOPE, PRIVACY, DOCUMENT }
+enum class EntryGlyph { BACK, CHECK, CHECK_CIRCLE, SPARKLE, ENVELOPE, PRIVACY, DOCUMENT, SYNC, LOCK, INFO }
 
 /// `side` escala amb la lletra si `scalesWithText`, com un símbol de sistema al costat d'un text.
 @Composable
@@ -82,6 +83,26 @@ private fun DrawScope.draw(glyph: EntryGlyph, color: Color) {
             listOf(0.34f, 0.5f, 0.66f).forEach { y ->
                 drawLine(color, Offset(w * 0.32f, w * y), Offset(w * 0.68f, w * y), strokeWidth = w * 0.08f, cap = StrokeCap.Round)
             }
+        }
+        EntryGlyph.SYNC -> {
+            val inset = w * 0.16f
+            val arc = Size(w - inset * 2, w - inset * 2)
+            drawArc(color, 200f, 130f, false, Offset(inset, inset), arc, style = stroke)
+            drawArc(color, 20f, 130f, false, Offset(inset, inset), arc, style = stroke)
+            // Les dues puntes de fletxa, al final de cada arc.
+            drawPath(Path().apply { moveTo(w * 0.72f, w * 0.1f); lineTo(w * 0.8f, w * 0.27f); lineTo(w * 0.62f, w * 0.3f) }, color, style = stroke)
+            drawPath(Path().apply { moveTo(w * 0.28f, w * 0.9f); lineTo(w * 0.2f, w * 0.73f); lineTo(w * 0.38f, w * 0.7f) }, color, style = stroke)
+        }
+        EntryGlyph.LOCK -> {
+            drawRoundRect(color, Offset(w * 0.18f, w * 0.44f), Size(w * 0.64f, w * 0.48f), CornerRadius(w * 0.08f), style = stroke)
+            drawArc(color, 180f, 180f, false, Offset(w * 0.3f, w * 0.1f), Size(w * 0.4f, w * 0.4f), style = stroke)
+            drawLine(color, Offset(w * 0.3f, w * 0.3f), Offset(w * 0.3f, w * 0.44f), strokeWidth = w * 0.11f)
+            drawLine(color, Offset(w * 0.7f, w * 0.3f), Offset(w * 0.7f, w * 0.44f), strokeWidth = w * 0.11f)
+        }
+        EntryGlyph.INFO -> {
+            drawCircle(color, radius = w * 0.44f, style = stroke)
+            drawCircle(color, radius = w * 0.06f, center = Offset(w * 0.5f, w * 0.3f))
+            drawLine(color, Offset(w * 0.5f, w * 0.45f), Offset(w * 0.5f, w * 0.72f), strokeWidth = w * 0.11f, cap = StrokeCap.Round)
         }
     }
 }

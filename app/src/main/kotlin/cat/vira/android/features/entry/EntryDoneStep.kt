@@ -24,6 +24,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import cat.vira.android.R
+import cat.vira.android.core.design.tokens.ViraArea
 import cat.vira.android.core.design.tokens.ViraColor
 import cat.vira.android.core.design.tokens.ViraFont
 import cat.vira.android.core.design.tokens.ViraSpacing
@@ -32,12 +33,14 @@ import kotlinx.coroutines.delay
 
 /// E6 · Fet. La celebració de la primera acció, i **només del que ha passat** (`EntryDoneStep.swift`).
 ///
-/// - Una tasca afegida: la píndola "A Avui". Afegir no dona monedes, i dir-ho seria mentir.
+/// - Una tasca afegida: la píndola blava de Pla amb el seu títol, i a sobre "Ho tens a Avui. Quan
+///   ho acabis, toca el cercle." (`EntryNavigator.message`). Afegir no dona monedes, i dir-ho seria mentir.
 /// - Un check-in o un focus: el que hagi donat el comptador pel seu camí de sempre. Si el sostre
 ///   o el llindar del focus no han donat res, no surt res.
 /// - **Cap "Dia 1" ni cap menció de la ratxa**: una sola acció no pot completar un dia.
 ///
-/// Viri hi surt com l'estàtua daurada amb confeti i anelles (`EntryStage`). No té botó enrere: una
+/// Viri hi surt dins del coet (`viri_scene_launch`) amb confeti i anelles a sobre (`EntryScene`).
+/// El consell de Siri de l'iPhone no hi és: Android no té Siri. No té botó enrere: una
 /// celebració no es desfà. El nivell encara no existeix a Android; quan hi sigui, aquest pas l'ha
 /// de marcar com a celebrat (`consumeLevel` a l'iPhone).
 @OptIn(ExperimentalLayoutApi::class)
@@ -45,7 +48,7 @@ import kotlinx.coroutines.delay
 fun EntryDoneStep(outcome: EntryFirstActionOutcome?, prefs: EntryPreferences, onContinue: () -> Unit) {
     val chips = entryDoneChips(outcome, prefs.progressVisible.value)
     val viriLine = stringResource(R.string.onboarding_viri_done)
-    val announcement = (listOf(viriLine) + chips).joinToString(". ")
+    val announcement = (listOf(viriLine) + chips.map { it.text }).joinToString(". ")
     val haptics = LocalHapticFeedback.current
     val view = LocalView.current
     val context = LocalContext.current
@@ -66,16 +69,16 @@ fun EntryDoneStep(outcome: EntryFirstActionOutcome?, prefs: EntryPreferences, on
             FlowRow(
                 horizontalArrangement = Arrangement.spacedBy(ViraSpacing.xs),
                 verticalArrangement = Arrangement.spacedBy(ViraSpacing.xs),
-                modifier = Modifier.fillMaxWidth().clearAndSetSemantics { contentDescription = chips.joinToString(", ") },
+                modifier = Modifier.fillMaxWidth().clearAndSetSemantics { contentDescription = chips.joinToString(", ") { it.text } },
             ) {
                 chips.forEach { chip ->
                     Text(
-                        chip,
+                        chip.text,
                         style = ViraFont.headline,
-                        color = ViraColor.textPrimary,
+                        color = ViraColor.onSurface(chip.area),
                         modifier = Modifier
                             .defaultMinSize(minHeight = ViraTouch.minimum)
-                            .background(ViraColor.surfaceElevated, CircleShape)
+                            .background(ViraColor.surface(chip.area), CircleShape)
                             .wrapContentHeight(Alignment.CenterVertically)
                             .padding(horizontal = ViraSpacing.m, vertical = ViraSpacing.xxs),
                     )
@@ -86,15 +89,21 @@ fun EntryDoneStep(outcome: EntryFirstActionOutcome?, prefs: EntryPreferences, on
     }
 }
 
+/// Una píndola: el text i de quina àrea és. La tasca va en blau de Pla; les recompenses, en el groc
+/// dels premis.
+private data class EntryDoneChip(val text: String, val area: ViraArea)
+
 /// Les píndoles, ja escrites. Les de recompensa respecten "Ensenya el progrés" d'Ajustos.
 @Composable
-private fun entryDoneChips(outcome: EntryFirstActionOutcome?, progressVisible: Boolean): List<String> {
+private fun entryDoneChips(outcome: EntryFirstActionOutcome?, progressVisible: Boolean): List<EntryDoneChip> {
     if (outcome == null) return emptyList()
-    if (outcome.taskTitle != null) return listOf(stringResource(R.string.onboarding_done_task))
+    outcome.taskTitle?.let { title ->
+        return listOf(EntryDoneChip(title.trim().ifEmpty { stringResource(R.string.onboarding_done_task) }, ViraArea.Plan))
+    }
     if (!progressVisible) return emptyList()
     val reward = outcome.reward
     return buildList {
-        if (reward.coins > 0) add(stringResource(R.string.focus_done_coins, reward.coins))
-        if (reward.xp > 0) add(stringResource(R.string.toast_reward_xp, reward.xp))
+        if (reward.coins > 0) add(EntryDoneChip(stringResource(R.string.focus_done_coins, reward.coins), ViraArea.Rewards))
+        if (reward.xp > 0) add(EntryDoneChip(stringResource(R.string.toast_reward_xp, reward.xp), ViraArea.Rewards))
     }
 }

@@ -19,6 +19,9 @@ object EntryPreferenceKeys {
     const val AGE_RANGE = "settings.ageRange"
     /// Per on vol començar qui entra (`EntryStartIntent`).
     const val ENTRY_START_INTENT = "settings.entryStartIntent"
+    /// Què ha fet de debò qui ha passat per la primera acció (`EntryFirstActionKind`); buit si ha
+    /// dit «Ara no». Només serveix perquè el tomb no repeteixi el que «Fet» ja ha dit.
+    const val ENTRY_FIRST_ACTION = "settings.entryFirstAction"
     const val PROGRESS_VISIBLE = "settings.progressVisible"
     const val MODULE_HABITS_ENABLED = "settings.moduleHabitsEnabled"
     const val MODULE_MEDICATION_ENABLED = "settings.moduleMedicationEnabled"
@@ -68,6 +71,7 @@ class EntryPreferences(private val store: Store) {
     }
 
     val startIntent get() = string(EntryPreferenceKeys.ENTRY_START_INTENT)
+    val firstAction get() = string(EntryPreferenceKeys.ENTRY_FIRST_ACTION)
     val ageRange get() = string(EntryPreferenceKeys.AGE_RANGE)
     val onboardingCompleted get() = boolean(EntryPreferenceKeys.ONBOARDING_COMPLETED, false)
     val celebrationsEnabled get() = boolean(EntryPreferenceKeys.CELEBRATIONS_ENABLED, true)

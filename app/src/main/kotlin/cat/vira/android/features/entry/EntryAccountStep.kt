@@ -20,7 +20,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import cat.vira.android.R
 import cat.vira.android.core.backend.ViraAccountRole
-import cat.vira.android.core.design.tokens.ViraArea
 import cat.vira.android.core.design.tokens.ViraColor
 import cat.vira.android.core.design.tokens.ViraFont
 import cat.vira.android.core.design.tokens.ViraSpacing
@@ -50,7 +49,8 @@ fun EntryAccountStep(
     var password by remember { mutableStateOf("") }
     var isWorking by remember { mutableStateOf(false) }
     var showsConfirmNotice by remember { mutableStateOf(false) }
-    val ink = ViraColor.onCard(ViraArea.Rewards)
+    /// El jove que es registra ha tocat «Amb el correu»: ara hi ha els camps.
+    var isEditingEmail by remember { mutableStateOf(false) }
     // Vuit caràcters és el mínim de Supabase per defecte: val més dir-ho abans d'enviar-ho.
     val isValid = email.contains("@") && email.length > 4 && password.length >= 8
 
@@ -74,7 +74,7 @@ fun EntryAccountStep(
         }
     }
 
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(ViraSpacing.s)) {
+    val emailForm: @Composable () -> Unit = {
         EntryField(
             label = stringResource(R.string.account_email_field),
             value = email,
@@ -103,15 +103,28 @@ fun EntryAccountStep(
         if (!isSigningUp) {
             EntryLinkButton(stringResource(R.string.account_password_forgot), onForgotPassword)
         }
-        Column(verticalArrangement = Arrangement.spacedBy(ViraSpacing.xs)) {
+    }
+    val providers: @Composable () -> Unit = {
+        EntryProviderButton(stringResource(R.string.account_sign_in_google), {
+            val activity = context.findActivity() ?: return@EntryProviderButton
+            perform { services.signInWithGoogle(activity) }
+        }, enabled = !isWorking)
+    }
+
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(ViraSpacing.s)) {
+        // Qui entra amb un compte que ja té va directe als camps: és el que ha vingut a fer.
+        if (!isSigningUp || isEditingEmail) {
+            emailForm()
             EntryMethodsDivider(stringResource(R.string.account_methods_divider))
-            EntryProviderButton(stringResource(R.string.account_sign_in_google), {
-                val activity = context.findActivity() ?: return@EntryProviderButton
-                perform { services.signInWithGoogle(activity) }
-            }, enabled = !isWorking)
+            providers()
+        } else {
+            // Registre (Arnau, 2026-10-21): el proveïdor primer, que és un toc, i el correu darrere
+            // d'un botó. Qui el tria troba els camps aquí mateix.
+            providers()
+            EntrySecondaryButton(stringResource(R.string.account_sign_in_email_short), { isEditingEmail = true })
         }
         if (showsConfirmNotice) {
-            Text(stringResource(R.string.account_email_confirm_message), style = ViraFont.footnote, color = ink)
+            Text(stringResource(R.string.account_email_confirm_message), style = ViraFont.footnote, color = ViraColor.textPrimary)
         }
         EntryErrorText(error)
     }
