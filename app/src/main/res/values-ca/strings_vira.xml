@@ -1936,10 +1936,6 @@
     <string name="profile_nickname_placeholder">Posa\'t un malnom</string>
     <string name="profile_overview_best_streak">Millor ratxa</string>
     <string name="profile_pill_hint">Obre el perfil i els ajustos</string>
-    <plurals name="profile_pill_streak_days">
-        <item quantity="one">%1$d dia</item>
-        <item quantity="other">%1$d dies</item>
-    </plurals>
     <string name="profile_viri_bubble_level">Ja ets al nivell %1$d. Quin viatge!</string>
     <string name="profile_viri_bubble_plain">M\'agrada com em queda.</string>
     <string name="progress_accumulated">El que has fet</string>

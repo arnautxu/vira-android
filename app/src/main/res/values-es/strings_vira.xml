@@ -1936,10 +1936,6 @@
     <string name="profile_nickname_placeholder">Ponte un apodo</string>
     <string name="profile_overview_best_streak">Mejor racha</string>
     <string name="profile_pill_hint">Abre el perfil y los ajustes</string>
-    <plurals name="profile_pill_streak_days">
-        <item quantity="one">%1$d día</item>
-        <item quantity="other">%1$d días</item>
-    </plurals>
     <string name="profile_viri_bubble_level">Ya estás en el nivel %1$d. ¡Qué viaje!</string>
     <string name="profile_viri_bubble_plain">Me gusta cómo me queda.</string>
     <string name="progress_accumulated">Lo que has hecho</string>

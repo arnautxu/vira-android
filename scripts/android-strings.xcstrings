@@ -645,65 +645,6 @@
         }
       },
       "comment": "Temporal (2026-10-23): l'iPhone ja no el fa servir (PR #39–#45). Es treu quan la pantalla d'Android que el llegeix (entrada, tomb o Botiga) passi a la versió nova."
-    },
-    "profile.pill.streak_days": {
-      "localizations": {
-        "ca": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld dia"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld dies"
-                }
-              }
-            }
-          }
-        },
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld day"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld days"
-                }
-              }
-            }
-          }
-        },
-        "es": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld día"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld días"
-                }
-              }
-            }
-          }
-        }
-      },
-      "comment": "Temporal (2026-10-23): l'iPhone ja no el fa servir (capçalera nova, PR #42). Es treu amb la capçalera nova d'Android."
     }
   }
 }

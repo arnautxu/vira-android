@@ -1936,10 +1936,6 @@
     <string name="profile_nickname_placeholder">Choose a nickname</string>
     <string name="profile_overview_best_streak">Best streak</string>
     <string name="profile_pill_hint">Opens your profile and settings</string>
-    <plurals name="profile_pill_streak_days">
-        <item quantity="one">%1$d day</item>
-        <item quantity="other">%1$d days</item>
-    </plurals>
     <string name="profile_viri_bubble_level">Level %1$d already. What a ride!</string>
     <string name="profile_viri_bubble_plain">I like how this looks on me.</string>
     <string name="progress_accumulated">What you\'ve done</string>
