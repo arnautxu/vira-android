@@ -148,6 +148,28 @@ class ViraProgress(
         true
     }
 
+    /// Paga «Tres dies amb Vira» si ja hi ha els tres dies i encara no s'ha cobrat. `false` sense
+    /// tocar res si no toca (`ViraWelcomeChallenge.claim`).
+    suspend fun claimWelcome(now: Instant = clock()): Boolean = db.withTransaction {
+        if (ViraWelcomeChallenge.isClaimed(db.challengeClaims().all())) return@withTransaction false
+        if (ViraWelcomeChallenge.activeDays(db.coinTransactions().all(), days().zone, now) < ViraWelcomeChallenge.DAYS) {
+            return@withTransaction false
+        }
+        val reward = ViraWelcomeChallenge.REWARD
+        val counter = store.counter()
+        store.save(
+            db.progressCounters(),
+            counter.copy(
+                totalXP = counter.totalXP + reward,
+                coinBalance = counter.coinBalance + reward,
+                coinsEarnedTotal = counter.coinsEarnedTotal + reward,
+            ),
+        )
+        store.create(db.coinTransactions(), CoinTransaction(amount = reward, reasonRaw = CoinReason.CHALLENGE.raw, createdAt = now))
+        store.create(db.challengeClaims(), ChallengeClaim(key = ViraWelcomeChallenge.KEY, cycleStart = ViraWelcomeChallenge.CYCLE_START, claimedAt = now))
+        true
+    }
+
     /// Si toca celebrar una fita de ratxa (7 o 30 dies), en marca el senyal i en torna la clau de
     /// carta. Una sola vegada per fita.
     suspend fun takeStreakMilestone(): String? = db.withTransaction {

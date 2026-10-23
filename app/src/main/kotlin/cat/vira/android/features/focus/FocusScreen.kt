@@ -25,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
@@ -37,6 +38,7 @@ import cat.vira.android.R
 import cat.vira.android.ViraApp
 import cat.vira.android.core.data.ViraPreferences
 import cat.vira.android.core.data.ViraStore
+import cat.vira.android.core.data.model.CoinReason
 import cat.vira.android.core.data.model.FocusKind
 import cat.vira.android.core.data.model.PlanItemStatus
 import cat.vira.android.core.design.LocalViraEnvironment
@@ -83,6 +85,16 @@ fun FocusScreen(request: FocusStartRequest = FocusStartRequest(), onClose: () ->
     }
 
     val modes = FocusMode.all(profiles.filter { !it.isArchived })
+    // «+15 ViriCoins a partir de 10 min» (`FocusRewardLine`): només si avui encara en pot donar.
+    // Es torna a mirar a cada sessió tancada, perquè la que s'acaba pot esgotar el sostre.
+    val rewardCoins by produceState<Int?>(null, store, controller.phase) {
+        value = store?.let {
+            val rewards = cat.vira.android.core.data.ViraRewards(it)
+            if (rewards.grantsToday(CoinReason.FOCUS) < cat.vira.android.core.data.ViraRewards.FOCUS_DAILY_CAP) {
+                cat.vira.android.core.data.ViraRewards.FOCUS_REWARD
+            } else null
+        }
+    }
     val pending = items.filter { it.statusRaw == PlanItemStatus.PENDING.raw }
     val today = LocalDate.now()
     val tasks = pending.filter { it.day.atZone(ZoneId.systemDefault()).toLocalDate() == today || it.id == controller.linkedItemID }
@@ -170,6 +182,7 @@ fun FocusScreen(request: FocusStartRequest = FocusStartRequest(), onClose: () ->
                         tasks = tasks,
                         linkedItemID = controller.linkedItemID,
                         notificationsDenied = notificationsDenied,
+                        rewardCoins = rewardCoins,
                         onSelectMode = { controller.select(it) },
                         onSelectMinutes = { controller.select(it * 60) },
                         onSelectTask = { item ->

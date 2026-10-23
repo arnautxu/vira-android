@@ -64,6 +64,8 @@ internal data class ChallengesUi(
     val rows: List<ChallengeRowState>,
     val balance: Int,
     val saveFailed: Boolean = false,
+    /// «Tres dies amb Vira», fins que es cobra; `null` un cop cobrat.
+    val welcome: WelcomeChallengeUi? = null,
 )
 
 /// Reptes diaris i setmanals (`ChallengesView`, `VIRI_AND_GAMIFICATION.md` §2.6): objectius curts
@@ -76,6 +78,7 @@ internal fun ChallengesContent(
     onPeriod: (ChallengePeriod) -> Unit,
     onClaim: (ChallengeItem) -> Unit,
     modifier: Modifier = Modifier,
+    onClaimWelcome: () -> Unit = {},
 ) {
     Column(
         modifier
@@ -107,6 +110,8 @@ internal fun ChallengesContent(
                 showsAllLabels = true,
                 modifier = Modifier.padding(bottom = ViraSpacing.xs),
             )
+            // El primer premi a l'abast (2026-10-22): a dalt fins que es cobra.
+            ui.welcome?.let { ChallengesWelcomeCard(it, onClaimWelcome) }
             if (ui.saveFailed) ViraInlineError(stringResource(R.string.challenge_save_error))
             // Sense ítems no es dibuixa res: una targeta buida es llegiria com una pantalla trencada.
             if (ui.rows.isNotEmpty()) {

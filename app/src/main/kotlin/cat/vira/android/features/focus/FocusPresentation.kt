@@ -20,7 +20,8 @@ import kotlinx.coroutines.launch
 /// enmig, perquè triar el mode i la durada és part de la decisió.
 data class FocusStartRequest(
     val kind: FocusKind = FocusKind.FOCUS,
-    val seconds: Int = 25 * 60,
+    /// 10 minuts de sortida (iPhone, 2026-10-22): començar petit és el que fa començar.
+    val seconds: Int = 10 * 60,
     val linkedTitle: String? = null,
     val linkedItemID: UUID? = null,
     val profileID: UUID? = null,

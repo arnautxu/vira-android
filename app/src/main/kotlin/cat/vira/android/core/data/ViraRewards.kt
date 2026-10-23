@@ -18,7 +18,7 @@ import java.time.ZoneId
 /// | Tasca o esdeveniment completat | 3 | 5 |
 /// | Hàbit completat | 5 | 5 |
 /// | Registre emocional | 10 | 2 |
-/// | Sessió de focus completada (≥15 min) | 15 | 4 |
+/// | Sessió de focus completada (≥10 min) | 15 | 4 |
 /// | **Medicació** | **0 — no hi ha regla, i no n'hi pot haver** | — |
 ///
 /// `CoinReason` no té cap cas de medicació: gamificar l'adherència és una decisió clínica.
@@ -33,7 +33,7 @@ class ViraRewards(
     private val store: ViraStore,
     private val clock: () -> Instant = ViraTime::now,
     private val zone: () -> ZoneId = ZoneId::systemDefault,
-    /// 15 minuts. L'iPhone el baixa a 10 s només en builds de desenvolupament, per al botó de prova
+    /// 10 minuts (abans 15; baixat el 2026-10-22 amb el focus de 10 minuts de sortida). L'iPhone el baixa a 10 s només en builds de desenvolupament, per al botó de prova
     /// de la preparació del focus; aquí ho decideix qui construeix l'objecte.
     private val focusMinimumSeconds: Int = FOCUS_MINIMUM_SECONDS,
 ) {
@@ -114,7 +114,10 @@ class ViraRewards(
     companion object {
         const val FOCUS_REWARD = 15
         const val FOCUS_DAILY_CAP = 4
-        const val FOCUS_MINIMUM_SECONDS = 15 * 60
+        const val FOCUS_MINIMUM_SECONDS = 10 * 60
+
+        /// El llindar en minuts, per als textos («a partir de 10 min»).
+        const val FOCUS_MINIMUM_MINUTES = 10
 
         /// `null` vol dir que aquell motiu no genera res: les compres.
         fun rule(reason: CoinReason): Rule? = when (reason) {
