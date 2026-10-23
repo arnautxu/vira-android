@@ -30,24 +30,52 @@ private fun Screen(content: @Composable () -> Unit) = ViraCapture {
 @PreviewTest @ViraScreenCaptures @Composable
 fun BotigaSkins() = Screen {
     ShopContent(
-        balance = 620, ownedSkinKeys = setOf("chef"), equippedKey = "chef", ownedBadgeKeys = emptySet(),
-        counter = counter, streak = streak, cardsEnabled = true, saveFailed = false,
-        section = ShopSection.Skins, onSection = {}, onBack = {}, onDefaultTap = {}, onSkinTap = {}, onBadgeTap = {},
+        balance = 620, ownedKeys = setOf("chef"), equippedKey = "chef", wishKey = "",
+        saveFailed = false, onBack = {}, onDefaultTap = {}, onSkinTap = {},
     )
 }
 
+/// La teva fita marcada amb «La vull» i ja a l'abast: Viri ho diu a l'escenari.
 @PreviewTest @ViraScreenCaptures @Composable
-fun BotigaCartes() = Screen {
+fun BotigaObjectiu() = Screen {
     ShopContent(
-        balance = 620, ownedSkinKeys = emptySet(), equippedKey = null, ownedBadgeKeys = setOf("bolt"),
-        counter = counter, streak = streak, cardsEnabled = true, saveFailed = false,
-        section = ShopSection.Badges, onSection = {}, onBack = {}, onDefaultTap = {}, onSkinTap = {}, onBadgeTap = {},
+        balance = 1_600, ownedKeys = setOf("chef"), equippedKey = null, wishKey = "shark",
+        saveFailed = false, onBack = {}, onDefaultTap = {}, onSkinTap = {},
     )
 }
 
 @PreviewTest @ViraScreenCaptures @Composable
-fun BotigaDetall() = Screen {
-    ShopDetailContent(requireNotNull(SkinItem.item("astronaut")).display, isOwned = false, isEquipped = false, balance = 620, onBuy = {}, onWear = {}, onClose = {})
+fun BotigaProvadorComprar() = Screen {
+    ShopFittingRoomContent(
+        requireNotNull(SkinItem.item("astronaut")), isOwned = false, isEquipped = false, balance = 620,
+        dailyPace = null, wishKey = "", onWish = {}, onBuy = {}, onWear = {}, onClose = {},
+    )
+}
+
+@PreviewTest @ViraScreenCaptures @Composable
+fun BotigaProvadorFalten() = Screen {
+    ShopFittingRoomContent(
+        requireNotNull(SkinItem.item("dragon")), isOwned = false, isEquipped = false, balance = 620,
+        dailyPace = 60.0, wishKey = "dragon", onWish = {}, onBuy = {}, onWear = {}, onClose = {},
+    )
+}
+
+@PreviewTest @ViraScreenCaptures @Composable
+fun BotigaVestidor() = Screen {
+    ShopDressingRoom(requireNotNull(SkinItem.item("pirate")), onContinue = {}, holdsClosed = true)
+}
+
+@PreviewTest @ViraScreenCaptures @Composable
+fun BotigaSeguentObjectiu() = Screen {
+    ShopNextGoalContent(
+        bought = requireNotNull(SkinItem.item("chef")), catalog = ShopCollection.catalog(setOf("chef")),
+        ownedKeys = setOf("chef"), balance = 620, onChoose = {}, onLater = {}, initialChoice = "shark",
+    )
+}
+
+@PreviewTest @ViraCaptures @Composable
+fun BotigaAvisObjectiu() = Screen {
+    ShopGoalBannerCard(requireNotNull(SkinItem.item("dragon")), onOpen = {}, onClose = {})
 }
 
 @PreviewTest @ViraScreenCaptures @Composable
@@ -83,12 +111,18 @@ fun PremiCelebracio() = Screen {
 
 @PreviewTest @ViraScreenCaptures @Composable
 fun CartesBuit() = Screen {
-    CardsContent(emptyList(), onOpen = {}, onBack = {})
+    CardsContent(emptyList(), latest = null, latestIsNew = false, onOpen = {}, onCategory = {}, onBack = {})
 }
 
 @PreviewTest @ViraScreenCaptures @Composable
 fun CartesAmbCartes() = Screen {
-    CardsContent(CardItem.unlocked(counter, streak), onOpen = {}, onBack = {})
+    val owned = CardItem.unlocked(counter, streak)
+    CardsContent(owned, latest = CardItem.item("week_streak"), latestIsNew = true, onOpen = {}, onCategory = {}, onBack = {})
+}
+
+@PreviewTest @ViraScreenCaptures @Composable
+fun CartesCategoria() = Screen {
+    CardCategoryContent(CardItem.Category.Emotions, CardItem.unlocked(counter, streak), onOpen = {}, onBack = {})
 }
 
 @PreviewTest @ViraScreenCaptures @Composable

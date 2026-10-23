@@ -34,7 +34,13 @@ import kotlin.math.roundToInt
 /// ha. Amb un modificador de mesura i no `BoxWithConstraints`, perquè la graella iguala alçades
 /// amb mesures intrínseques. El gruix de la vora el porta la raresa: sobreviu al blanc i negre.
 @Composable
-fun CardFace(card: CardItem, modifier: Modifier = Modifier, baseWidth: Dp = 196.dp) {
+fun CardFace(
+    card: CardItem,
+    modifier: Modifier = Modifier,
+    baseWidth: Dp = 196.dp,
+    /// La part animada (`CardLiveEffect`): només a la carta que es mira de prop.
+    isLive: Boolean = false,
+) {
     val target = baseWidth * LocalDensity.current.fontScale.coerceIn(1f, 2f)
     val shape = RoundedCornerShape(ViraRadius.l)
     val edge = ViraColor.onCard(ViraArea.Rewards)
@@ -60,6 +66,7 @@ fun CardFace(card: CardItem, modifier: Modifier = Modifier, baseWidth: Dp = 196.
         } else {
             Image(painterResource(card.pictogram), null, Modifier.fillMaxSize(0.56f), contentScale = ContentScale.Fit)
         }
+        if (isLive) CardLiveEffect(card)
         // La vora va per sobre de la il·lustració.
         Box(Modifier.fillMaxSize().border(border, edge.copy(alpha = 0.35f), shape))
     }

@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -45,11 +46,19 @@ import cat.vira.android.core.design.tokens.ViraTouch
 /// el moment que sí que ho és. Només les guanyades: barrejar-hi siluetes convertiria una pantalla
 /// de recompensa en un recompte del que et falta.
 @Composable
-fun CardCollectionScreen(cards: List<CardItem>, startingAt: String, onClose: () -> Unit, modifier: Modifier = Modifier) {
+fun CardCollectionScreen(
+    cards: List<CardItem>,
+    startingAt: String,
+    onClose: () -> Unit,
+    modifier: Modifier = Modifier,
+    /// Obrir-la és el que li treu la «Nova» de dalt de l'àlbum (`ViraCardShelf.markOpened`).
+    onOpened: (String) -> Unit = {},
+) {
     val area = ViraArea.Rewards
     val ink = ViraColor.onCard(area)
     val start = cards.indexOfFirst { it.key == startingAt }.coerceAtLeast(0)
     val pager = rememberPagerState(initialPage = start) { cards.size }
+    LaunchedEffect(pager.currentPage, cards.size) { cards.getOrNull(pager.currentPage)?.let { onOpened(it.key) } }
     Column(modifier.fillMaxSize().background(ViraGradient.card(area)).safeDrawingPadding()) {
         // Títol, posició i tancar. La posició va en text perquè els punts de sota són només color.
         Row(
@@ -77,7 +86,7 @@ fun CardCollectionScreen(cards: List<CardItem>, startingAt: String, onClose: () 
                 Text(stringResource(R.string.card_collection_empty), style = ViraFont.body, color = ink, textAlign = TextAlign.Center)
             }
         } else {
-            HorizontalPager(pager, Modifier.weight(1f)) { index -> CardPage(cards[index]) }
+            HorizontalPager(pager, Modifier.weight(1f)) { index -> CardPage(cards[index], isLive = index == pager.currentPage) }
             if (cards.size > 1) PageDots(cards.size, pager.currentPage)
         }
     }
@@ -86,7 +95,7 @@ fun CardCollectionScreen(cards: List<CardItem>, startingAt: String, onClose: () 
 /// Una carta: la targeta gran, el nom, la raresa en paraules i què vol dir. Amb desplaçament,
 /// perquè a lletra gran la targeta creix i el que es perdria és el text que l'explica.
 @Composable
-private fun CardPage(card: CardItem) {
+private fun CardPage(card: CardItem, isLive: Boolean) {
     val ink = ViraColor.onCard(ViraArea.Rewards)
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState())
@@ -95,7 +104,7 @@ private fun CardPage(card: CardItem) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(ViraSpacing.l),
     ) {
-        CardFace(card, baseWidth = 232.dp)
+        CardFace(card, baseWidth = 232.dp, isLive = isLive)
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(ViraSpacing.xs)) {
             Text(stringResource(card.titleRes), style = ViraFont.title, color = ink, textAlign = TextAlign.Center)
             // La raresa en text: el gruix de la vora sol no és informació.

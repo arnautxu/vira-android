@@ -62,7 +62,11 @@ import java.text.NumberFormat
 fun Int.viraFormatted(): String = NumberFormat.getIntegerInstance(viraLocale()).format(this)
 
 /// Els símbols del sistema que fa servir la Botiga, dibuixats: Android no té els SF Symbols.
-enum class ShopSymbol { Circle, Sparkles, Diamond, Crown, Star, Check, Plus, Minus, Lock }
+enum class ShopSymbol {
+    Circle, Sparkles, Diamond, Crown, Star, Check, Plus, Minus, Lock,
+    // Els prestatges de l'àlbum (`CardItem.Category.symbol`) i els cors de «La vull».
+    Heart, HeartOutline, Scope, CheckCircle, List, Flame, Calendar, Close, Chevron,
+}
 
 /// Un [ShopSymbol] en línia amb el text, a la mida de la lletra. Decoratiu: el nom el porta el text.
 @Composable
@@ -105,6 +109,55 @@ fun ShopSymbolIcon(symbol: ShopSymbol, color: Color, modifier: Modifier = Modifi
                 drawLine(color, Offset(w * 0.12f, w * 0.5f), Offset(w * 0.88f, w * 0.5f), w * 0.14f, StrokeCap.Round)
             }
             ShopSymbol.Minus -> drawLine(color, Offset(w * 0.12f, w * 0.5f), Offset(w * 0.88f, w * 0.5f), w * 0.14f, StrokeCap.Round)
+            ShopSymbol.Heart -> drawPath(heart(w), color)
+            ShopSymbol.HeartOutline -> drawPath(heart(w), color, style = stroke)
+            ShopSymbol.Scope -> {
+                drawCircle(color, radius = w * 0.36f, style = stroke)
+                drawCircle(color, radius = w * 0.1f)
+                drawLine(color, Offset(w * 0.5f, 0f), Offset(w * 0.5f, w * 0.22f), w * 0.12f, StrokeCap.Round)
+                drawLine(color, Offset(w * 0.5f, w * 0.78f), Offset(w * 0.5f, w), w * 0.12f, StrokeCap.Round)
+                drawLine(color, Offset(0f, w * 0.5f), Offset(w * 0.22f, w * 0.5f), w * 0.12f, StrokeCap.Round)
+                drawLine(color, Offset(w * 0.78f, w * 0.5f), Offset(w, w * 0.5f), w * 0.12f, StrokeCap.Round)
+            }
+            ShopSymbol.CheckCircle -> {
+                drawCircle(color, radius = w * 0.42f, style = stroke)
+                drawPath(
+                    Path().apply { moveTo(w * 0.3f, w * 0.52f); lineTo(w * 0.45f, w * 0.66f); lineTo(w * 0.72f, w * 0.36f) },
+                    color, style = Stroke(width = w * 0.13f, cap = StrokeCap.Round, join = StrokeJoin.Round),
+                )
+            }
+            ShopSymbol.List -> for (row in 0 until 3) {
+                val y = w * (0.22f + row * 0.28f)
+                drawCircle(color, radius = w * 0.07f, center = Offset(w * 0.12f, y))
+                drawLine(color, Offset(w * 0.32f, y), Offset(w * 0.92f, y), w * 0.12f, StrokeCap.Round)
+            }
+            ShopSymbol.Flame -> drawPath(
+                Path().apply {
+                    moveTo(w * 0.5f, w * 0.04f)
+                    cubicTo(w * 0.62f, w * 0.28f, w * 0.88f, w * 0.42f, w * 0.86f, w * 0.64f)
+                    cubicTo(w * 0.84f, w * 0.86f, w * 0.66f, w * 0.96f, w * 0.5f, w * 0.96f)
+                    cubicTo(w * 0.32f, w * 0.96f, w * 0.14f, w * 0.84f, w * 0.14f, w * 0.62f)
+                    cubicTo(w * 0.14f, w * 0.46f, w * 0.26f, w * 0.36f, w * 0.32f, w * 0.26f)
+                    cubicTo(w * 0.36f, w * 0.38f, w * 0.42f, w * 0.44f, w * 0.46f, w * 0.44f)
+                    cubicTo(w * 0.44f, w * 0.3f, w * 0.46f, w * 0.16f, w * 0.5f, w * 0.04f)
+                    close()
+                },
+                color,
+            )
+            ShopSymbol.Calendar -> {
+                drawRoundRect(color, topLeft = Offset(w * 0.08f, w * 0.16f), size = androidx.compose.ui.geometry.Size(w * 0.84f, w * 0.76f), cornerRadius = androidx.compose.ui.geometry.CornerRadius(w * 0.14f), style = stroke)
+                drawLine(color, Offset(w * 0.08f, w * 0.4f), Offset(w * 0.92f, w * 0.4f), w * 0.12f)
+                drawLine(color, Offset(w * 0.3f, w * 0.06f), Offset(w * 0.3f, w * 0.24f), w * 0.12f, StrokeCap.Round)
+                drawLine(color, Offset(w * 0.7f, w * 0.06f), Offset(w * 0.7f, w * 0.24f), w * 0.12f, StrokeCap.Round)
+            }
+            ShopSymbol.Close -> {
+                drawLine(color, Offset(w * 0.2f, w * 0.2f), Offset(w * 0.8f, w * 0.8f), w * 0.14f, StrokeCap.Round)
+                drawLine(color, Offset(w * 0.8f, w * 0.2f), Offset(w * 0.2f, w * 0.8f), w * 0.14f, StrokeCap.Round)
+            }
+            ShopSymbol.Chevron -> {
+                drawLine(color, Offset(w * 0.35f, w * 0.12f), Offset(w * 0.7f, w * 0.5f), w * 0.14f, StrokeCap.Round)
+                drawLine(color, Offset(w * 0.7f, w * 0.5f), Offset(w * 0.35f, w * 0.88f), w * 0.14f, StrokeCap.Round)
+            }
             ShopSymbol.Lock -> {
                 drawRoundRect(color, topLeft = Offset(w * 0.18f, w * 0.44f), size = androidx.compose.ui.geometry.Size(w * 0.64f, w * 0.48f), cornerRadius = androidx.compose.ui.geometry.CornerRadius(w * 0.1f))
                 drawArc(color, 180f, 180f, false, topLeft = Offset(w * 0.3f, w * 0.12f), size = androidx.compose.ui.geometry.Size(w * 0.4f, w * 0.6f), style = Stroke(width = w * 0.12f))
@@ -120,6 +173,15 @@ private fun sparkle(center: Offset, radius: Float) = Path().apply {
     quadraticTo(center.x + k, center.y + k, center.x, center.y + radius)
     quadraticTo(center.x - k, center.y + k, center.x - radius, center.y)
     quadraticTo(center.x - k, center.y - k, center.x, center.y - radius)
+    close()
+}
+
+private fun heart(w: Float) = Path().apply {
+    moveTo(w * 0.5f, w * 0.9f)
+    cubicTo(w * 0.1f, w * 0.62f, w * 0.02f, w * 0.38f, w * 0.12f, w * 0.22f)
+    cubicTo(w * 0.24f, w * 0.04f, w * 0.44f, w * 0.1f, w * 0.5f, w * 0.26f)
+    cubicTo(w * 0.56f, w * 0.1f, w * 0.76f, w * 0.04f, w * 0.88f, w * 0.22f)
+    cubicTo(w * 0.98f, w * 0.38f, w * 0.9f, w * 0.62f, w * 0.5f, w * 0.9f)
     close()
 }
 
@@ -147,11 +209,15 @@ fun Modifier.shopFrame(area: ViraArea, ink: Color, radius: Dp = ViraRadius.l): M
 
 /// Etiqueta d'una raresa o secció amb el seu símbol. La forta és la píndola de capçalera (degradat
 /// i `onCard`); la suau va sobre una targeta, amb la superfície de l'àrea.
+///
+/// **Una paraula no es parteix mai** (Arnau, 2026-10-22: «Comú / n» al provador): un títol de
+/// diverses paraules salta de línia entre paraules, i el d'una de sola es queda en una línia.
 @Composable
 fun ShopRibbon(title: String, symbol: ShopSymbol, area: ViraArea, modifier: Modifier = Modifier, isStrong: Boolean = false) {
     val shape = RoundedCornerShape(if (isStrong) ViraRadius.l else ViraRadius.s)
     val ink = if (isStrong) ViraColor.onCard(area) else ViraColor.onSurface(area)
     val style = if (isStrong) ViraFont.headline else ViraFont.caption
+    val oneWord = ' ' !in title.trim()
     Row(
         modifier = modifier
             .then(if (isStrong) Modifier.background(ViraGradient.card(area), shape) else Modifier.background(ViraColor.surface(area), shape))
@@ -160,11 +226,12 @@ fun ShopRibbon(title: String, symbol: ShopSymbol, area: ViraArea, modifier: Modi
         horizontalArrangement = Arrangement.spacedBy(ViraSpacing.xxs),
     ) {
         ShopSymbolIcon(symbol, ink, size = if (isStrong) 16.dp else 12.dp)
-        Text(title, style = style, color = ink)
+        Text(title, style = style, color = ink, softWrap = !oneWord, maxLines = if (oneWord) 1 else Int.MAX_VALUE)
     }
 }
 
-/// Capçalera d'una secció: la píndola i, a la dreta, el que costa o quantes en tens.
+/// Capçalera d'una secció: la píndola i, a la dreta, el que costa o quantes en tens. Amb la lletra
+/// gran, el detall va a sota: en fila s'escapçava lletra a lletra.
 @Composable
 fun ShopSectionHeader(
     title: String,
@@ -173,23 +240,31 @@ fun ShopSectionHeader(
     modifier: Modifier = Modifier,
     trailing: @Composable () -> Unit,
 ) {
-    Row(
-        modifier = modifier.fillMaxWidth().semantics(mergeDescendants = true) { heading() },
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        ShopRibbon(title, symbol, area, isStrong = true)
-        Spacer(Modifier.weight(1f).defaultMinSize(minWidth = ViraSpacing.xs))
-        trailing()
+    val semantics = modifier.fillMaxWidth().semantics(mergeDescendants = true) { heading() }
+    if (cat.vira.android.core.design.LocalViraEnvironment.current.isAccessibilitySize) {
+        Column(semantics, verticalArrangement = Arrangement.spacedBy(ViraSpacing.xxs)) {
+            ShopRibbon(title, symbol, area, isStrong = true)
+            trailing()
+        }
+    } else {
+        Row(
+            semantics, verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(ViraSpacing.xs, Alignment.Start),
+        ) {
+            ShopRibbon(title, symbol, area, isStrong = true)
+            Spacer(Modifier.weight(1f))
+            trailing()
+        }
     }
 }
 
-/// El preu d'una peça amb la moneda, per a la dreta d'una capçalera.
+/// Quantes en tens d'una secció («3 de 5»), per a la dreta d'una capçalera.
 @Composable
-fun ShopCoinAmount(amount: Int, modifier: Modifier = Modifier) {
-    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(ViraSpacing.xxs)) {
-        ViraPictogram(R.drawable.picto_shop, size = 18.dp, scalesWithText = true)
-        Text(amount.viraFormatted(), style = ViraFont.footnote.tabular(), color = ViraColor.textSecondary)
-    }
+fun ShopCollectionCount(owned: Int, total: Int, modifier: Modifier = Modifier) {
+    Text(
+        stringResource(R.string.shop_collection_count, owned.viraFormatted(), total.viraFormatted()),
+        style = ViraFont.footnote.tabular(), color = ViraColor.textSecondary, modifier = modifier,
+    )
 }
 
 /// El saldo, a dalt a la dreta (`ShopWallet`): un sol lloc on es diu quant tens. La xifra roda en
@@ -282,6 +357,61 @@ fun ShopProgressBar(value: Int, total: Int, area: ViraArea, label: String, ink: 
                 )
             }
         }
+    }
+}
+
+/// «Ja pots!»: la peça ja és a l'abast. Daurada com el moneder, i sempre amb el text. TalkBack ho diu a
+/// l'estat de la fitxa.
+@Composable
+fun ShopReadyTag(modifier: Modifier = Modifier) {
+    Text(
+        stringResource(R.string.shop_ready_tag), style = ViraFont.caption, color = ViraColor.onCard(ViraArea.Rewards),
+        maxLines = 1, softWrap = false,
+        modifier = modifier.clearAndSetSemantics { }
+            .background(ViraGradient.card(ViraArea.Rewards), CircleShape)
+            .padding(horizontal = ViraSpacing.xs, vertical = 2.dp),
+    )
+}
+
+/// La barreta d'una fitxa que encara no et pots comprar: repeteix el «Falten…» del botó, i per això
+/// TalkBack no la diu.
+@Composable
+fun ShopMiniBar(value: Int, total: Int, ink: Color, modifier: Modifier = Modifier) {
+    val fraction = if (total > 0) (value.toFloat() / total).coerceIn(0f, 1f) else 0f
+    Box(
+        modifier.fillMaxWidth().height(4.dp).clip(CircleShape).background(ink.copy(alpha = 0.2f))
+            .clearAndSetSemantics { },
+    ) {
+        if (fraction > 0f) Box(Modifier.fillMaxWidth(fraction).height(4.dp).clip(CircleShape).background(ink))
+    }
+}
+
+/// La col·lecció de skins (`ShopCollectionMeter`): quantes en tens de les que hi ha, amb la xifra
+/// escrita i una barra. Creix i prou: no hi ha cap rànquing.
+@Composable
+fun ShopCollectionMeter(owned: Int, total: Int, modifier: Modifier = Modifier) {
+    val count = stringResource(R.string.shop_collection_count, owned.viraFormatted(), total.viraFormatted())
+    val title = stringResource(R.string.shop_collection_title)
+    val large = cat.vira.android.core.design.LocalViraEnvironment.current.isAccessibilitySize
+    Column(
+        modifier.fillMaxWidth()
+            .background(ViraColor.surfaceElevated, RoundedCornerShape(ViraRadius.m))
+            .padding(ViraSpacing.s)
+            .clearAndSetSemantics { contentDescription = "$title, $count" },
+        verticalArrangement = Arrangement.spacedBy(ViraSpacing.xs),
+    ) {
+        val titleText = @Composable { Text(title, style = ViraFont.headline, color = ViraColor.textPrimary) }
+        val countText = @Composable { Text(count, style = ViraFont.headline.tabular(), color = ViraColor.accent(ViraArea.Today)) }
+        if (large) {
+            Column(verticalArrangement = Arrangement.spacedBy(ViraSpacing.xxs)) { titleText(); countText() }
+        } else {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                titleText()
+                Spacer(Modifier.weight(1f).padding(start = ViraSpacing.xs))
+                countText()
+            }
+        }
+        ShopMiniBar(owned, total, ViraColor.accent(ViraArea.Today))
     }
 }
 

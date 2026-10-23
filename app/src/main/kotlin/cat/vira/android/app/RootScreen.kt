@@ -34,6 +34,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import cat.vira.android.R
+import cat.vira.android.features.shop.ShopGoalBanner
 import cat.vira.android.ViraApp
 import cat.vira.android.core.data.ViraPreferences
 import cat.vira.android.core.design.components.ViraProfileSummary
@@ -175,6 +176,7 @@ private fun MainTabs(navigator: ViraNavigator) {
                         ViraTab.Progress -> ProgressScreen()
                     }
                 }
+                ShopGoalBanner(celebrations.isCelebrating) { navigator.navigate(ViraDestination.Shop) }
             }
         }
         val step = tutorial.step

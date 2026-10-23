@@ -68,6 +68,11 @@ internal class CelebrationQueue(
         private set
     var levelCelebration by mutableStateOf<Int?>(null)
         private set
+
+    /// Si hi ha una celebració a la pantalla (`viraCelebrationIsActive`): l'avís d'objectiu de la
+    /// Botiga l'espera.
+    val isCelebrating: Boolean
+        get() = streakCelebration != null || badgeCelebration != null || cardCelebration != null || levelCelebration != null
     private var pendingLevel: Int? = null
 
     /// Quantes pantalles demanen que la ratxa esperi. **Un comptador i no un booleà**: n'hi pot
@@ -286,7 +291,20 @@ internal class CelebrationQueue(
     /// La primera vegada, el que ja estigui guanyat es dona per vist: una festa per cada carta que
     /// ja es tenia seria el contrari del que vol dir celebrar.
     private fun presentNextCard() {
-        if (!ViraReleaseGate.cards || !streakLoaded || !counterLoaded) return
+        if (!ViraReleaseGate.cards || !streakLoaded || !counterLoaded || preparingCards) return
+        // Abans de mirar res, els recomptes de les cartes al dia (`ViraCardCelebrations.prepare`):
+        // si pugen perquè les dades ja hi eren, el que en surti no és d'ara i no es celebra.
+        preparingCards = true
+        scope.launch {
+            runCatching { cards.prepare(backend.db) }
+            preparingCards = false
+            presentPreparedCard()
+        }
+    }
+
+    private var preparingCards = false
+
+    private fun presentPreparedCard() {
         if (!celebrationsEnabled || !cards.isSeeded) {
             if (counter != null) cards.absorb(counter, streak)
             return
@@ -306,7 +324,7 @@ internal class CelebrationQueue(
         presentAllPending()
     }
 
-    val ownedCards: Int get() = maxOf(1, CardItem.unlocked(counter, streak).size)
+    val ownedCards: Int get() = maxOf(1, cards.unlocked(counter, streak).size)
 
     private fun presentAllPending() {
         presentPendingStreak()

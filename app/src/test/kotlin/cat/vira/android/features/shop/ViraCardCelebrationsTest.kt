@@ -38,7 +38,7 @@ class ViraCardCelebrationsTest {
         assertTrue(celebrations.pending(synced, null).isEmpty())
         // Una fita nova de debò, després, sí que surt.
         val later = synced.copy(habitsCompletedCount = 10)
-        assertEquals(listOf("habits_10"), celebrations.pending(later, null).map { it.key })
+        assertEquals(setOf("habits_1", "habits_5", "habits_10"), celebrations.pending(later, null).map { it.key }.toSet())
     }
 
     @Test

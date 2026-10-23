@@ -36,6 +36,8 @@ class ViraRewards(
     /// 10 minuts (abans 15; baixat el 2026-10-22 amb el focus de 10 minuts de sortida). L'iPhone el baixa a 10 s només en builds de desenvolupament, per al botó de prova
     /// de la preparació del focus; aquí ho decideix qui construeix l'objecte.
     private val focusMinimumSeconds: Int = FOCUS_MINIMUM_SECONDS,
+    /// Els recomptes de les cartes que no són al comptador (`ViraCardTallies`).
+    private val tallies: ViraCardTallies? = ViraCardTallies.shared,
 ) {
 
     data class Rule(val coins: Int, val dailyCap: Int)
@@ -56,6 +58,9 @@ class ViraRewards(
     /// diari. Retorna les **monedes** concedides, que és el que la interfície celebra.
     suspend fun award(reason: CoinReason, now: Instant = clock()): Int = db.withTransaction {
         val rule = rule(reason) ?: return@withTransaction 0
+        // Abans de tocar l'XP: el canvi del comptador és el que fa que la cua de celebracions torni
+        // a mirar les cartes, i el recompte de tasques ja hi ha de ser (`ViraCardTallies`).
+        if (reason == CoinReason.PLAN_ITEM) tallies?.add(1, ViraCardTallies.Kind.TASKS_DONE)
         val counter = store.counter()
         val underCap = grantsToday(reason, now) < rule.dailyCap
         if (underCap) {
@@ -80,6 +85,12 @@ class ViraRewards(
         val counter = store.counter()
         if (counter.coinBalance < amount) return@withTransaction false
         store.create(db.coinTransactions(), CoinTransaction(amount = -amount, reasonRaw = reason.raw, createdAt = now))
+        // Les dues compres que fan una carta, abans del saldo pel mateix motiu que a `award`.
+        when (reason) {
+            CoinReason.PURCHASE_SKIN -> tallies?.add(1, ViraCardTallies.Kind.SKINS_OWNED)
+            CoinReason.PERSONAL_REWARD -> tallies?.add(1, ViraCardTallies.Kind.REWARDS_REDEEMED)
+            else -> Unit
+        }
         store.save(db.progressCounters(), counter.copy(coinBalance = counter.coinBalance - amount))
         true
     }
@@ -88,6 +99,7 @@ class ViraRewards(
     /// qualsevol sessió de focus completada, sigui quin sigui el sostre: és un rècord de constància.
     suspend fun award(session: FocusSession, now: Instant = clock()): Int = db.withTransaction {
         if (session.kind != FocusKind.FOCUS || !session.completed) return@withTransaction 0
+        tallies?.add(session.actualSeconds, ViraCardTallies.Kind.FOCUS_SECONDS)
         val counter = store.counter()
         store.save(db.progressCounters(), counter.copy(focusSessionsCount = counter.focusSessionsCount + 1))
         // Una sessió massa curta no compta com a sessió, encara que estigui completada.

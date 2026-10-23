@@ -19,7 +19,12 @@ import java.util.concurrent.ConcurrentHashMap
 
 /// Les peces de dades d'una execució de l'app: la base de dades, la sessió i el motor. En viu una
 /// per procés, dins de `ViraApp`; les pantalles i el treball en segon pla la demanen allà.
-class ViraBackend(context: Context) {
+class ViraBackend(
+    context: Context,
+    /// Després d'aplicar el comptador o la ratxa que baixen del compte (`ViraSyncEngine`): l'arrel
+    /// hi dona per vistes les cartes que ja es van guanyar en un altre telèfon.
+    afterProgressApplied: suspend (ViraDatabase) -> Unit = {},
+) {
 
     private val appContext: Context = context.applicationContext
 
@@ -33,7 +38,7 @@ class ViraBackend(context: Context) {
         alsoEraseOnAccountSwitch = { ViraNotifications.cancelEverything(appContext) },
         language = { ViraLanguage.current(appContext) },
     )
-    val engine = ViraSyncEngine(session, db, preferences)
+    val engine = ViraSyncEngine(session, db, preferences, afterProgressApplied = afterProgressApplied)
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 

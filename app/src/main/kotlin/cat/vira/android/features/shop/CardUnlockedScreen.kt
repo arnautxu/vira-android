@@ -11,6 +11,9 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -80,6 +83,8 @@ fun CardUnlockedScreen(card: CardItem, owned: Int, onContinue: () -> Unit, modif
 private fun TurningCard(card: CardItem, modifier: Modifier) {
     val reduceMotion = LocalViraEnvironment.current.reduceMotion
     val angle = remember { Animatable(if (reduceMotion) 0f else -65f) }
+    // La part animada arrenca quan la carta ja mira l'usuari.
+    var hasTurned by remember { mutableStateOf(reduceMotion) }
     LaunchedEffect(reduceMotion) {
         if (reduceMotion) {
             angle.snapTo(0f)
@@ -87,6 +92,7 @@ private fun TurningCard(card: CardItem, modifier: Modifier) {
             delay(120)
             angle.animateTo(0f, spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessLow))
         }
+        hasTurned = true
     }
     CardFace(
         card,
@@ -95,5 +101,6 @@ private fun TurningCard(card: CardItem, modifier: Modifier) {
             cameraDistance = 18f * density
         },
         baseWidth = 168.dp,
+        isLive = hasTurned,
     )
 }
