@@ -1502,7 +1502,7 @@
     <string name="notification_permission_allow">Avisa\'m</string>
     <string name="notification_permission_ask">T\'aviso a les %1$s?</string>
     <string name="notification_permission_ask_support">Un avís quan toqui, i prou.</string>
-    <string name="notification_permission_denied">Els avisos estan apagats. Es tornen a encendre als Ajustos de l\'iPhone.</string>
+    <string name="notification_permission_denied">Els avisos estan apagats. Es tornen a encendre als ajustos del telèfon.</string>
     <string name="notification_permission_settings">Ajustos</string>
     <string name="notification_streak_farewell">Faig silenci uns dies. Tot és on ho vas deixar.</string>
     <string name="notification_streak_milestone_1">%1$d dies seguits. Ho deixo escrit.</string>

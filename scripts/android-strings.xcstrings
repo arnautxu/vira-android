@@ -645,6 +645,29 @@
         }
       },
       "comment": "Temporal (2026-10-23): l'iPhone ja no el fa servir (PR #39–#45). Es treu quan la pantalla d'Android que el llegeix (entrada, tomb o Botiga) passi a la versió nova."
+    },
+    "notification.permission.denied": {
+      "comment": "Android: l'iPhone diu «Ajustos de l'iPhone».",
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Els avisos estan apagats. Es tornen a encendre als ajustos del telèfon."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los avisos están apagados. Se vuelven a encender en los ajustes del teléfono."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notifications are off. You can turn them back on in your phone's settings."
+          }
+        }
+      }
     }
   }
 }

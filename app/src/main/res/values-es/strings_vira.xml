@@ -1502,7 +1502,7 @@
     <string name="notification_permission_allow">Avísame</string>
     <string name="notification_permission_ask">¿Te aviso a las %1$s?</string>
     <string name="notification_permission_ask_support">Un aviso cuando toque, y ya.</string>
-    <string name="notification_permission_denied">Los avisos están apagados. Se vuelven a encender en los Ajustes del iPhone.</string>
+    <string name="notification_permission_denied">Los avisos están apagados. Se vuelven a encender en los ajustes del teléfono.</string>
     <string name="notification_permission_settings">Ajustes</string>
     <string name="notification_streak_farewell">Me quedo en silencio unos días. Todo sigue donde lo dejaste.</string>
     <string name="notification_streak_milestone_1">%1$d días seguidos. Lo dejo escrito.</string>
