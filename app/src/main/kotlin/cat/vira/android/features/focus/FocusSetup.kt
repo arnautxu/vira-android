@@ -1,13 +1,11 @@
 package cat.vira.android.features.focus
 
-import cat.vira.android.core.data.ViraRewards
-import cat.vira.android.core.design.components.ViraPictogram
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -30,15 +28,19 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import cat.vira.android.R
+import cat.vira.android.core.data.ViraRewards
 import cat.vira.android.core.data.model.FocusKind
 import cat.vira.android.core.data.model.PlanItem
 import cat.vira.android.core.design.LocalViraEnvironment
 import cat.vira.android.core.design.components.ViraActionButton
+import cat.vira.android.core.design.components.ViraPictogram
 import cat.vira.android.core.design.tokens.ViraArea
 import cat.vira.android.core.design.tokens.ViraColor
 import cat.vira.android.core.design.tokens.ViraFont
 import cat.vira.android.core.design.tokens.ViraRadius
 import cat.vira.android.core.design.tokens.ViraSpacing
+import cat.vira.android.features.entry.ViraTip
+import cat.vira.android.features.entry.ViraTipRow
 import java.util.UUID
 
 /// Preparació d'una sessió (`FocusSetupView`): **títol a dalt, medalló al centre òptic, accions
@@ -85,6 +87,7 @@ fun FocusSetupContent(
                     color = ViraColor.accent(ViraArea.Focus),
                     modifier = Modifier.padding(horizontal = ViraSpacing.screenMargin).semantics { heading() },
                 )
+                ViraTipRow(ViraTip.FOCUS, Modifier.padding(horizontal = ViraSpacing.screenMargin))
                 Spacer(Modifier.height(ViraSpacing.xxl))
                 FocusHero(modes, mode, minutes, side, onSelectMode)
                 FocusModeLabels(mode, Modifier.padding(top = ViraSpacing.m).padding(horizontal = ViraSpacing.screenMargin))

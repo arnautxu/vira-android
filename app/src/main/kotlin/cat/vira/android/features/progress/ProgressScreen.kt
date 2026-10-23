@@ -97,7 +97,11 @@ fun ProgressScreen() {
         label = "progressPath",
     ) { destination ->
         when (destination) {
-            null -> ProfileRoute(backend, onOpen = { path.add(it) })
+            null -> Box {
+                ProfileRoute(backend, onOpen = { path.add(it) })
+                // «Aquí és Viri», el primer cop (2026-10-22): era una parada del tomb.
+                ViriTabTip()
+            }
             ProgressDestination.Streak -> StreakRoute(backend, progress, back)
             ProgressDestination.Challenges -> ChallengesRoute(backend, progress, back)
             ProgressDestination.Shop -> ProgressSlots.Shop(back)

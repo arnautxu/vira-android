@@ -1,11 +1,11 @@
 package cat.vira.android.features.plan
 
-import cat.vira.android.app.PlanSection
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
@@ -14,10 +14,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -44,8 +43,8 @@ import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import cat.vira.android.core.design.viraLocale
 import cat.vira.android.R
+import cat.vira.android.app.PlanSection
 import cat.vira.android.core.data.model.PlanItem
 import cat.vira.android.core.design.components.viraPressable
 import cat.vira.android.core.design.components.viraTabBarClearance
@@ -55,6 +54,9 @@ import cat.vira.android.core.design.tokens.ViraFont
 import cat.vira.android.core.design.tokens.ViraRadius
 import cat.vira.android.core.design.tokens.ViraSpacing
 import cat.vira.android.core.design.tokens.ViraTouch
+import cat.vira.android.core.design.viraLocale
+import cat.vira.android.features.entry.ViraTip
+import cat.vira.android.features.entry.ViraTipRow
 import cat.vira.android.features.progress.RewardsSceneCard
 import cat.vira.android.features.today.QuickCapturePeriod
 import cat.vira.android.features.today.QuickCaptureScreen
@@ -103,6 +105,7 @@ fun CalendarSection(
     Column(Modifier.fillMaxSize()) {
         CalendarHeader(selection, week, counts, today, mode, onSelect = { selection = it }, onMode = { mode = it })
         HorizontalDivider(color = ViraColor.separator)
+        ViraTipRow(ViraTip.PLAN_ADD, Modifier.padding(horizontal = ViraSpacing.screenMargin).padding(top = ViraSpacing.xs))
         when (mode) {
             CalendarMode.Day -> DayContent(
                 items = snapshot.items(selection, zone),

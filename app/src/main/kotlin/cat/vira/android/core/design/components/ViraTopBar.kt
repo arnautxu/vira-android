@@ -88,6 +88,8 @@ data class ViraProfileSummary(
 ///   però TalkBack el diu.
 /// - «Ajuda ara» és fixa i sempre visible: a un toc des de qualsevol punt (D-39).
 ///
+/// `helpModifier` deixa que l'arrel digui al tomb on és «Ajuda ara».
+///
 /// Sense estat de dades: qui la posa li dona el resum, les accions i el contingut dels dos panells.
 @Composable
 fun ViraTopBar(
@@ -97,6 +99,7 @@ fun ViraTopBar(
     onSettings: () -> Unit,
     onHelp: () -> Unit,
     modifier: Modifier = Modifier,
+    helpModifier: Modifier = Modifier,
     avatar: @Composable () -> Unit = {},
     streakPanel: @Composable ColumnScope.(dismiss: () -> Unit) -> Unit = {},
     coinsPanel: @Composable ColumnScope.(dismiss: () -> Unit) -> Unit = {},
@@ -118,7 +121,7 @@ fun ViraTopBar(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         ViraProfileButton(profile.name, onProfile, onSettings, avatar)
                         Spacer(Modifier.weight(1f))
-                        ViraHelpButton(onHelp)
+                        ViraHelpButton(onHelp, helpModifier)
                     }
                     if (profile.coins != null) counters()
                 }
@@ -130,7 +133,7 @@ fun ViraTopBar(
                     ViraProfileButton(profile.name, onProfile, onSettings, avatar, Modifier.padding(end = ViraSpacing.xxs))
                     if (profile.coins != null) counters()
                     Spacer(Modifier.weight(1f))
-                    ViraHelpButton(onHelp)
+                    ViraHelpButton(onHelp, helpModifier)
                 }
             }
         }

@@ -53,6 +53,8 @@ import cat.vira.android.core.design.tokens.ViraGradient
 import cat.vira.android.core.design.tokens.ViraRadius
 import cat.vira.android.core.design.tokens.ViraSpacing
 import cat.vira.android.core.design.tokens.ViraTouch
+import cat.vira.android.features.entry.ViraTutorialTarget
+import cat.vira.android.features.entry.viraTutorialTarget
 import cat.vira.android.features.progress.logic.ChallengeItem
 import cat.vira.android.features.progress.logic.ViraLevel
 
@@ -185,7 +187,10 @@ private fun WhatYouHaveDone(
     }
     Column(verticalArrangement = Arrangement.spacedBy(ViraSpacing.xs)) {
         ProgressSectionHeader(stringResource(R.string.progress_accumulated))
-        ViraTileGrid(tiles) { tile, cellModifier -> CountTileView(tile, cellModifier) }
+        ViraTileGrid(tiles) { tile, cellModifier ->
+            val target = if (tile.pictogram == R.drawable.picto_flame) Modifier.viraTutorialTarget(ViraTutorialTarget.Streak) else Modifier
+            CountTileView(tile, cellModifier.then(target))
+        }
     }
 }
 

@@ -21,6 +21,8 @@ import cat.vira.android.core.design.components.viraSectionBackground
 import cat.vira.android.core.design.components.viraTabBarClearance
 import cat.vira.android.core.design.tokens.ViraArea
 import cat.vira.android.core.design.tokens.ViraSpacing
+import cat.vira.android.features.entry.ViraTutorialTarget
+import cat.vira.android.features.entry.viraTutorialTarget
 
 /// El que Avui pot demanar a fora: escriure, obrir una altra pantalla o una captura.
 internal class TodayCallbacks(
@@ -95,6 +97,7 @@ internal fun TodayContent(
                 onDelete = callbacks.onDelete,
                 onAdd = { callbacks.onCapture(false) },
                 onOpenCalendar = callbacks.onOpenCalendar,
+                modifier = Modifier.viraTutorialTarget(ViraTutorialTarget.TodayDay),
             )
         }
         // Els hàbits no tenen hora i no han de competir amb una agenda.

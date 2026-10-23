@@ -45,6 +45,8 @@ import cat.vira.android.core.design.tokens.ViraGradient
 import cat.vira.android.core.design.tokens.ViraRadius
 import cat.vira.android.core.design.tokens.ViraSpacing
 import cat.vira.android.core.design.tokens.ViraTouch
+import cat.vira.android.features.entry.ViraTip
+import cat.vira.android.features.entry.ViraTipRow
 
 /// Mindfulness: Viri et convida a respirar i, a sota, les tres categories (`MindfulnessView`).
 ///
@@ -66,6 +68,7 @@ internal fun MindfulnessContent(
         verticalArrangement = Arrangement.spacedBy(ViraSpacing.sectionGap),
     ) {
         MindfulnessHero(onBreathe)
+        ViraTipRow(ViraTip.MINDFULNESS)
         Column(verticalArrangement = Arrangement.spacedBy(ViraSpacing.rowGap)) {
             Text(
                 stringResource(R.string.emotions_mindfulness_need),

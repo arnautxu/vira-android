@@ -43,9 +43,11 @@ import cat.vira.android.core.design.tokens.ViraColor
 import cat.vira.android.core.notifications.ViraNotifications
 import cat.vira.android.features.emotions.EmotionsScreen
 import cat.vira.android.features.entry.LocalViraShowTutorialStop
+import cat.vira.android.features.entry.LocalViraTipPreferences
 import cat.vira.android.features.entry.LocalViraTutorialTargets
 import cat.vira.android.features.entry.ViraTutorialOverlay
 import cat.vira.android.features.entry.ViraTutorialTarget
+import cat.vira.android.features.entry.viraTutorialTarget
 import cat.vira.android.features.focus.FocusResumeEffect
 import cat.vira.android.features.plan.PlanScreen
 import cat.vira.android.features.progress.ProgressScreen
@@ -87,7 +89,11 @@ fun RootScreen() {
     // Una sessió en marxa torna a la vista quan l'app torna a primer pla (des de l'avís fix).
     FocusResumeEffect { navigator.startFocus(navigator.focusLink) }
 
-    CompositionLocalProvider(LocalViraNavigator provides navigator) {
+    // Les pistes d'un sol ús llegeixen aquestes preferències; a les captures no n'hi ha i no surten.
+    CompositionLocalProvider(
+        LocalViraNavigator provides navigator,
+        LocalViraTipPreferences provides LocalViraBackend.current.preferences,
+    ) {
         ViraCompletionQueue {
             NavHost(
                 navController = navController,
@@ -235,6 +241,7 @@ fun ViraRootLayout(
             onProfile = onProfile,
             onSettings = onSettings,
             onHelp = onHelp,
+            helpModifier = Modifier.viraTutorialTarget(ViraTutorialTarget.HelpNow),
             avatar = avatar,
             streakPanel = streakPanel,
             coinsPanel = coinsPanel,
