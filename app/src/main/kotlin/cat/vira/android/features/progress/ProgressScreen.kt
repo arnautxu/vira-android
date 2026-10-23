@@ -1,5 +1,8 @@
 package cat.vira.android.features.progress
 
+import cat.vira.android.core.sound.ViraHaptics
+import cat.vira.android.core.sound.ViraSound
+import androidx.compose.ui.platform.LocalContext
 import cat.vira.android.features.shop.AccessoryItem
 import cat.vira.android.features.progress.ui.WelcomeChallengeUi
 import cat.vira.android.features.progress.logic.ViraWelcomeChallenge
@@ -167,6 +170,7 @@ private fun ProfileRoute(backend: ViraBackend, onOpen: (ProgressDestination) -> 
 
 @Composable
 private fun StreakRoute(backend: ViraBackend, progress: ViraProgress, onBack: () -> Unit) {
+    val context = LocalContext.current
     val db = backend.db
     val scope = rememberCoroutineScope()
     val streak by db.streaks().observe().collectAsStateWithLifecycle(null)
@@ -197,14 +201,28 @@ private fun StreakRoute(backend: ViraBackend, progress: ViraProgress, onBack: ()
         ),
         onBack = onBack,
         onShiftMonth = { monthText = month.plusMonths(it).toString() },
-        onBuySavedDay = { scope.launch { progress.buyFreeze() } },
+        onBuySavedDay = {
+            scope.launch {
+                val bought = progress.buyFreeze()
+                ViraHaptics.play(context, if (bought) ViraHaptics.Feedback.Reward else ViraHaptics.Feedback.Warning)
+                // «No arribes al preu» no sona: és un avís, no un error, i ja vibra.
+                if (bought) ViraSound.play(context, ViraSound.Cue.SAVED_DAY)
+            }
+        },
     )
 }
 
 // Reptes
 
+/// Has recollit les monedes d'un repte: el «ka-ching» i la moneda (`ViraSound.play(.coins)`).
+private fun earned(context: android.content.Context) {
+    ViraHaptics.play(context, ViraHaptics.Feedback.Reward)
+    ViraSound.play(context, ViraSound.Cue.COINS)
+}
+
 @Composable
 private fun ChallengesRoute(backend: ViraBackend, progress: ViraProgress, onBack: () -> Unit) {
+    val context = LocalContext.current
     val db = backend.db
     val scope = rememberCoroutineScope()
     val claims by db.challengeClaims().observeAll().collectAsStateWithLifecycle(emptyList())
@@ -240,7 +258,10 @@ private fun ChallengesRoute(backend: ViraBackend, progress: ViraProgress, onBack
         onClaimWelcome = {
             scope.launch {
                 try {
-                    if (progress.claimWelcome()) saveFailed = false
+                    if (progress.claimWelcome()) {
+                        saveFailed = false
+                        earned(context)
+                    }
                 } catch (_: Exception) {
                     saveFailed = true
                 }
@@ -251,6 +272,7 @@ private fun ChallengesRoute(backend: ViraBackend, progress: ViraProgress, onBack
                 try {
                     if (progress.claim(item)) {
                         saveFailed = false
+                        earned(context)
                         if (celebrationsEnabled) celebratingKey = item.key
                     }
                 } catch (_: Exception) {

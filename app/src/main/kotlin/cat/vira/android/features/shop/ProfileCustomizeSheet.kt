@@ -1,5 +1,8 @@
 package cat.vira.android.features.shop
 
+import androidx.compose.ui.platform.LocalContext
+import cat.vira.android.core.sound.ViraSound
+import cat.vira.android.core.sound.ViraHaptics
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
@@ -73,6 +76,7 @@ import kotlinx.coroutines.launch
 fun ProfileCustomizeSheet(onDismiss: () -> Unit) {
     val data = rememberShopData()
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
     val counter by data.counter.collectAsStateWithLifecycle(null)
     val streak by data.streak.collectAsStateWithLifecycle(null)
     val profile by data.profile.collectAsStateWithLifecycle(null)
@@ -102,7 +106,11 @@ fun ProfileCustomizeSheet(onDismiss: () -> Unit) {
                 streak = streak,
                 onDone = { name -> saveNickname(name); onDismiss() },
                 onSaveNickname = { saveNickname(it) },
-                onEquip = { key -> scope.launch { data.skinsLogic.equip(key) } },
+                onEquip = { key ->
+                    ViraHaptics.play(context, ViraHaptics.Feedback.Done)
+                    ViraSound.play(context, ViraSound.Cue.EQUIP)
+                    scope.launch { data.skinsLogic.equip(key) }
+                },
                 onToggleBadge = { key -> scope.launch { data.badgesLogic.toggle(key) } },
                 modifier = Modifier.imePadding(),
             )

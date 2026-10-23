@@ -1,5 +1,6 @@
 package cat.vira.android.features.plan
 
+import cat.vira.android.core.sound.ViraSound
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -53,6 +54,7 @@ fun HabitEditor(habit: Habit?, actions: PlanActions, onDismiss: () -> Unit, zone
             ),
             isNew = habit == null,
         )
+        ViraSound.saved(context)
         onDismiss()
     }
 

@@ -1,5 +1,7 @@
 package cat.vira.android.core.design.components
 
+import cat.vira.android.core.sound.ViraHaptics
+import cat.vira.android.core.sound.ViraSound
 import android.view.accessibility.AccessibilityManager
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
@@ -108,6 +110,8 @@ fun ViraCelebrationScreen(
     celebrationsEnabled: Boolean = true,
     backdrop: ViraCelebrationBackdrop? = null,
     onShown: () -> Unit = {},
+    /// El so de la pantalla (`ViraSound`). Per defecte, la xifra que puja.
+    sound: ViraSound.Cue? = ViraSound.Cue.COUNT_UP,
     extra: @Composable () -> Unit = {},
     hero: @Composable () -> Unit,
 ) {
@@ -124,6 +128,13 @@ fun ViraCelebrationScreen(
 
     LaunchedEffect(Unit) {
         onShown()
+        // La remuntada tàctil va amb la xifra: mateixos 420 ms d'espera i 500 ms de compte.
+        ViraHaptics.celebrate(context)
+        // El vídeo que sona ja porta el seu so; la resta d'entrades (la flama, la brillantor)
+        // comencen abans que la xifra.
+        if (sound != null && playing?.sound != true) {
+            ViraSound.play(context, sound, delayMs = if (sound == ViraSound.Cue.COUNT_UP) 420 else 240)
+        }
         launch { appear.animateTo(1f, if (reduceMotion) ViraMotion.reduced() else ViraMotion.emphasis()) }
         if (count != null && !reduceMotion) {
             delay(420)

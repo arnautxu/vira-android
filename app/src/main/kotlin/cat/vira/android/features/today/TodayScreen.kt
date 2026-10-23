@@ -1,5 +1,6 @@
 package cat.vira.android.features.today
 
+import cat.vira.android.core.sound.ViraSound
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -155,6 +156,7 @@ fun TodayScreen() {
         onDelete = { item -> planActions.delete(item) },
         onCapture = { tomorrow -> captureTomorrow = tomorrow },
         onMoveToTomorrow = { item ->
+            ViraSound.play(context, ViraSound.Cue.SAVED)
             scope.launch {
                 moved = actions.moveToTomorrow(item)
                 // L'avís de la tasca ha de canviar de dia amb ella.
@@ -165,6 +167,7 @@ fun TodayScreen() {
             val original = moved
             moved = null
             if (original != null) {
+                ViraSound.play(context, ViraSound.Cue.UNDO)
                 scope.launch {
                     actions.undoMove(original)
                     ViraNotifications.reschedule(context.applicationContext)

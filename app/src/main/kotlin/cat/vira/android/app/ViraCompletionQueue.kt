@@ -1,5 +1,8 @@
 package cat.vira.android.app
 
+import androidx.compose.runtime.LaunchedEffect
+import cat.vira.android.core.sound.ViraHaptics
+import cat.vira.android.core.sound.ViraSound
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.content.Context
 import android.view.View
@@ -58,9 +61,21 @@ fun ViraCompletionQueue(content: @Composable () -> Unit) {
     val queue = (context.applicationContext as ViraApp).completions
     queue.celebrationsEnabled = celebrationsEnabled
     queue.challengesEnabled = challengesEnabled
+    // Deixa a punt l'escala del dia i les monedes: el primer toc no pot esperar el disc.
+    LaunchedEffect(Unit) { ViraSound.prepare(context) }
     DisposableEffect(queue, view) {
         queue.announce = { coins, xp -> announce(view, context, coins, xp) }
-        onDispose { queue.announce = { _, _ -> } }
+        // Encara no hi ha el vol de monedes de l'iPhone: el guany sona com quan no volen.
+        queue.earned = {
+            ViraHaptics.play(context, ViraHaptics.Feedback.Reward)
+            ViraSound.play(context, ViraSound.Cue.COINS)
+        }
+        queue.undone = { ViraSound.play(context, ViraSound.Cue.UNDO) }
+        onDispose {
+            queue.announce = { _, _ -> }
+            queue.earned = {}
+            queue.undone = {}
+        }
     }
 
     ProvideViraCompletions(present = queue::present, undo = queue::undo, active = queue.active) {
@@ -154,6 +169,12 @@ internal class CompletionQueue(
     private val actionAt = mutableMapOf<PendingCompletion, Instant>()
     /// La revelació dita per TalkBack. La posa la pantalla visible: cal una vista on anunciar-la.
     var announce: (coins: Int, xp: Int) -> Unit = { _, _ -> }
+    /// El so i la vibració del guany (`ViraSound.play(.coins)`). Només amb monedes de debò: amb el
+    /// sostre diari ple, sonar prometria una recompensa que no hi és.
+    var earned: () -> Unit = {}
+    /// El «Desfer» de la fila (`ViraSound.play(.undo)`); des de la casella ja ha sonat, i
+    /// `ViraSound` no el repeteix si coincideixen.
+    var undone: () -> Unit = {}
     var active by mutableStateOf<ActiveCompletion?>(null)
         private set
     var habitCelebration by mutableStateOf<HabitCelebration?>(null)
@@ -184,6 +205,7 @@ internal class CompletionQueue(
         val current = pending ?: return
         if (current.id != id) return
         timeline?.cancel()
+        undone()
         current.onUndo()
         actionAt.remove(current)
         pending = null
@@ -212,6 +234,8 @@ internal class CompletionQueue(
                 completion.title != null && isFirstHabitOfDay()
             if (revealing !== completion) return
             active = ActiveCompletion(completion.id, CompletionPhase.Revealing(coins, xp))
+            // Si s'obre una celebració a sobre, ja porta els seus sons: el guany calla.
+            if (coins > 0 && moment == null && !opensHabitCelebration) earned()
             announce(coins, xp)
             when {
                 // La retenció passa a la pantalla que s'obre: l'allibera en tancar-se.
