@@ -123,6 +123,7 @@ private fun nightMoment(plan: TodayViriPlan.Night, actions: TodayViriActions): T
             title = title,
             message = stringResource(R.string.today_viri_night_moved, moved.title),
             actions = listOf(TodayViriMomentUi.Action(stringResource(R.string.action_undo), run = actions.undoMove), captureTomorrow),
+            proposes = true,
         )
     }
 
@@ -147,7 +148,19 @@ private fun nightMoment(plan: TodayViriPlan.Night, actions: TodayViriActions): T
         title = title,
         message = message,
         actions = buttons,
+        proposes = plan.moveCandidate != null,
     )
+}
+
+/// La línia de la píndola plegada: què toca ara, sense dir mai el nom d'un fàrmac (Viri és neutre
+/// amb la medicació).
+@Composable
+internal fun todayViriStatus(data: TodayData): String {
+    if (data.hour >= TodayPlanRules.Period.Night.startHour) return stringResource(R.string.today_viri_night_title)
+    val pending = data.pending
+    if (!data.agenda.isEmpty && pending.isEmpty()) return stringResource(R.string.today_viri_status_done)
+    val next = pending.firstOrNull { !it.isMedication } ?: return stringResource(R.string.today_viri_status_idle)
+    return stringResource(R.string.today_viri_status_next, itemLabel(next, data))
 }
 
 @Composable

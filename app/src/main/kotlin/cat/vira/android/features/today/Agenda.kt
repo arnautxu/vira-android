@@ -34,7 +34,11 @@ class Agenda(
 
         // Els del calendari del sistema: per a l'usuari **són** el seu dia. No s'editen ni
         // s'esborren des d'aquí, i la fila ho diu.
-        for (event in calendarEvents) {
+        // Un esdeveniment que és **la mateixa tasca** (mateix títol, mateixa hora) no surt dues
+        // vegades: es queda la de Vira, que és la que es pot editar i fa sumar la ratxa
+        // (Arnau, 2026-10-22: «Agafar cartera» dues vegades a les 7:30).
+        val planKeys = planItems.mapNotNull { item -> item.time?.let { matchKey(item.title, it) } }.toSet()
+        for (event in calendarEvents.filter { matchKey(it.title, it.start) !in planKeys }) {
             result += AgendaEntry(
                 id = "cal-${event.id}",
                 title = event.title,
@@ -101,12 +105,21 @@ class Agenda(
 
     val done: List<AgendaEntry> get() = entries.filter { it.isDone }
 
-    private companion object {
-        val collator: Collator = Collator.getInstance()
+    companion object {
+        private val collator: Collator = Collator.getInstance()
 
         /// Per posició dins del dia; els empats, pel títol en l'ordre de l'idioma.
-        val order = Comparator<AgendaEntry> { lhs, rhs ->
+        private val order = Comparator<AgendaEntry> { lhs, rhs ->
             if (lhs.rank == rhs.rank) collator.compare(lhs.title, rhs.title) else lhs.rank.compareTo(rhs.rank)
+        }
+
+        /// Títol sense majúscules, accents ni espais de les vores, i l'hora al minut. És el que fa
+        /// que una tasca i el seu esdeveniment es reconeguin com la mateixa cosa.
+        fun matchKey(title: String, time: Instant): String {
+            val folded = java.text.Normalizer.normalize(title.trim(), java.text.Normalizer.Form.NFD)
+                .replace(Regex("\\p{M}+"), "")
+                .lowercase(java.util.Locale.ROOT)
+            return "${time.epochSecond.floorDiv(60)}|$folded"
         }
     }
 }

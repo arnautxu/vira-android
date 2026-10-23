@@ -59,7 +59,7 @@ private fun data(now: Instant, items: List<PlanItem> = listOf(essay, doneTask, m
 private fun Today(data: TodayData, completion: TodayCompletion = TodayCompletion()) {
     ViraCapture {
         ViraTheme(reduceMotion = true) {
-            TodayContent(data, completion, TodayCallbacks(), isViriExpanded = true, isTomorrowExpanded = true)
+            TodayContent(data, completion, TodayCallbacks(), isTomorrowExpanded = true)
         }
     }
 }
@@ -86,7 +86,6 @@ fun TodayEmpty() = ViraCapture { ViraTheme(reduceMotion = true) {
         TodayData(now = at(16), zone = zone),
         TodayCompletion(),
         TodayCallbacks(),
-        isViriExpanded = true,
         isTomorrowExpanded = false,
     )
 } }

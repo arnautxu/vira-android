@@ -110,6 +110,9 @@ internal fun TodayHabitsStrip(
     onToggle: (Habit) -> Unit,
     onOpenHabits: () -> Unit,
     modifier: Modifier = Modifier,
+    /// Només quan no hi ha cap hàbit enlloc: la fila buida ofereix tres idees d'un toc
+    /// (`TodayHabitSuggestions`). Amb hàbits que avui no toquen, la fila buida de sempre.
+    onSuggest: ((TodayHabitSuggestion, String) -> Unit)? = null,
 ) {
     val area = ViraArea.Plan
     val doneCount = habits.count { it.id in doneIds }
@@ -136,7 +139,9 @@ internal fun TodayHabitsStrip(
                 )
             }
         }
-        if (habits.isEmpty()) {
+        if (habits.isEmpty() && onSuggest != null) {
+            TodayHabitSuggestions(onAdd = onSuggest, onOpenHabits = onOpenHabits)
+        } else if (habits.isEmpty()) {
             Row(Modifier.fillMaxWidth().padding(vertical = ViraSpacing.s), verticalAlignment = Alignment.CenterVertically) {
                 Text(stringResource(R.string.today_habits_empty), style = ViraFont.footnote, color = ViraColor.textSecondary, modifier = Modifier.weight(1f))
                 Text(
