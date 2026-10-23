@@ -74,4 +74,4 @@ fun MedicationReminderStep(state: MedicationAddState, showsNameInReminder: Boole
 /// «8:00 i 21:00» per a la resposta «Sí» de l'avís.
 @Composable
 private fun timesSummary(times: List<Int>): String =
-    ListFormatter.getInstance(viraLocale()).format(times.toSet().sorted().map(::clockText))
+    ListFormatter.getInstance(viraLocale()).format(times.toSet().sorted().map { clockText(it) })
