@@ -36,6 +36,8 @@ interface SettingsBackend {
     /// La clau de la skin posada, o `null` per al Viri de sempre.
     val equippedSkin: Flow<String?>
     val streakVisible: Flow<Boolean>
+    /// Si hi ha alguna pauta de medicació activa: Avisos només ensenya la medicació a qui en té.
+    val hasMedications: Flow<Boolean>
     val focusProfiles: Flow<List<FocusProfile>>
     /// «0.1 (1)», com «versió (build)» a l'iPhone.
     val appVersion: String
@@ -71,6 +73,7 @@ class ViraSettingsBackend(private val context: Context, private val backend: Vir
     override val profileName: Flow<String> = db.profiles().observe().map { it?.displayName.orEmpty() }
     override val equippedSkin: Flow<String?> = db.skinOwnerships().observeAll().map { all -> all.firstOrNull { it.isEquipped }?.key }
     override val streakVisible: Flow<Boolean> = db.streaks().observe().map { it?.isVisible ?: true }
+    override val hasMedications: Flow<Boolean> = db.medications().observeAll().map { all -> all.any { it.isActive } }
     override val focusProfiles: Flow<List<FocusProfile>> =
         db.focusProfiles().observeAll().map { all -> all.filter { !it.isArchived } }
 
@@ -132,6 +135,7 @@ class PreviewSettingsBackend(
     name: String = "",
     skin: String? = null,
     profiles: List<FocusProfile> = emptyList(),
+    medications: Boolean = false,
     private val guardian: ViraGuardianRequest = ViraGuardianRequest(ViraConsentStatus.MISSING),
 ) : SettingsBackend {
     override val initialGuardianSummary = guardian
@@ -140,6 +144,7 @@ class PreviewSettingsBackend(
     override val profileName: Flow<String> = MutableStateFlow(name)
     override val equippedSkin: Flow<String?> = MutableStateFlow(skin)
     override val streakVisible: Flow<Boolean> = MutableStateFlow(true)
+    override val hasMedications: Flow<Boolean> = MutableStateFlow(medications)
     override val focusProfiles: Flow<List<FocusProfile>> = MutableStateFlow(profiles)
     override val appVersion = "0.1 (1)"
 

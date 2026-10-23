@@ -21,6 +21,7 @@ import cat.vira.android.core.notifications.ViraNotificationWorker
 import cat.vira.android.core.notifications.ViraNotifications
 import cat.vira.android.features.emotions.ViraEmotionCheckIn
 import cat.vira.android.features.plan.PlanNotificationEffects
+import cat.vira.android.features.settings.ViraSimpleSettings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -71,6 +72,10 @@ class ViraApp : Application(), ViraNotificationHost {
         ViraNotificationChannel.register(this)
         ViraNotificationWorker.schedule(this)
         ViraNotifications.watch(this, backend.db)
+        // Ajustos més simples: el que ja no es pot triar torna al seu valor a cada arrencada.
+        ProcessLifecycleOwner.get().lifecycleScope.launch(Dispatchers.Default) {
+            ViraSimpleSettings.apply(ViraPreferences.open(this@ViraApp), backend.db)
+        }
     }
 
     /// En tornar a primer pla, una passada; mentre s'hi està, una cada cinc minuts.

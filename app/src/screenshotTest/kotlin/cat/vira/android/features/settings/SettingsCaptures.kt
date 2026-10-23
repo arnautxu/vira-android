@@ -29,6 +29,7 @@ private fun backend(session: ViraSession.State = signedIn) = PreviewSettingsBack
     sessionState = session,
     sync = ViraSyncEngine.State.Succeeded(Instant.EPOCH),
     name = "Nora",
+    medications = true,
     // Sense dates: «fa 2 dies» canviaria cada dia i la captura deixaria de coincidir.
     guardian = ViraGuardianRequest(ViraConsentStatus.PENDING, guardian = "ma•••@gmail.com", canResend = true),
     profiles = listOf(
@@ -61,9 +62,6 @@ fun SettingsNotifications() = Capture(category(SettingsCategory.NOTIFICATIONS))
 
 @PreviewTest @SettingsPageCaptures @Composable
 fun SettingsApp() = Capture(category(SettingsCategory.APP))
-
-@PreviewTest @SettingsPageCaptures @Composable
-fun SettingsMotivation() = Capture(category(SettingsCategory.MOTIVATION))
 
 @PreviewTest @SettingsPageCaptures @Composable
 fun SettingsPrivacy() = Capture(category(SettingsCategory.PRIVACY))
