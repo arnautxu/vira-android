@@ -6,6 +6,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -29,6 +30,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.res.stringResource
@@ -182,52 +185,64 @@ fun AddStepperRow(
     onRemove: (() -> Unit)? = null,
 ) {
     val shape = RoundedCornerShape(ViraRadius.l)
-    val stacked = LocalViraEnvironment.current.isAccessibilitySize
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .defaultMinSize(minHeight = ViraTouch.comfortable)
-            .background(ViraColor.surfaceElevated, shape)
-            .then(if (isEmphasized) Modifier.border(2.dp, ViraColor.accent(area), shape) else Modifier)
-            .padding(start = ViraSpacing.m, end = ViraSpacing.xs, top = ViraSpacing.xs, bottom = ViraSpacing.xs),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(ViraSpacing.xs),
-    ) {
-        val labelGroup = @Composable { modifier: Modifier ->
-            Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(ViraSpacing.s)) {
-                ViraPictogram(pictogram, size = 30.dp, scalesWithText = true)
-                Text(label, style = ViraFont.callout, color = ViraColor.textSecondary)
-            }
+    val removable = onRemove != null && removeLabel != null
+    // Com `ViewThatFits`: en fila si l'etiqueta hi cap sencera; si no, a sobre dels botons.
+    val measurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    val labelStyle = ViraFont.callout
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val stacked = LocalViraEnvironment.current.isAccessibilitySize || run {
+            val labelWidth = with(density) { measurer.measure(label, labelStyle, softWrap = false).size.width.toDp() }
+            val fixed = ViraSpacing.m + ViraSpacing.xs + 30.dp + ViraSpacing.s + ViraSpacing.xs +
+                ViraTouch.minimum * 2 + 72.dp + ViraSpacing.xs * 2 + if (removable) ViraTouch.minimum + ViraSpacing.xs else 0.dp
+            labelWidth + fixed > maxWidth
         }
-        val stepper = @Composable {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(ViraSpacing.xs)) {
-                StepButton(isPlus = false, area = area, label = "$label −", onClick = onDecrement)
-                Text(
-                    value,
-                    style = ViraFont.title.copy(fontFeatureSettings = "tnum"),
-                    color = ViraColor.textPrimary,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.widthIn(min = 72.dp).clearAndSetSemantics { contentDescription = "$label, $value" },
-                )
-                StepButton(isPlus = true, area = area, label = "$label +", onClick = onIncrement)
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .defaultMinSize(minHeight = ViraTouch.comfortable)
+                .background(ViraColor.surfaceElevated, shape)
+                .then(if (isEmphasized) Modifier.border(2.dp, ViraColor.accent(area), shape) else Modifier)
+                .padding(start = ViraSpacing.m, end = ViraSpacing.xs, top = ViraSpacing.xs, bottom = ViraSpacing.xs),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(ViraSpacing.xs),
+        ) {
+            val labelGroup = @Composable { modifier: Modifier ->
+                Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(ViraSpacing.s)) {
+                    ViraPictogram(pictogram, size = 30.dp, scalesWithText = true)
+                    Text(label, style = ViraFont.callout, color = ViraColor.textSecondary)
+                }
             }
-        }
-        if (stacked) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(ViraSpacing.xs)) {
-                labelGroup(Modifier)
+            val stepper = @Composable {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(ViraSpacing.xs)) {
+                    StepButton(isPlus = false, area = area, label = "$label −", onClick = onDecrement)
+                    Text(
+                        value,
+                        style = ViraFont.title.copy(fontFeatureSettings = "tnum"),
+                        color = ViraColor.textPrimary,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.widthIn(min = 72.dp).clearAndSetSemantics { contentDescription = "$label, $value" },
+                    )
+                    StepButton(isPlus = true, area = area, label = "$label +", onClick = onIncrement)
+                }
+            }
+            if (stacked) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(ViraSpacing.xs)) {
+                    labelGroup(Modifier)
+                    stepper()
+                }
+            } else {
+                labelGroup(Modifier.weight(1f))
                 stepper()
             }
-        } else {
-            labelGroup(Modifier.weight(1f))
-            stepper()
-        }
-        if (onRemove != null && removeLabel != null) {
-            Box(
-                Modifier.size(ViraTouch.minimum).viraPressable(onClickLabel = removeLabel, onClick = onRemove)
-                    .semantics { contentDescription = removeLabel },
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(Icons.Filled.Close, contentDescription = null, tint = ViraColor.textSecondary, modifier = Modifier.size(18.dp))
+            if (onRemove != null && removeLabel != null) {
+                Box(
+                    Modifier.size(ViraTouch.minimum).viraPressable(onClickLabel = removeLabel, onClick = onRemove)
+                        .semantics { contentDescription = removeLabel },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(Icons.Filled.Close, contentDescription = null, tint = ViraColor.textSecondary, modifier = Modifier.size(18.dp))
+                }
             }
         }
     }
