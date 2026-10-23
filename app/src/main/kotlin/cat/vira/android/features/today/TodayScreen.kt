@@ -182,10 +182,12 @@ fun TodayScreen() {
         onSuggestHabit = { suggestion, title ->
             val habit = suggestion.habit(title)
             planActions.save(habit, isNew = true)
+            ViraSound.saved(context)
             suggestedHabit = habit
         },
         // Com el «Desfer» d'«Afegir»: s'arxiva, que és el que treu un hàbit de tota l'app.
         onUndoSuggestedHabit = {
+            ViraSound.play(context, ViraSound.Cue.UNDO)
             suggestedHabit?.let(planActions::archive)
             suggestedHabit = null
         },
