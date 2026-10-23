@@ -47,7 +47,7 @@ fun BotigaObjectiu() = Screen {
 @PreviewTest @ViraScreenCaptures @Composable
 fun BotigaProvadorComprar() = Screen {
     ShopFittingRoomContent(
-        requireNotNull(SkinItem.item("astronaut")), isOwned = false, isEquipped = false, balance = 620,
+        requireNotNull(SkinItem.item("astronaut")), isOwned = false, isEquipped = false, balance = 2_000,
         dailyPace = null, wishKey = "", onWish = {}, onBuy = {}, onWear = {}, onClose = {},
     )
 }
