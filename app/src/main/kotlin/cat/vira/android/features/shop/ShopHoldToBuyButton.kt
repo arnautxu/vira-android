@@ -9,6 +9,8 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -56,6 +58,7 @@ import kotlinx.coroutines.launch
 ///
 /// **TalkBack i Accés amb interruptors** no poden mantenir res: per a ells és un botó normal, i
 /// l'acció per defecte compra a l'instant.
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ShopHoldToBuyButton(price: Int, onBuy: () -> Unit, modifier: Modifier = Modifier) {
     val reduceMotion = LocalViraEnvironment.current.reduceMotion
@@ -113,14 +116,24 @@ fun ShopHoldToBuyButton(price: Int, onBuy: () -> Unit, modifier: Modifier = Modi
         Box(Modifier.matchParentSize()) {
             Box(Modifier.fillMaxHeight().fillMaxWidth(progress.value.coerceIn(0f, 1f)).background(ViraColor.onAccent.copy(alpha = 0.24f)))
         }
-        Row(
+        // En fila mentre hi cap; amb la lletra gran, el preu baixa sencer a sota i mai es parteix.
+        FlowRow(
             Modifier.padding(horizontal = ViraSpacing.m, vertical = ViraSpacing.s),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(ViraSpacing.xs),
+            horizontalArrangement = Arrangement.spacedBy(ViraSpacing.xs, Alignment.CenterHorizontally),
+            verticalArrangement = Arrangement.spacedBy(ViraSpacing.xxs),
         ) {
-            Text(stringResource(R.string.shop_hold_buy), style = ViraFont.headline, color = ViraColor.onAccent, textAlign = TextAlign.Center)
-            ViraPictogram(R.drawable.picto_shop, size = 22.dp, scalesWithText = true)
-            Text(price.viraFormatted(), style = ViraFont.headline.tabular(), color = ViraColor.onAccent)
+            Text(
+                stringResource(R.string.shop_hold_buy), style = ViraFont.headline, color = ViraColor.onAccent,
+                textAlign = TextAlign.Center, modifier = Modifier.align(Alignment.CenterVertically),
+            )
+            Row(
+                Modifier.align(Alignment.CenterVertically),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(ViraSpacing.xs),
+            ) {
+                ViraPictogram(R.drawable.picto_shop, size = 22.dp, scalesWithText = true)
+                Text(price.viraFormatted(), style = ViraFont.headline.tabular(), color = ViraColor.onAccent, maxLines = 1, softWrap = false)
+            }
         }
     }
 }
