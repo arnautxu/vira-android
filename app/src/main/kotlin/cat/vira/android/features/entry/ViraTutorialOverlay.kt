@@ -61,14 +61,21 @@ fun ViraTutorialOverlay(
     onSkip: () -> Unit,
     modifier: Modifier = Modifier,
     context: ViraTutorialContext = ViraTutorialContext(),
-    onTry: () -> Unit = {},
+    /// Marca la tasca de «Prova-ho» i torna com tornar-la a desmarcar.
+    onTry: () -> (() -> Unit)? = { null },
 ) {
     val environment = LocalViraEnvironment.current
     val density = LocalDensity.current
     // Ha tocat el cercle d'Avui en aquesta parada: la frase passa a dir que ja és fet.
     var didTry by remember(step) { mutableStateOf(false) }
+    // El cercle tocat i com desfer-ho: la frase diu «toca'l un altre cop» i ha de poder-se fer.
+    var tried by remember(step) { mutableStateOf<Pair<Rect, () -> Unit>?>(null) }
     var origin by remember { mutableStateOf(Offset.Zero) }
-    val spots = tutorialSpots(step, frames, context.copy(didTry = didTry), origin)
+    // «Prova-ho» només si el cercle cau dins del forat: si no, la frase seria una promesa que la
+    // cortina no deixa complir, i la parada diu el que diu sense tasca.
+    val reachable = tryCircle(step, tutorialSpots(step, frames, context, origin), frames, context, didTry = false, origin) != null
+    val shown = if (reachable || didTry) context.copy(didTry = didTry) else context.copy(tryTitle = null)
+    val spots = tutorialSpots(step, frames, shown, origin)
     val tryCircle = tryCircle(step, spots, frames, context, didTry, origin)
     val scrim = ViraColor.shadow.copy(
         alpha = when {
@@ -99,8 +106,16 @@ fun ViraTutorialOverlay(
         spots.firstOrNull { it.target.isTab }?.let { ViraTutorialTapHint(it.rect, maxWidth, isCircle = false, onTap = onNext) }
         tryCircle?.let { rect ->
             ViraTutorialTapHint(rect, maxWidth, isCircle = true) {
+                val undo = onTry()
                 didTry = true
-                onTry()
+                tried = undo?.let { rect to it }
+            }
+        }
+        tried?.takeIf { didTry }?.let { (rect, undo) ->
+            ViraTutorialTapHint(rect, maxWidth, isCircle = true, quiet = true) {
+                undo()
+                didTry = false
+                tried = null
             }
         }
 

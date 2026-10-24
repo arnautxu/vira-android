@@ -27,6 +27,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -98,9 +99,13 @@ fun ProgressScreen() {
     ) { destination ->
         when (destination) {
             null -> Box {
-                ProfileRoute(backend, onOpen = { path.add(it) })
-                // «Aquí és Viri», el primer cop (2026-10-22): era una parada del tomb.
-                ViriTabTip()
+                // «Aquí és Viri», el primer cop (2026-10-22): era una parada del tomb. Mentre hi és,
+                // el perfil de sota no es pot recórrer amb TalkBack.
+                val tip = rememberViriTabTipVisible()
+                Box(if (tip) Modifier.clearAndSetSemantics { } else Modifier) {
+                    ProfileRoute(backend, onOpen = { path.add(it) })
+                }
+                ViriTabTip(tip)
             }
             ProgressDestination.Streak -> StreakRoute(backend, progress, back)
             ProgressDestination.Challenges -> ChallengesRoute(backend, progress, back)

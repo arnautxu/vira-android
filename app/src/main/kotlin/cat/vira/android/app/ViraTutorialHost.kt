@@ -85,8 +85,12 @@ class ViraTutorialState internal constructor(
         saved.value = saved.value.orEmpty() + listOf(plan.name, emotions.name)
     }
 
-    fun tryIt() {
-        targets.tryIt?.perform?.invoke()
+    /// Marca la tasca que es pot provar i torna com desfer-ho: la mateixa acció sobre la mateixa
+    /// fila, encara que el «Prova-ho» ja apunti a la següent.
+    fun tryIt(): (() -> Unit)? {
+        val perform = targets.tryIt?.perform ?: return null
+        perform()
+        return perform
     }
 
     fun advance() {

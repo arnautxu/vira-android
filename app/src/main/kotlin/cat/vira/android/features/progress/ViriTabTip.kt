@@ -59,15 +59,22 @@ import cat.vira.android.features.entry.ViraTutorialBadge
 /// Amb el progrés o la botiga amagats a Ajustos, la seva línia no hi és: no s'explica el que no
 /// es veu. El Viri de la cantonada és el guia del tomb, no el de l'usuari: no es vesteix.
 @Composable
-fun BoxScope.ViriTabTip() {
+fun rememberViriTabTipVisible(): Boolean {
     val preferences = LocalViraBackend.current.preferences
     val seen by rememberPreference(preferences, VIRI_TAB_TIP_SEEN, false)
     val tutorialCompleted by rememberPreference(preferences, ViraPreferences.TUTORIAL_COMPLETED, false)
+    return !seen && tutorialCompleted
+}
+
+/// La cortina i la targeta. Qui la posa amaga a TalkBack el que queda a sota mentre `visible`.
+@Composable
+fun BoxScope.ViriTabTip(visible: Boolean) {
+    val preferences = LocalViraBackend.current.preferences
     val progressVisible by rememberPreference(preferences, PROGRESS_VISIBLE, true)
     val shopVisible by rememberPreference(preferences, SHOP_VISIBLE, true)
 
     AnimatedVisibility(
-        visible = !seen && tutorialCompleted,
+        visible = visible,
         enter = fadeIn(),
         exit = fadeOut(),
         modifier = Modifier.matchParentSize(),

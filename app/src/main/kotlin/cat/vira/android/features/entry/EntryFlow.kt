@@ -3,6 +3,7 @@ package cat.vira.android.features.entry
 import androidx.activity.compose.BackHandler
 import cat.vira.android.core.design.tokens.ViraColor
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.runtime.setValue
@@ -220,8 +221,9 @@ fun EntryFlow(
                     ) {
                         if (!lineOnStage && nav.showsProgress && shown == nav.step) {
                             val position = nav.progressPosition
-                            // TalkBack ja el té a la capçalera, amb la frase sencera.
-                            EntryProgressCount(position.position, position.total, Modifier.clearAndSetSemantics { })
+                            // A lletra gran la càpsula de la capçalera no hi és: aquí TalkBack diu la frase sencera.
+                            val progress = stringResource(R.string.onboarding_progress, position.position, position.total)
+                            EntryProgressCount(position.position, position.total, Modifier.clearAndSetSemantics { contentDescription = progress })
                         }
                         val shownLine = nav.viriLineFor(shown)?.let { stringResource(it) }
                         if (!lineOnStage && shownLine != null) EntryViriLine(shownLine)

@@ -105,8 +105,9 @@ fun ViraTutorialBadge(number: Int, side: Dp, scales: Boolean, modifier: Modifier
 /// «Toca aquí» a sobre d'una peça que es pot tocar (la pestanya o el cercle de «Prova-ho»): una
 /// anella que batega cap enfora, la píndola i el toc. La pestanya batega poc; el cercle, més.
 /// Amb Reduir moviment, cap batec. Per a TalkBack no hi és: la targeta ja té «Següent».
+/// `quiet`: només el toc, sense batec ni píndola (el cercle ja tocat, per desfer-lo).
 @Composable
-fun ViraTutorialTapHint(rect: Rect, width: Dp, isCircle: Boolean, onTap: () -> Unit) {
+fun ViraTutorialTapHint(rect: Rect, width: Dp, isCircle: Boolean, quiet: Boolean = false, onTap: () -> Unit) {
     val environment = LocalViraEnvironment.current
     val density = LocalDensity.current
     val ring = ViraColor.lightArtworkVeil
@@ -122,6 +123,7 @@ fun ViraTutorialTapHint(rect: Rect, width: Dp, isCircle: Boolean, onTap: () -> U
             .clearAndSetSemantics { }
             .pointerInput(onTap) { detectTapGestures { onTap() } },
     )
+    if (quiet) return
     if (!environment.reduceMotion) {
         val transition = rememberInfiniteTransition(label = "tutorialPulse")
         // Un batec cap enfora i torna de cop: és una crida, no una respiració.
