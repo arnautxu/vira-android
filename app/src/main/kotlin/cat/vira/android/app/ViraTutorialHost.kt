@@ -51,8 +51,11 @@ class ViraTutorialState internal constructor(
         get() = saved.value?.getOrNull(1)?.split(",")?.map(ViraTutorialStep::valueOf)?.let(::ViraTutorialRoute)
             ?: ViraTutorialRoute.FIRST
 
-    /// La pestanya d'on s'ha obert una parada sola, per tornar-hi.
-    private val origin: ViraTab? get() = saved.value?.getOrNull(2)?.let(ViraTab::valueOf)
+    /// La pestanya d'on s'ha obert una parada sola, i la cara de Pla i d'Emocions que hi havia,
+    /// per tornar exactament on era (l'estat buit d'Hàbits o de l'historial).
+    private val origin: ViraTab? get() = saved.value?.getOrNull(2)?.takeIf { it.isNotEmpty() }?.let(ViraTab::valueOf)
+    private val originPlan: PlanSection? get() = saved.value?.getOrNull(3)?.let(PlanSection::valueOf)
+    private val originEmotions: EmotionsSection? get() = saved.value?.getOrNull(4)?.let(EmotionsSection::valueOf)
 
     /// L'última parada que s'ha ensenyat, per dibuixar-la mentre la cortina es fon.
     var lastStep: ViraTutorialStep? = null
@@ -76,7 +79,10 @@ class ViraTutorialState internal constructor(
     fun showStop(stop: ViraTutorialStep) {
         if (step != null) return
         targets.startTracking()
+        val plan = navigator.planSection
+        val emotions = navigator.emotionsSection
         show(stop, ViraTutorialRoute(listOf(stop)), origin = navigator.selectedTab)
+        saved.value = saved.value.orEmpty() + listOf(plan.name, emotions.name)
     }
 
     fun tryIt() {
@@ -105,9 +111,15 @@ class ViraTutorialState internal constructor(
         if (step == null) return
         val single = route.stops.size == 1
         val back = origin
+        val plan = originPlan
+        val emotions = originEmotions
         preferences.edit().putBoolean(ViraPreferences.TUTORIAL_COMPLETED, true).apply()
         saved.value = null
         targets.stopTracking()
+        if (single) {
+            plan?.let { navigator.planSection = it }
+            emotions?.let { navigator.emotionsSection = it }
+        }
         navigator.open(if (single) back ?: ViraTab.Today else ViraTab.Today)
     }
 
@@ -115,7 +127,7 @@ class ViraTutorialState internal constructor(
     /// explica: Organització pel calendari (on és el «+»), Emocions per les cares i Viri per l'arrel.
     private fun show(step: ViraTutorialStep, route: ViraTutorialRoute, origin: ViraTab?) {
         lastStep = step
-        saved.value = listOfNotNull(step.name, route.stops.joinToString(",") { it.name }, origin?.name)
+        saved.value = listOf(step.name, route.stops.joinToString(",") { it.name }, origin?.name.orEmpty())
         when (step.screen) {
             ViraTab.Plan -> navigator.navigate(ViraDestination.Plan(PlanSection.Calendar))
             ViraTab.Emotions -> navigator.navigate(ViraDestination.Emotions(EmotionsSection.CheckIn))
@@ -142,6 +154,9 @@ fun rememberViraTutorial(navigator: ViraNavigator): ViraTutorialState {
         val isFirst = firstLook.value
         firstLook.value = false
         if (completed || state.step != null) {
+            // Un tomb restaurat després que Android recreï l'activitat: el registre és nou i cal
+            // tornar a seguir les peces, o la cortina quedaria sense forats ni «Prova-ho».
+            if (state.step != null) state.targets.startTracking()
             state.checking = false
             return@LaunchedEffect
         }
