@@ -11,7 +11,9 @@ import cat.vira.android.app.processCompletionQueue
 import cat.vira.android.core.backend.ViraBackend
 import cat.vira.android.core.backend.sync.ViraSyncWorker
 import cat.vira.android.core.data.ViraDatabase
+import cat.vira.android.core.data.ViraPreferences
 import cat.vira.android.core.data.ViraStore
+import cat.vira.android.core.notifications.ViraAbsence
 import cat.vira.android.core.notifications.ViraNotificationChannel
 import cat.vira.android.core.notifications.ViraNotificationEffects
 import cat.vira.android.core.notifications.ViraNotificationHost
@@ -19,6 +21,7 @@ import cat.vira.android.core.notifications.ViraNotificationWorker
 import cat.vira.android.core.notifications.ViraNotifications
 import cat.vira.android.features.emotions.ViraEmotionCheckIn
 import cat.vira.android.features.plan.PlanNotificationEffects
+import cat.vira.android.features.settings.ViraSimpleSettings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -69,6 +72,10 @@ class ViraApp : Application(), ViraNotificationHost {
         ViraNotificationChannel.register(this)
         ViraNotificationWorker.schedule(this)
         ViraNotifications.watch(this, backend.db)
+        // Ajustos més simples: el que ja no es pot triar torna al seu valor a cada arrencada.
+        ProcessLifecycleOwner.get().lifecycleScope.launch(Dispatchers.Default) {
+            ViraSimpleSettings.apply(ViraPreferences.open(this@ViraApp), backend.db)
+        }
     }
 
     /// En tornar a primer pla, una passada; mentre s'hi està, una cada cinc minuts.
@@ -77,6 +84,8 @@ class ViraApp : Application(), ViraNotificationHost {
 
         override fun onStart(owner: LifecycleOwner) {
             loop = owner.lifecycleScope.launch(Dispatchers.Default) { backend.syncWhileVisible() }
+            // Abans de refer cap finestra d'avisos: torna a començar el compte de l'absència.
+            ViraAbsence.noteOpened(ViraPreferences.open(this@ViraApp))
             // Cada tornada a primer pla torna a fer la finestra d'avisos, com a l'iPhone.
             owner.lifecycleScope.launch(Dispatchers.Default) { ViraNotifications.reschedule(this@ViraApp) }
         }

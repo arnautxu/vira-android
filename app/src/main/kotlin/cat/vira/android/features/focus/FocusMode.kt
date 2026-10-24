@@ -66,8 +66,9 @@ data class FocusMode(
 
         /// Els tres modes de `USER_FLOWS.md` F16, en el seu ordre. Es conserven sempre.
         fun builtIns(): List<FocusMode> = listOf(
+            // 10 de sortida (iPhone, 2026-10-22, punts de fricció): abans 15/25/45 amb 25.
             builtIn(FocusKind.FOCUS, R.string.focus_pomodoro_title, FocusPictogram.VIRI_FOCUSED,
-                listOf(15, 25, 45), 5..60, 25),
+                listOf(10, 25, 45), 5..60, 10),
             builtIn(FocusKind.SHORT_BREAK, R.string.focus_kind_short_break, FocusPictogram.VIRI_CHILL,
                 listOf(5, 10), 5..30, 5),
             builtIn(FocusKind.LONG_BREAK, R.string.focus_kind_long_break, FocusPictogram.VIRI_MEDITATING,

@@ -11,30 +11,13 @@ import org.junit.Test
 class SettingsLogicTest {
 
     @Test
-    fun elsAvisosNoCompténCategoriesSiElMestreEstaApagat() {
-        val on = SettingsTally()
-        assertEquals(SettingsTally.Count(5, 5), on.count(SettingsCategory.NOTIFICATIONS))
-        val off = SettingsTally(reminders = false)
-        // Només queden els missatges de Viri, que van a part.
-        assertEquals(SettingsTally.Count(1, 5), off.count(SettingsCategory.NOTIFICATIONS))
-    }
-
-    @Test
-    fun lAppIMotivacioCompténElsSeusInterruptors() {
-        val tally = SettingsTally(mindfulnessModule = false, shopVisible = false, challenges = false)
+    fun avisosDiuSiEsEncesINomesLAppCompta() {
+        assertNull("un sol interruptor: no es compta", SettingsTally().count(SettingsCategory.NOTIFICATIONS))
+        val tally = SettingsTally(mindfulnessModule = false)
         assertEquals(SettingsTally.Count(2, 3), tally.count(SettingsCategory.APP))
-        assertEquals(SettingsTally.Count(2, 4), tally.count(SettingsCategory.MOTIVATION))
         assertNull(tally.count(SettingsCategory.PRIVACY))
         assertNull(tally.count(SettingsCategory.ACCOUNT))
-    }
-
-    @Test
-    fun laCercaNoDistingeixMajusculesNiAccents() {
-        val keywords = "notificacions, avisos, recordatoris, hàbits"
-        assertTrue(SettingsCategory.matches("HABITS", keywords))
-        assertTrue(SettingsCategory.matches("  notificacio ", keywords))
-        assertFalse(SettingsCategory.matches("botiga", keywords))
-        assertFalse(SettingsCategory.matches("   ", keywords))
+        assertEquals(listOf(SettingsCategory.NOTIFICATIONS, SettingsCategory.APP, SettingsCategory.PRIVACY), SettingsCategory.families)
     }
 
     @Test

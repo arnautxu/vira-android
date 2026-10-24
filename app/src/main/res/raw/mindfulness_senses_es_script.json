@@ -1,60 +1,60 @@
 {
  "id": "senses",
  "language": "es",
- "duration": 161.5,
+ "duration": 164.18,
  "steps": 5,
  "segments": [
   {
    "start": 0.6,
-   "end": 5.38,
+   "end": 5.63,
    "kind": "line",
    "step": null,
    "stepTitle": null,
    "text": "mindfulness.senses.line1"
   },
   {
-   "start": 5.38,
-   "end": 38.92,
+   "start": 5.63,
+   "end": 39.49,
    "kind": "line",
    "step": 0,
    "stepTitle": "mindfulness.senses.step1",
    "text": "mindfulness.senses.line2"
   },
   {
-   "start": 38.92,
-   "end": 74.68,
+   "start": 39.49,
+   "end": 75.38,
    "kind": "line",
    "step": 1,
    "stepTitle": "mindfulness.senses.step2",
    "text": "mindfulness.senses.line3"
   },
   {
-   "start": 74.68,
-   "end": 106.32,
+   "start": 75.38,
+   "end": 107.1,
    "kind": "line",
    "step": 2,
    "stepTitle": "mindfulness.senses.step3",
    "text": "mindfulness.senses.line4"
   },
   {
-   "start": 106.32,
-   "end": 134.32,
+   "start": 107.1,
+   "end": 135.28,
    "kind": "line",
    "step": 3,
    "stepTitle": "mindfulness.senses.step4",
    "text": "mindfulness.senses.line5"
   },
   {
-   "start": 134.32,
-   "end": 158.26,
+   "start": 135.28,
+   "end": 159.35,
    "kind": "line",
    "step": 4,
    "stepTitle": "mindfulness.senses.step5",
    "text": "mindfulness.senses.line6"
   },
   {
-   "start": 158.26,
-   "end": 161.41,
+   "start": 159.35,
+   "end": 164.18,
    "kind": "line",
    "step": 4,
    "stepTitle": "mindfulness.senses.step5",

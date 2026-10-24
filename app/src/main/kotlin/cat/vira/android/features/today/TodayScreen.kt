@@ -22,6 +22,7 @@ import cat.vira.android.app.ViraDestination
 import cat.vira.android.app.ViraFocusLink
 import cat.vira.android.app.rememberPreference
 import cat.vira.android.core.data.ViraStore
+import cat.vira.android.core.data.model.Habit
 import cat.vira.android.core.data.model.IntakeStatus
 import cat.vira.android.core.data.model.PlanItem
 import cat.vira.android.core.design.components.LocalActiveCompletion
@@ -42,7 +43,6 @@ import java.time.ZoneId
 internal object TodayKeys {
     const val HABITS_MODULE = "settings.moduleHabitsEnabled"
     const val MEDICATION_MODULE = "settings.moduleMedicationEnabled"
-    const val VIRI_EXPANDED = "settings.todayViriExpanded"
     const val TOMORROW_EXPANDED = "settings.todayTomorrowExpanded"
 }
 
@@ -73,7 +73,6 @@ fun TodayScreen() {
 
     val habitsEnabled by rememberPreference(prefs, TodayKeys.HABITS_MODULE, true)
     val medicationEnabled by rememberPreference(prefs, TodayKeys.MEDICATION_MODULE, true)
-    val viriExpanded by rememberPreference(prefs, TodayKeys.VIRI_EXPANDED, false)
     val tomorrowExpanded by rememberPreference(prefs, TodayKeys.TOMORROW_EXPANDED, false)
     val calendarEnabled by rememberPreference(prefs, TodayCalendar.ENABLED_KEY, false)
 
@@ -105,6 +104,14 @@ fun TodayScreen() {
     var moved by remember { mutableStateOf<PlanItem?>(null) }
     var captureTomorrow by remember { mutableStateOf<Boolean?>(null) }
     var editing by remember { mutableStateOf<PlanItem?>(null) }
+    var suggestedHabit by remember { mutableStateOf<Habit?>(null) }
+    // «Desfer» es queda uns segons i se'n va sol, com el de marcar una cosa feta.
+    LaunchedEffect(suggestedHabit?.id) {
+        if (suggestedHabit != null) {
+            delay(TodayHabitSuggestion.UNDO_MILLIS)
+            suggestedHabit = null
+        }
+    }
 
     val data = TodayData(
         now = now,
@@ -168,7 +175,17 @@ fun TodayScreen() {
         onOpenCalendar = { navigator.navigate(ViraDestination.Plan(PlanSection.Calendar)) },
         onOpenHabits = { navigator.navigate(ViraDestination.Plan(PlanSection.Habits)) },
         onOpenCheckIn = { navigator.navigate(ViraDestination.Emotions(EmotionsSection.CheckIn)) },
-        onViriExpandedChange = { prefs.edit { putBoolean(TodayKeys.VIRI_EXPANDED, it) } },
+        // Pel camí de sempre (`PlanActions.save`), sense recordatori; crear no dona res.
+        onSuggestHabit = { suggestion, title ->
+            val habit = suggestion.habit(title)
+            planActions.save(habit, isNew = true)
+            suggestedHabit = habit
+        },
+        // Com el «Desfer» d'«Afegir»: s'arxiva, que és el que treu un hàbit de tota l'app.
+        onUndoSuggestedHabit = {
+            suggestedHabit?.let(planActions::archive)
+            suggestedHabit = null
+        },
         onTomorrowExpandedChange = { prefs.edit { putBoolean(TodayKeys.TOMORROW_EXPANDED, it) } },
     )
 
@@ -176,8 +193,8 @@ fun TodayScreen() {
         data = data,
         completion = TodayCompletion(active, undoCompletion),
         callbacks = callbacks,
-        isViriExpanded = viriExpanded,
         isTomorrowExpanded = tomorrowExpanded,
+        suggestedHabit = suggestedHabit,
     )
 
     captureTomorrow?.let { forTomorrow ->

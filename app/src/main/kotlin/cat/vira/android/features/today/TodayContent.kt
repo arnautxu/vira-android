@@ -36,20 +36,23 @@ internal class TodayCallbacks(
     val onOpenCalendar: () -> Unit = {},
     val onOpenHabits: () -> Unit = {},
     val onOpenCheckIn: () -> Unit = {},
-    val onViriExpandedChange: (Boolean) -> Unit = {},
+    /// Crea un hàbit d'una idea de la fila buida (`TodayHabitSuggestions`); el títol ja és traduït.
+    val onSuggestHabit: (TodayHabitSuggestion, String) -> Unit = { _, _ -> },
+    val onUndoSuggestedHabit: () -> Unit = {},
     val onTomorrowExpandedChange: (Boolean) -> Unit = {},
 )
 
-/// Inici sense estat (`TodayView`): Viri a dalt, que diu què toca; després el dia, els hàbits i el
+/// Inici sense estat (`TodayView`): Viri a sobre del dia, que diu què toca; després el dia, els hàbits i el
 /// check-in; i al vespre, què hi ha demà. La capçalera fixa (`ViraTopBar`) és de l'arrel.
 @Composable
 internal fun TodayContent(
     data: TodayData,
     completion: TodayCompletion,
     callbacks: TodayCallbacks,
-    isViriExpanded: Boolean,
     isTomorrowExpanded: Boolean,
     modifier: Modifier = Modifier,
+    /// L'hàbit creat des d'una idea, mentre s'ofereix «Desfer».
+    suggestedHabit: Habit? = null,
 ) {
     // Quantes vegades s'ha tocat «Una altra cosa», i «Avui em costa»: Viri baixa el ritme.
     var skips by rememberSaveable { mutableIntStateOf(0) }
@@ -78,24 +81,22 @@ internal fun TodayContent(
             .padding(horizontal = ViraSpacing.screenMargin),
         verticalArrangement = Arrangement.spacedBy(ViraSpacing.sectionGap),
     ) {
-        TodayViriCard(
-            moment = moment,
-            isExpanded = isViriExpanded,
-            onExpandedChange = callbacks.onViriExpandedChange,
-            modifier = Modifier.padding(top = ViraSpacing.xs),
-        )
-        AgendaModule(
-            // Mentre dura el «Desfer», la fila marcada es queda al seu lloc: el missatge s'ha de
-            // poder llegir quiet (`Agenda.ordered(holding:)`).
-            entries = data.agenda.ordered(holding = completion.activeId, now = data.now),
-            completion = completion,
-            zone = data.zone,
-            onToggle = callbacks.onToggle,
-            onEdit = callbacks.onEdit,
-            onDelete = callbacks.onDelete,
-            onAdd = { callbacks.onCapture(false) },
-            onOpenCalendar = callbacks.onOpenCalendar,
-        )
+        // Viri a sobre del dia, com a assistent (Arnau, 2026-10-22).
+        Column(Modifier.padding(top = ViraSpacing.xs), verticalArrangement = Arrangement.spacedBy(ViraSpacing.s)) {
+            TodayViriPill(moment = moment, status = todayViriStatus(data))
+            AgendaModule(
+                // Mentre dura el «Desfer», la fila marcada es queda al seu lloc: el missatge s'ha de
+                // poder llegir quiet (`Agenda.ordered(holding:)`).
+                entries = data.agenda.ordered(holding = completion.activeId, now = data.now),
+                completion = completion,
+                zone = data.zone,
+                onToggle = callbacks.onToggle,
+                onEdit = callbacks.onEdit,
+                onDelete = callbacks.onDelete,
+                onAdd = { callbacks.onCapture(false) },
+                onOpenCalendar = callbacks.onOpenCalendar,
+            )
+        }
         // Els hàbits no tenen hora i no han de competir amb una agenda.
         if (data.habitsEnabled) {
             TodayHabitsStrip(
@@ -105,7 +106,10 @@ internal fun TodayContent(
                 habitCompletionId = data::habitCompletionId,
                 onToggle = callbacks.onToggleHabit,
                 onOpenHabits = callbacks.onOpenHabits,
+                // Les idees només surten quan no hi ha cap hàbit enlloc.
+                onSuggest = callbacks.onSuggestHabit.takeIf { data.habits.none { !it.isArchived } },
             )
+            suggestedHabit?.let { TodayAddedHabitRow(it, callbacks.onUndoSuggestedHabit) }
         }
         // Només «Com estàs?» (Arnau, 2026-10-09): la resta de dreceres ja són a un toc.
         TodayCheckInRow(onClick = callbacks.onOpenCheckIn)

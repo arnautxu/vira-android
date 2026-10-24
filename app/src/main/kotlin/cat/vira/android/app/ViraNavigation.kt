@@ -29,6 +29,8 @@ sealed interface ViraDestination {
     data object Challenges : ViraDestination
     data object Friends : ViraDestination
     data object Streak : ViraDestination
+    /// La Botiga, des del panell de les monedes de la capçalera.
+    data object Shop : ViraDestination
 }
 
 /// La tasca a què es lliga una sessió de Concentra't oberta des d'una fila (`FocusStartRequest`
@@ -94,6 +96,7 @@ class ViraNavigator internal constructor(
             ViraDestination.Challenges -> showProgress(ProgressDestination.Challenges)
             ViraDestination.Friends -> showProgress(ProgressDestination.Friends)
             ViraDestination.Streak -> showProgress(ProgressDestination.Streak)
+            ViraDestination.Shop -> showProgress(ProgressDestination.Shop)
         }
     }
 

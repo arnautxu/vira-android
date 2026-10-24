@@ -1,6 +1,23 @@
 package cat.vira.android.features.today
 
+import androidx.compose.ui.graphics.vector.ImageVector
 import cat.vira.android.core.data.model.PlanItem
+
+/// El que diu Viri en un moment concret, i què es pot fer des d'allà (`TodayViriMoment`). El
+/// dibuixa `TodayViriPill`, a sobre de «El teu dia».
+internal data class TodayViriMomentUi(
+    /// Canvia quan canvia el missatge, perquè l'entrada s'animi només llavors.
+    val id: String,
+    val scene: String,
+    val title: String,
+    val message: String,
+    val actions: List<Action> = emptyList(),
+    /// Viri proposa alguna cosa que la llista no fa (passar a demà, desfer-ho): la píndola s'obre
+    /// sola. La resta es queda plegada fins que la toques.
+    val proposes: Boolean = false,
+) {
+    data class Action(val title: String, val icon: ImageVector? = null, val run: () -> Unit)
+}
 
 /// Què diu Viri a dalt d'Avui, decidit sense pantalla (`TodayView+Viri.swift`). Quatre moments,
 /// per aquest ordre:

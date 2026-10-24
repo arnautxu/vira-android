@@ -131,4 +131,18 @@ class AgendaTest {
         val medication = Medication(name = "Elvanse", timesInMinutes = listOf(9 * 60), weekdays = listOf(1))
         assertTrue(agenda(emptyList(), listOf(medication)).isEmpty)
     }
+
+    @Test
+    fun unEsdevenimentQueEsLaMateixaTascaNoSurtDuesVegades() {
+        // El que passa en enviar una tasca al calendari: torna com a esdeveniment.
+        val result = agenda(listOf(item("Agafar cartera", hour = 7)), events = listOf(event(" agafar CARTERA ", 7), event("Institut", 8)))
+        assertEquals(listOf("Agafar cartera", "Institut"), result.entries.map { it.title })
+        assertTrue(result.entries.first().kind is AgendaEntry.Kind.Plan)
+    }
+
+    @Test
+    fun laClauIgnoraAccentsIMajusculesPeroNoLHora() {
+        assertEquals(Agenda.matchKey("Música", time(7)), Agenda.matchKey(" musica ", time(7)))
+        assertFalse(Agenda.matchKey("Música", time(7)) == Agenda.matchKey("Música", time(8)))
+    }
 }

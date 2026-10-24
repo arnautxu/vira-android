@@ -1,60 +1,60 @@
 {
  "id": "bodyScan",
  "language": "en",
- "duration": 166.6,
+ "duration": 169.16,
  "steps": 5,
  "segments": [
   {
    "start": 0.6,
-   "end": 8.55,
+   "end": 8.79,
    "kind": "line",
    "step": null,
    "stepTitle": null,
    "text": "mindfulness.bodyScan.line1"
   },
   {
-   "start": 8.55,
-   "end": 37.29,
+   "start": 8.79,
+   "end": 37.73,
    "kind": "line",
    "step": 0,
    "stepTitle": "mindfulness.bodyScan.step1",
    "text": "mindfulness.bodyScan.line2"
   },
   {
-   "start": 37.29,
-   "end": 66.82,
+   "start": 37.73,
+   "end": 67.47,
    "kind": "line",
    "step": 1,
    "stepTitle": "mindfulness.bodyScan.step2",
    "text": "mindfulness.bodyScan.line3"
   },
   {
-   "start": 66.82,
-   "end": 100.0,
+   "start": 67.47,
+   "end": 100.85,
    "kind": "line",
    "step": 2,
    "stepTitle": "mindfulness.bodyScan.step3",
    "text": "mindfulness.bodyScan.line4"
   },
   {
-   "start": 100.0,
-   "end": 128.87,
+   "start": 100.85,
+   "end": 129.77,
    "kind": "line",
    "step": 3,
    "stepTitle": "mindfulness.bodyScan.step4",
    "text": "mindfulness.bodyScan.line5"
   },
   {
-   "start": 128.87,
-   "end": 161.01,
+   "start": 129.77,
+   "end": 162.03,
    "kind": "line",
    "step": 4,
    "stepTitle": "mindfulness.bodyScan.step5",
    "text": "mindfulness.bodyScan.line6"
   },
   {
-   "start": 161.01,
-   "end": 166.51,
+   "start": 162.03,
+   "end": 169.16,
    "kind": "line",
    "step": 4,
    "stepTitle": "mindfulness.bodyScan.step5",

@@ -16,11 +16,8 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -38,12 +35,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import cat.vira.android.R
 import cat.vira.android.app.LocalViraBackend
 import cat.vira.android.core.data.model.FocusProfile
-import cat.vira.android.core.design.components.ViraEmptyState
 import cat.vira.android.core.design.components.ViraPageTitle
 import cat.vira.android.core.design.components.ViraPictogram
 import cat.vira.android.core.design.components.ViraTag
@@ -219,43 +214,13 @@ private fun SettingsBar(area: ViraArea, onBack: (() -> Unit)?, onDone: (() -> Un
 
 @Composable
 private fun SettingsHomePage(onClose: () -> Unit, onOpen: (SettingsCategory) -> Unit) {
-    var query by remember { mutableStateOf("") }
     val tally = rememberSettingsTally()
     SettingsPageScaffold(ViraArea.Today, onDone = onClose) {
         ViraPageTitle(stringResource(R.string.settings_title), ViraArea.Today)
-        SettingsSearchField(query) { query = it }
-        if (query.isBlank()) {
-            SettingsAccountCard(onOpenAccount = { onOpen(SettingsCategory.ACCOUNT) })
-            SettingsFamilies(tally, onOpen)
-            SettingsFooterRows(SettingsCategory.footer, onOpen)
-        } else {
-            SettingsSearchResults(query, onOpen)
-        }
+        SettingsAccountCard(onOpenAccount = { onOpen(SettingsCategory.ACCOUNT) })
+        SettingsFamilies(tally, onOpen)
+        SettingsFooterRows(SettingsCategory.footer, onOpen)
     }
-}
-
-@Composable
-private fun SettingsSearchField(query: String, onChange: (String) -> Unit) {
-    val prompt = stringResource(R.string.settings_search_prompt)
-    OutlinedTextField(
-        value = query,
-        onValueChange = onChange,
-        placeholder = { Text(prompt, style = ViraFont.body, color = ViraColor.textSecondary) },
-        singleLine = true,
-        textStyle = ViraFont.body,
-        shape = RoundedCornerShape(ViraRadius.m),
-        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedContainerColor = ViraColor.surfaceElevated,
-            unfocusedContainerColor = ViraColor.surfaceElevated,
-            focusedTextColor = ViraColor.textPrimary,
-            unfocusedTextColor = ViraColor.textPrimary,
-            focusedBorderColor = ViraColor.accent(ViraArea.Today),
-            unfocusedBorderColor = ViraColor.separator,
-            cursorColor = ViraColor.accent(ViraArea.Today),
-        ),
-        modifier = Modifier.fillMaxWidth(),
-    )
 }
 
 @Composable
@@ -283,7 +248,7 @@ private fun SettingsFamilies(tally: SettingsTally, onOpen: (SettingsCategory) ->
     }
 }
 
-/// Sobre Vira, i els resultats de la cerca: files blanques, no fitxes de color.
+/// Sobre Vira: files blanques, no fitxes de color.
 @Composable
 private fun SettingsFooterRows(items: List<SettingsCategory>, onOpen: (SettingsCategory) -> Unit) {
     Column(Modifier.fillMaxWidth().background(ViraColor.surfaceElevated, RoundedCornerShape(ViraRadius.l))) {
@@ -317,16 +282,6 @@ private fun SettingsFooterRows(items: List<SettingsCategory>, onOpen: (SettingsC
     }
 }
 
-@Composable
-private fun SettingsSearchResults(query: String, onOpen: (SettingsCategory) -> Unit) {
-    val matches = SettingsCategory.entries.filter { SettingsCategory.matches(query, it.searchKeywords()) }
-    if (matches.isEmpty()) {
-        ViraEmptyState(title = stringResource(R.string.settings_search_empty), message = query.trim())
-    } else {
-        SettingsFooterRows(matches, onOpen)
-    }
-}
-
 /// El contingut d'una família (`SettingsCategoryView`): un repartidor de les seccions que ja
 /// existeixen, sense lògica pròpia.
 @Composable
@@ -340,7 +295,9 @@ fun SettingsCategoryPage(
     val tally = rememberSettingsTally()
     SettingsPageScaffold(category.area, onBack = onBack) {
         ViraPageTitle(stringResource(category.title), category.area)
-        if (category in SettingsCategory.families || category == SettingsCategory.ACCOUNT) {
+        // Avisos no en porta: amb un sol interruptor, una barra de «quants n'hi ha d'encesos» no
+        // diria res (Arnau, 2026-10-23).
+        if (category != SettingsCategory.NOTIFICATIONS && category != SettingsCategory.ABOUT) {
             SettingsCategoryHero(category, tally)
         }
         when (category) {
@@ -352,12 +309,13 @@ fun SettingsCategoryPage(
                 SettingsSessionSection(onFinished = onErased)
             }
             SettingsCategory.NOTIFICATIONS -> SettingsNotificationsSection()
-            // L'aparença és a la portada, a la targeta del compte.
+            // L'aparença és a la portada, a la targeta del compte. El so i la vibració hi han
+            // arribat des de «Com et vull motivar» (Arnau, 2026-10-23).
             SettingsCategory.APP -> {
                 SettingsModulesSection()
+                SettingsSoundsSection()
                 SettingsFocusModesSection(onOpenFocusModes)
             }
-            SettingsCategory.MOTIVATION -> SettingsMotivationSection()
             SettingsCategory.PRIVACY -> {
                 SettingsPrivacySection()
                 SettingsDataSection(onErased)

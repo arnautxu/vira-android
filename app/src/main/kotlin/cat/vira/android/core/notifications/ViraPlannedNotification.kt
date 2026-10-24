@@ -47,6 +47,8 @@ enum class ViraActionSet {
     PLAN,
     /// L'avís del vespre de Viri **i** el del registre emocional: emocions de resposta ràpida.
     VIRI,
+    /// «El teu dia», al matí: sense botons, un toc obre Inici.
+    DAY,
 }
 
 /// Un canal per categoria, les cinc de `USER_FLOWS.md` F24 (CLAUDE.md d'Android).

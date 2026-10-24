@@ -11,7 +11,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.stringResource
 import androidx.core.app.NotificationManagerCompat
@@ -23,29 +25,26 @@ import cat.vira.android.core.notifications.ViraNotifications
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-/// Recordatoris i missatges de Viri (`USER_FLOWS.md` F24, `SettingsNotificationsSection`).
+/// Avisos: un sol interruptor i, per a qui en té, la medicació (`SettingsNotificationsSection`,
+/// Arnau, 2026-10-23: «les notis hauria de ser un toggle només» i «no vull que es pugui
+/// personalitzar, només lo de medicació»).
 ///
-/// **Recordatoris** és el mestre, i per sota hi ha Hàbits, Medicació, Tasques del pla i Registre
-/// emocional —aquest amb hora pròpia, perquè no surt de cap pauta de l'usuari—. **Missatges de
-/// Viri** va a part: és gamificació, i tota la gamificació s'ha de poder apagar sense perdre res més.
-///
-/// Aquí es desen les preferències, amb els noms de l'iPhone, i cada canvi demana a
-/// `ViraNotifications` que torni a programar els avisos.
+/// - **«Avisos»** (`remindersEnabled`) ho porta tot menys la medicació: el matí, hàbits, tasques,
+///   l'emocional i Viri. Les hores les posa Vira (el matí a les 8:00, el vespre après amb
+///   `ViraEveningHour`), i les categories i el detall ja no es trien (`ViraSimpleSettings`).
+/// - **Medicació**, a part i només si en tens: el seu interruptor no penja d'«Avisos» —qui ho apaga
+///   tot continua tenint les preses— i el nom del fàrmac segueix apagat de fàbrica
+///   (`PRIVACY_AND_SAFETY.md` §4.6).
 @Composable
 fun SettingsNotificationsSection() {
-    var reminders by rememberBooleanPreference(ViraPreferences.REMINDERS_ENABLED, true)
-    var habits by rememberBooleanPreference(SettingsKeys.REMINDERS_HABITS, true)
+    val backend = LocalSettingsBackend.current
+    val preferences = LocalSettingsPreferences.current
+    var notifications by rememberBooleanPreference(ViraPreferences.REMINDERS_ENABLED, true)
+    val medicationModule by rememberBooleanPreference(SettingsKeys.MODULE_MEDICATION, true)
     var medication by rememberBooleanPreference(SettingsKeys.REMINDERS_MEDICATION, true)
-    var plan by rememberBooleanPreference(SettingsKeys.REMINDERS_PLAN, true)
-    var emotion by rememberBooleanPreference(SettingsKeys.REMINDERS_EMOTION, true)
-    var emotionHour by rememberIntPreference(SettingsKeys.EMOTION_REMINDER_HOUR, SettingsKeys.EMOTION_DEFAULT_HOUR)
-    var emotionMinute by rememberIntPreference(SettingsKeys.EMOTION_REMINDER_MINUTE, SettingsKeys.EMOTION_DEFAULT_MINUTE)
-    var detail by rememberBooleanPreference(ViraPreferences.NOTIFICATION_DETAIL_ENABLED, true)
     // El fàrmac va a part i neix apagat: no pot penjar del mateix interruptor que l'hàbit.
     var medicationDetail by rememberBooleanPreference(SettingsKeys.NOTIFICATION_DETAIL_MEDICATION, false)
-    var viri by rememberBooleanPreference(SettingsKeys.VIRI_MESSAGES, true)
-    var viriHour by rememberIntPreference(SettingsKeys.VIRI_MESSAGE_HOUR, SettingsKeys.VIRI_DEFAULT_HOUR)
-    var viriMinute by rememberIntPreference(SettingsKeys.VIRI_MESSAGE_MINUTE, SettingsKeys.VIRI_DEFAULT_MINUTE)
+    val hasMedications by backend.hasMedications.collectAsStateOr(false)
 
     val context = LocalContext.current
     val isPreview = LocalInspectionMode.current
@@ -58,48 +57,43 @@ fun SettingsNotificationsSection() {
         }
     }
     // Un cop denegat el permís, Android ja no torna a preguntar. Callar deixaria un interruptor
-    // encès que no farà mai res. Només compta el que hi ha en aquesta secció.
-    val isDenied = remember(revision, reminders, viri) {
-        !isPreview && (reminders || viri) && !notificationsAllowed(context)
+    // encès que no farà mai res.
+    val isDenied = remember(revision, notifications, medication) {
+        !isPreview && (notifications || medication) && !notificationsAllowed(context)
     }
     // Qualsevol canvi d'aquí (o un permís que acaba d'arribar) canvia què s'ha de recordar.
-    LaunchedEffect(
-        revision, reminders, habits, medication, plan, emotion, emotionHour, emotionMinute,
-        detail, medicationDetail, viri, viriHour, viriMinute,
-    ) {
+    LaunchedEffect(revision, notifications, medication, medicationDetail) {
         if (!isPreview) withContext(Dispatchers.Default) { ViraNotifications.reschedule(context.applicationContext) }
     }
 
-    SettingsGroup(header = stringResource(R.string.settings_notifications_section)) {
+    SettingsGroup(
+        footer = stringResource(
+            if (notifications) R.string.settings_notifications_master_footer else R.string.settings_notifications_master_off,
+        ),
+    ) {
         row {
-            SettingsToggleRow(stringResource(R.string.settings_notifications_reminders), reminders, {
-                reminders = it
-                if (it) askIfNeeded()
-            })
+            SettingsToggleRow(
+                stringResource(R.string.settings_notifications_master), notifications, {
+                    // Escriu també els missatges de Viri: així no poden quedar desaparellats.
+                    ViraSimpleSettings.setNotifications(preferences, it)
+                    notifications = it
+                    if (it) askIfNeeded()
+                },
+                pictogram = R.drawable.picto_set_notifications,
+            )
         }
     }
 
-    if (reminders) {
-        SettingsGroup(header = stringResource(R.string.settings_notifications_categories)) {
-            row { SettingsToggleRow(stringResource(R.string.settings_notifications_category_habits), habits, { habits = it }, pictogram = R.drawable.picto_habits) }
-            row { SettingsToggleRow(stringResource(R.string.settings_notifications_category_medication), medication, { medication = it }, pictogram = R.drawable.picto_medication) }
-            row { SettingsToggleRow(stringResource(R.string.settings_notifications_category_plan), plan, { plan = it }, pictogram = R.drawable.picto_plan_check) }
-            row { SettingsToggleRow(stringResource(R.string.settings_notifications_category_emotion), emotion, { emotion = it }, pictogram = R.drawable.picto_journal) }
-            if (emotion) {
-                row {
-                    SettingsTimeRow(stringResource(R.string.settings_notifications_emotion_time), emotionHour, emotionMinute) { hour, minute ->
-                        emotionHour = hour
-                        emotionMinute = minute
-                    }
-                }
-            }
-        }
-
-        SettingsGroup(header = stringResource(R.string.settings_notifications_details)) {
+    if (medicationModule && hasMedications) {
+        SettingsGroup(header = stringResource(R.string.settings_notifications_category_medication)) {
             row {
                 SettingsToggleRow(
-                    stringResource(R.string.settings_notifications_detail), detail, { detail = it },
-                    hint = stringResource(R.string.settings_notifications_detail_hint),
+                    stringResource(R.string.settings_notifications_medication), medication, {
+                        medication = it
+                        if (it) askIfNeeded()
+                    },
+                    hint = stringResource(R.string.settings_notifications_medication_hint),
+                    pictogram = R.drawable.picto_medication,
                 )
             }
             if (medication) {
@@ -113,27 +107,32 @@ fun SettingsNotificationsSection() {
         }
     }
 
-    SettingsGroup {
+    if (isDenied) {
+        SettingsGroup {
+            row { SettingsBlockedRow(stringResource(R.string.habits_reminder_denied)) { openNotificationSettings(context) } }
+        }
+    }
+}
+
+/// So i vibració, en un sol interruptor (`SettingsSoundsSection`, Arnau, 2026-10-23). Venen de «Com
+/// et vull motivar», que ha sortit d'Ajustos: queda el que fa falta de debò —treure el so a classe—
+/// i va junt amb la vibració, perquè qui vol el telèfon callat també el vol quiet.
+@Composable
+fun SettingsSoundsSection() {
+    val preferences = LocalSettingsPreferences.current
+    var soundMode by rememberStringPreference(SettingsKeys.SOUND_MODE, ViraSoundMode.ALL.raw)
+    val haptics = LocalHapticFeedback.current
+    SettingsGroup(header = stringResource(R.string.settings_sounds)) {
         row {
             SettingsToggleRow(
-                stringResource(R.string.settings_notifications_viri), viri, {
-                    viri = it
-                    if (it) askIfNeeded()
+                stringResource(R.string.settings_sounds_haptics), ViraSoundMode.from(soundMode) != ViraSoundMode.OFF, { isOn ->
+                    ViraSimpleSettings.setSounds(preferences, isOn)
+                    soundMode = (if (isOn) ViraSoundMode.ALL else ViraSoundMode.OFF).raw
+                    // Un interruptor de so que no es nota en tocar-lo no es pot comprovar.
+                    if (isOn) haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                 },
-                hint = stringResource(R.string.settings_notifications_viri_hint),
-                pictogram = R.drawable.viri_entry_waving,
+                hint = stringResource(R.string.settings_sounds_hint),
             )
-        }
-        if (viri) {
-            row {
-                SettingsTimeRow(stringResource(R.string.settings_notifications_viri_time), viriHour, viriMinute) { hour, minute ->
-                    viriHour = hour
-                    viriMinute = minute
-                }
-            }
-        }
-        if (isDenied) {
-            row { SettingsBlockedRow(stringResource(R.string.habits_reminder_denied)) { openNotificationSettings(context) } }
         }
     }
 }

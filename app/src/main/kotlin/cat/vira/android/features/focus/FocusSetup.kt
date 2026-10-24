@@ -1,5 +1,8 @@
 package cat.vira.android.features.focus
 
+import cat.vira.android.core.data.ViraRewards
+import cat.vira.android.core.design.components.ViraPictogram
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -42,7 +45,7 @@ import java.util.UUID
 /// ancorades a baix**. L'aire que queda entre el medalló i el panell és intencionat: el fons
 /// il·lustrat el converteix en atmosfera.
 ///
-/// Dos tocs des d'Avui fins a «en marxa»: la pantalla s'obre amb els valors per defecte (25 min) i
+/// Dos tocs des d'Avui fins a «en marxa»: la pantalla s'obre amb els valors per defecte (10 min) i
 /// «Comença» ho arrenca.
 @Composable
 fun FocusSetupContent(
@@ -57,6 +60,8 @@ fun FocusSetupContent(
     onSelectTask: (PlanItem?) -> Unit,
     onStart: () -> Unit,
     modifier: Modifier = Modifier,
+    /// Les monedes que donarà la sessió (`FocusRewardLine`), o `null` si avui ja no en dona.
+    rewardCoins: Int? = null,
 ) {
     val accessibilitySize = LocalViraEnvironment.current.isAccessibilitySize
     BoxWithConstraints(modifier) {
@@ -92,6 +97,7 @@ fun FocusSetupContent(
                     tasks = tasks,
                     linkedItemID = linkedItemID,
                     notificationsDenied = notificationsDenied,
+                    rewardCoins = rewardCoins,
                     onSelectMinutes = onSelectMinutes,
                     onSelectTask = onSelectTask,
                     onStart = onStart,
@@ -161,6 +167,7 @@ fun FocusLaunchPanel(
     onSelectTask: (PlanItem?) -> Unit,
     onStart: () -> Unit,
     modifier: Modifier = Modifier,
+    rewardCoins: Int? = null,
 ) {
     val shape = RoundedCornerShape(ViraRadius.l)
     Column(
@@ -172,6 +179,7 @@ fun FocusLaunchPanel(
         verticalArrangement = Arrangement.spacedBy(ViraSpacing.s),
     ) {
         FocusTimeStepper(mode, minutes, onSelectMinutes)
+        if (mode.kind == FocusKind.FOCUS && rewardCoins != null) FocusRewardLine(rewardCoins)
         // Un selector buit no és una opció: és una decisió de més.
         if (mode.showsLinkedTask && tasks.isNotEmpty()) {
             FocusTaskTile(tasks, linkedItemID, onSelectTask)
@@ -189,6 +197,25 @@ fun FocusLaunchPanel(
             onStart,
             Modifier.fillMaxWidth().shadow(14.dp, RoundedCornerShape(ViraRadius.s), ambientColor = ViraColor.accent(ViraArea.Focus), spotColor = ViraColor.accent(ViraArea.Focus)),
             area = ViraArea.Focus,
+        )
+    }
+}
+
+/// «+15 ViriCoins a partir de 10 min» (`FocusRewardLine`, 2026-10-22, punts de fricció): el llindar
+/// del premi es diu abans de començar, no es descobreix en acabar. Amb el sostre del dia ja tocat no
+/// surt: prometre monedes que no arriben seria pitjor que callar.
+@Composable
+private fun FocusRewardLine(coins: Int) {
+    Row(
+        Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(ViraSpacing.xxs, Alignment.CenterHorizontally),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        ViraPictogram(R.drawable.picto_shop, size = 20.dp, scalesWithText = true)
+        Text(
+            stringResource(R.string.focus_reward_hint, coins, ViraRewards.FOCUS_MINIMUM_MINUTES),
+            style = ViraFont.footnoteEmphasis,
+            color = ViraColor.onSurface(ViraArea.Focus),
         )
     }
 }

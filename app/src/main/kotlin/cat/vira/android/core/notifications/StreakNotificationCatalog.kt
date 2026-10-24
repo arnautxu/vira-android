@@ -26,6 +26,12 @@ object StreakNotificationCatalog {
         data object Reset : Kind
         /// Fita de ratxa assolida, amb el nombre de dies.
         data class Milestone(val days: Int) : Kind
+        /// L'últim avís de la retirada per absència (`ViraAbsence`): Viri diu que calla i que tot
+        /// és on era. **Una sola frase**, sense rotació ni gràcia ni retret.
+        data object Farewell : Kind
+
+        /// Una notícia (fita, ratxa salvada o a zero): s'ha de dir encara que el dia ja compti.
+        val isNews: Boolean get() = this is Protected || this is Reset || this is Milestone
     }
 
     // Llistes escrites a mà i no muntades amb `getIdentifier`: el reductor de recursos de la
@@ -111,6 +117,7 @@ object StreakNotificationCatalog {
             Kind.Protected -> text.get(protected.pick(index))
             Kind.Reset -> text.get(reset.pick(index))
             is Kind.Milestone -> text.get(milestone.pick(index), kind.days)
+            Kind.Farewell -> text.get(R.string.notification_streak_farewell)
         }
     }
 

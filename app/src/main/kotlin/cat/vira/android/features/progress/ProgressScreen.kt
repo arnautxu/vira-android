@@ -1,5 +1,8 @@
 package cat.vira.android.features.progress
 
+import cat.vira.android.features.shop.AccessoryItem
+import cat.vira.android.features.progress.ui.WelcomeChallengeUi
+import cat.vira.android.features.progress.logic.ViraWelcomeChallenge
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
@@ -207,6 +210,7 @@ private fun ChallengesRoute(backend: ViraBackend, progress: ViraProgress, onBack
     val claims by db.challengeClaims().observeAll().collectAsStateWithLifecycle(emptyList())
     val ledger by db.coinTransactions().observeAll().collectAsStateWithLifecycle(emptyList())
     val counter by db.progressCounters().observe().collectAsStateWithLifecycle(null)
+    val accessories by db.accessoryOwnerships().observeAll().collectAsStateWithLifecycle(emptyList())
     val celebrationsEnabled by rememberPreference(backend.preferences, ViraPreferences.CELEBRATIONS_ENABLED, true)
     var periodName by rememberSaveable { mutableStateOf(ChallengePeriod.DAILY.name) }
     var saveFailed by rememberSaveable { mutableStateOf(false) }
@@ -221,10 +225,27 @@ private fun ChallengesRoute(backend: ViraBackend, progress: ViraProgress, onBack
     val rows = ChallengeItem.catalog.filter { it.period == period }.map {
         ChallengeRowState(it, ViraChallenges.progress(it, ledger, now, days), ViraChallenges.isClaimed(it, claims, now, days))
     }
+    val balance = counter?.coinBalance ?: 0
+    val welcome = if (ViraWelcomeChallenge.isClaimed(claims)) null else WelcomeChallengeUi(
+        activeDays = ViraWelcomeChallenge.activeDays(ledger, days.zone, now),
+        balance = balance,
+        // Les ulleres, si encara no són teves i el saldo no hi arriba.
+        firstItem = AccessoryItem.catalog.minByOrNull { it.price }
+            ?.takeIf { item -> accessories.none { it.key == item.key } && balance < item.price },
+    )
     ChallengesContent(
-        ui = ChallengesUi(period, rows, counter?.coinBalance ?: 0, saveFailed),
+        ui = ChallengesUi(period, rows, balance, saveFailed, welcome),
         onBack = onBack,
         onPeriod = { periodName = it.name },
+        onClaimWelcome = {
+            scope.launch {
+                try {
+                    if (progress.claimWelcome()) saveFailed = false
+                } catch (_: Exception) {
+                    saveFailed = true
+                }
+            }
+        },
         onClaim = { item ->
             scope.launch {
                 try {

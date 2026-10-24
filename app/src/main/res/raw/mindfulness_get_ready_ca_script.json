@@ -1,44 +1,44 @@
 {
  "id": "getReady",
  "language": "ca",
- "duration": 95.1,
+ "duration": 97.27,
  "steps": 3,
  "segments": [
   {
    "start": 0.6,
-   "end": 4.56,
+   "end": 4.7,
    "kind": "line",
    "step": null,
    "stepTitle": null,
    "text": "mindfulness.getReady.line1"
   },
   {
-   "start": 4.56,
-   "end": 24.13,
+   "start": 4.7,
+   "end": 24.38,
    "kind": "line",
    "step": 0,
    "stepTitle": "mindfulness.getReady.step1",
    "text": "mindfulness.getReady.line2"
   },
   {
-   "start": 24.13,
-   "end": 46.72,
+   "start": 24.38,
+   "end": 47.15,
    "kind": "line",
    "step": 1,
    "stepTitle": "mindfulness.getReady.step2",
    "text": "mindfulness.getReady.line3"
   },
   {
-   "start": 46.72,
-   "end": 51.03,
+   "start": 47.15,
+   "end": 51.58,
    "kind": "line",
    "step": 2,
    "stepTitle": "mindfulness.getReady.step3",
    "text": "mindfulness.getReady.line4"
   },
   {
-   "start": 51.03,
-   "end": 55.03,
+   "start": 51.58,
+   "end": 55.58,
    "kind": "breath",
    "step": 2,
    "stepTitle": "mindfulness.getReady.step3",
@@ -46,8 +46,8 @@
    "text": "help.breathe.inhale"
   },
   {
-   "start": 55.03,
-   "end": 57.03,
+   "start": 55.58,
+   "end": 57.58,
    "kind": "breath",
    "step": 2,
    "stepTitle": "mindfulness.getReady.step3",
@@ -55,8 +55,8 @@
    "text": "help.breathe.hold"
   },
   {
-   "start": 57.03,
-   "end": 61.03,
+   "start": 57.58,
+   "end": 61.58,
    "kind": "breath",
    "step": 2,
    "stepTitle": "mindfulness.getReady.step3",
@@ -64,8 +64,8 @@
    "text": "help.breathe.exhale"
   },
   {
-   "start": 61.03,
-   "end": 65.03,
+   "start": 61.58,
+   "end": 65.58,
    "kind": "breath",
    "step": 2,
    "stepTitle": "mindfulness.getReady.step3",
@@ -73,8 +73,8 @@
    "text": "help.breathe.inhale"
   },
   {
-   "start": 65.03,
-   "end": 67.03,
+   "start": 65.58,
+   "end": 67.58,
    "kind": "breath",
    "step": 2,
    "stepTitle": "mindfulness.getReady.step3",
@@ -82,8 +82,8 @@
    "text": "help.breathe.hold"
   },
   {
-   "start": 67.03,
-   "end": 71.03,
+   "start": 67.58,
+   "end": 71.58,
    "kind": "breath",
    "step": 2,
    "stepTitle": "mindfulness.getReady.step3",
@@ -91,8 +91,8 @@
    "text": "help.breathe.exhale"
   },
   {
-   "start": 71.03,
-   "end": 75.03,
+   "start": 71.58,
+   "end": 75.58,
    "kind": "breath",
    "step": 2,
    "stepTitle": "mindfulness.getReady.step3",
@@ -100,8 +100,8 @@
    "text": "help.breathe.inhale"
   },
   {
-   "start": 75.03,
-   "end": 77.03,
+   "start": 75.58,
+   "end": 77.58,
    "kind": "breath",
    "step": 2,
    "stepTitle": "mindfulness.getReady.step3",
@@ -109,8 +109,8 @@
    "text": "help.breathe.hold"
   },
   {
-   "start": 77.03,
-   "end": 81.03,
+   "start": 77.58,
+   "end": 81.58,
    "kind": "breath",
    "step": 2,
    "stepTitle": "mindfulness.getReady.step3",
@@ -118,8 +118,8 @@
    "text": "help.breathe.exhale"
   },
   {
-   "start": 81.03,
-   "end": 85.03,
+   "start": 81.58,
+   "end": 85.58,
    "kind": "breath",
    "step": 2,
    "stepTitle": "mindfulness.getReady.step3",
@@ -127,8 +127,8 @@
    "text": "help.breathe.inhale"
   },
   {
-   "start": 85.03,
-   "end": 87.03,
+   "start": 85.58,
+   "end": 87.58,
    "kind": "breath",
    "step": 2,
    "stepTitle": "mindfulness.getReady.step3",
@@ -136,8 +136,8 @@
    "text": "help.breathe.hold"
   },
   {
-   "start": 87.03,
-   "end": 91.03,
+   "start": 87.58,
+   "end": 91.58,
    "kind": "breath",
    "step": 2,
    "stepTitle": "mindfulness.getReady.step3",
@@ -145,8 +145,8 @@
    "text": "help.breathe.exhale"
   },
   {
-   "start": 91.03,
-   "end": 95.09,
+   "start": 91.58,
+   "end": 97.27,
    "kind": "line",
    "step": 2,
    "stepTitle": "mindfulness.getReady.step3",

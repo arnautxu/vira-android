@@ -13,8 +13,12 @@ import java.time.ZoneId
 /// ha configurat; això és **la veu de Viri**, i s'apaga per separat
 /// (`ViraNotificationPreferences.VIRI_MESSAGES_ENABLED`).
 ///
+/// ## Quan l'usuari no hi és
+/// Dies 0–2, cada dia; del 3 al 13, un cada 3 dies; el 14, el comiat; després, res fins que
+/// torni (`ViraAbsence`). El comiat és el mateix canal i la mateixa hora, amb una sola frase.
+///
 /// ## Un avís al dia com a molt
-/// Una sola franja diària a l'hora triada (20:30 de sortida) que porta **una** de quatre coses,
+/// Una sola franja diària a l'hora apresa (`ViraEveningHour`, 20:30 de sortida) que porta **una** de quatre coses,
 /// per aquest ordre: la fita, la ratxa salvada, la ratxa que ha tornat a zero, o l'avís que encara
 /// hi ha dia. Mai dues el mateix dia, i **mai cap si el dia ja compta** i no hi ha res a explicar.
 ///
@@ -30,9 +34,11 @@ object ViraStreakNotifications {
     /// encara s'ha de dir encara que el dia ja compti; un recordatori, no.
     const val NEWS_SUFFIX = "-news"
 
-    /// Cinc, dins del repartiment de 64 (26 + 14 + 8 + 3 + 5 = 56).
-    const val BUDGET = 5
-    const val WINDOW_DAYS = 7
+    /// Vuit, **compartides amb les 3 del recordatori emocional** (Arnau, 2026-10-23): el dia que
+    /// Viri parla, l'emocional no es programa, i juntes no passen de 8. Vuit perquè la finestra
+    /// arriba fins al comiat de l'absència: els dies 0, 1 i 2, els espaiats 3, 6, 9 i 12, i el 14.
+    const val BUDGET = 8
+    const val WINDOW_DAYS = ViraAbsence.FAREWELL_DAY + 1
 
     /// El mateix marge que les alarmes endarrerides.
     private val NEWS_GRACE: java.time.Duration get() = ViraNotificationScheduler.OVERDUE_GRACE
@@ -169,13 +175,41 @@ object ViraStreakNotifications {
     // MARK: Càlcul de la finestra
 
     /// Les franges que queden per davant: una per dia, la d'avui només si encara no ha passat.
-    fun slots(now: Instant, time: ViraClock, zone: ZoneId): List<Instant> {
+    ///
+    /// - `since`: l'últim cop que es va obrir l'app (`ViraAbsence`). Sense valor, ara: la primera
+    ///   arrencada i les proves.
+    /// - `quietUntil`: «Avui no» o «Uns dies» (`ViraViriQuiet`): fins aquell dia, cap franja.
+    /// - `young`: el descans de 12–15 (`ViraRestHours`). L'hora apresa ja no passa de les 21:00,
+    ///   però la regla no ha de dependre d'això.
+    fun slots(
+        now: Instant,
+        time: ViraClock,
+        zone: ZoneId,
+        since: Instant? = null,
+        quietUntil: Instant? = null,
+        young: Boolean = false,
+    ): List<Instant> {
         val today = LocalDate.ofInstant(now, zone)
+        val opened = since ?: now
         return (0 until WINDOW_DAYS).mapNotNull { offset ->
-            val fire = today.plusDays(offset.toLong()).atTime(time.hour, time.minute).atZone(zone).toInstant()
-            fire.takeIf { it.isAfter(now) }
+            val day = today.plusDays(offset.toLong())
+            val fire = day.atTime(time.hour, time.minute).atZone(zone).toInstant()
+            fire.takeIf {
+                it.isAfter(now) &&
+                    ViraAbsence.allowance(day, opened, zone) != ViraAbsence.Allowance.SILENT &&
+                    !ViraViriQuiet.isQuiet(day, quietUntil, zone) &&
+                    ViraRestHours.allows(it, young, zone)
+            }
         }
     }
+
+    /// Si Viri té franja aquest dia: la pregunta que fa el recordatori emocional abans de
+    /// programar-se. Si Viri parla, el vespre ja té el seu avís, amb els mateixos botons d'emoció.
+    /// No mira si el dia ja compta ni la concentració: un mode que fa callar Viri tampoc ha de
+    /// deixar passar l'emocional en el seu lloc.
+    fun speaks(day: LocalDate, enabled: Boolean, since: Instant?, quietUntil: Instant?, now: Instant, zone: ZoneId): Boolean =
+        enabled && !ViraViriQuiet.isQuiet(day, quietUntil, zone) &&
+            ViraAbsence.allowance(day, since ?: now, zone) != ViraAbsence.Allowance.SILENT
 
     fun requests(
         now: Instant,
@@ -186,15 +220,22 @@ object ViraStreakNotifications {
         zone: ZoneId,
         text: ViraNotificationText,
         eventStamp: Long? = null,
+        since: Instant? = null,
+        quietUntil: Instant? = null,
+        young: Boolean = false,
     ): List<ViraPlannedNotification> {
         val today = LocalDate.ofInstant(now, zone)
+        val opened = since ?: now
         val planned = mutableListOf<ViraPlannedNotification>()
         var news = event
-        for (fire in slots(now, time, zone)) {
+        for (fire in slots(now, time, zone, since, quietUntil, young)) {
             // Un mode de concentració que silencia Vira: dins de la seva finestra, res.
             if (muted?.contains(fire) == true) continue
             val day = LocalDate.ofInstant(fire, zone)
             val kind = when {
+                // El comiat mana sobre qualsevol notícia: després d'aquest ja no en vindrà cap
+                // altre, i ho ha de dir.
+                ViraAbsence.allowance(day, opened, zone) == ViraAbsence.Allowance.FAREWELL -> Kind.Farewell
                 // La notícia va a la primera franja que sona, tant si el dia ja compta com si no.
                 news != null -> news.kind.also { news = null }
                 // El dia d'avui ja compta i no hi ha res a explicar: no es diu res.
@@ -202,14 +243,14 @@ object ViraStreakNotifications {
                 else -> Kind.Nudge
             }
             planned += ViraPlannedNotification(
-                id = "$PREFIX${day.year}-${day.monthValue}-${day.dayOfMonth}" + if (kind is Kind.Nudge) "" else NEWS_SUFFIX,
+                id = "$PREFIX${day.year}-${day.monthValue}-${day.dayOfMonth}" + if (kind.isNews) NEWS_SUFFIX else "",
                 fireAtMillis = fire.toEpochMilli(),
                 title = StreakNotificationCatalog.title(text),
                 body = StreakNotificationCatalog.body(kind, day, text),
                 channel = ViraNotificationChannel.VIRI,
                 // És la franja del vespre: on estalviar-se obrir l'app val més.
                 actions = ViraActionSet.VIRI,
-                scheduledAtMillis = if (kind is Kind.Nudge) null else eventStamp,
+                scheduledAtMillis = if (kind.isNews) eventStamp else null,
             )
         }
         return planned.take(BUDGET)

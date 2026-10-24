@@ -7,6 +7,7 @@ import androidx.annotation.StringRes
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.RemoteInput
 import cat.vira.android.R
+import cat.vira.android.core.data.ViraPreferences
 import cat.vira.android.core.data.model.Emotion
 import cat.vira.android.core.data.model.IntakeStatus
 import kotlinx.coroutines.CoroutineScope
@@ -33,6 +34,9 @@ object ViraNotificationActions {
     const val MEDICATION_SKIPPED = "medication.skipped"
     const val SNOOZE = "snooze"
     const val CAPTURE = "capture"
+    /// «Avui no» i «Uns dies» a l'avís de Viri (`ViraViriQuiet`).
+    const val QUIET_TODAY = "viri.quiet.today"
+    const val QUIET_DAYS = "viri.quiet.days"
     /// `emotion.` + el valor en cru de l'`Emotion`.
     const val EMOTION_PREFIX = "emotion."
 
@@ -45,6 +49,7 @@ object ViraNotificationActions {
     sealed interface ViriButton {
         data class Feeling(val emotion: Emotion, @StringRes val label: Int) : ViriButton
         data object Capture : ViriButton
+        data class Quiet(val action: String, @StringRes val label: Int) : ViriButton
     }
 
     /// Els de l'iPhone són Content · Ansiós · Trist · «Apunta una cosa», però Android n'ensenya
@@ -69,6 +74,9 @@ object ViraNotificationActions {
     suspend fun handle(context: Context, request: Request, now: Instant = Instant.now()) {
         val host = context.notificationHost ?: return
         val effects = host.notificationEffects
+        // Respondre un avís és ser-hi, encara que l'app no s'obri: la retirada per absència torna a
+        // començar (`ViraAbsence`).
+        ViraAbsence.noteOpened(ViraPreferences.open(context), now)
         when {
             request.action == HABIT_DONE -> {
                 val id = request.habitId ?: return
@@ -87,6 +95,12 @@ object ViraNotificationActions {
                 val text = request.text?.trim().orEmpty()
                 if (text.isNotEmpty()) effects.capture(text)
             }
+            request.action == QUIET_TODAY || request.action == QUIET_DAYS -> ViraViriQuiet.quiet(
+                ViraPreferences.open(context),
+                days = if (request.action == QUIET_TODAY) 1 else ViraViriQuiet.SEVERAL_DAYS,
+                now = now,
+                zone = java.time.ZoneId.systemDefault(),
+            )
             request.action.startsWith(EMOTION_PREFIX) -> {
                 val raw = request.action.removePrefix(EMOTION_PREFIX)
                 Emotion.entries.firstOrNull { it.raw == raw }?.let { effects.logEmotion(it) }

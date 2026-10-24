@@ -157,6 +157,16 @@ private fun ChainRow(days: List<LocalDate?>, source: StreakChainSource, today: L
 @Composable
 private fun rowHeight(base: Dp): Dp = base * LocalDensity.current.fontScale.coerceAtMost(2f)
 
+/// La setmana d'avui en petit (`StreakWeekBar(.compact)`): la mateixa fila encadenada que el
+/// calendari. La fa servir el panell de la ratxa de la capçalera.
+@Composable
+internal fun StreakWeekCompact(week: StreakWeek, today: LocalDate, firstDayOfWeek: DayOfWeek) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        WeekdayHeader(firstDayOfWeek)
+        ChainRow(week.days, week, today, rowHeight(36.dp))
+    }
+}
+
 /// El mes de la ratxa (`StreakCalendarView`): els dies encadenats com una càpsula per tram. **Un
 /// reinici no esborra el calendari**: els dies fets es queden pintats per sempre.
 @OptIn(ExperimentalLayoutApi::class)

@@ -24,9 +24,15 @@ import java.time.temporal.ChronoUnit
 /// això també es conserva la finestra lliscant de pocs dies, que es refà a cada acció, en tornar a
 /// primer pla i des del treball de segon pla.
 ///
-/// 26 medicació + 14 hàbits + 8 pla + 3 emocions = **51**, més els 5 de Viri
-/// (`ViraStreakNotificationPlanner`) = **56 de 64**; els 8 lliures són per als «Més tard».
-/// L'ordre és el del dany de quedar-se sense l'avís: medicació primer, Viri al final.
+/// 26 medicació + 11 hàbits + 8 pla + 3 emocions = **48**, més els 3 de l'avís del matí i els 5
+/// de Viri = **56 de 64**; els 8 lliures són per als «Més tard». Viri en té 8 per arribar al comiat
+/// de l'absència (`ViraAbsence`), però **comparteix** les places amb les 3 d'emocions: quan Viri
+/// parla, l'emocional no es programa (Arnau, 2026-10-23). L'ordre és el del dany de quedar-se
+/// sense l'avís: medicació primer, Viri al final.
+///
+/// ## Un sol interruptor
+/// «Avisos» (`ViraNotificationSettings.general`) apaga tot el que no és medicació: la medicació
+/// té el seu interruptor i és l'única cosa que es personalitza (`ViraSimpleSettings`).
 ///
 /// ## El que no fa mai
 /// - **Recordar una cosa ja feta**: ni un hàbit ja marcat, ni una presa ja resolta, ni una tasca
@@ -39,11 +45,14 @@ object ViraNotificationPlanner {
     const val MEDICATION_PREFIX = "med-"
     const val PLAN_PREFIX = "plan-"
     const val EMOTION_PREFIX = "emotion-"
+    const val MORNING_PREFIX = "morning-"
 
     const val MEDICATION_BUDGET = 26
-    const val HABIT_BUDGET = 14
+    const val HABIT_BUDGET = 11
     const val PLAN_BUDGET = 8
     const val EMOTION_BUDGET = 3
+    /// Tres dies per endavant de «El teu dia» (`ViraMorningNotification`).
+    const val MORNING_BUDGET = 3
 
     /// Finestra recomanada a `IOS_NATIVE_INTEGRATIONS.md` §2.1.
     const val WINDOW_DAYS = 7
@@ -63,9 +72,11 @@ object ViraNotificationPlanner {
         val muted = muteWindow(inputs.focusSessions, now)
         return buildList {
             if (settings.medication) addAll(medication(inputs, settings, now, zone, text, muted))
+            if (!settings.general) return@buildList
             if (settings.habits) addAll(habits(inputs, settings, now, zone, text, muted))
             if (settings.plan) addAll(planItems(inputs, settings, now, zone, text, muted))
             if (settings.emotion) addAll(emotion(inputs, settings, now, zone, text, muted))
+            if (settings.morning) addAll(ViraMorningNotification.requests(inputs, settings, now, zone, text, muted))
         }
     }
 
@@ -217,9 +228,13 @@ object ViraNotificationPlanner {
         }
     }
 
-    /// Un al dia, a l'hora d'Ajustos, i **cap si el dia ja té registre**. El text no té variant
-    /// amb detall: el detall seria dir a qui miri la pantalla que aquesta persona porta un
-    /// registre emocional (`PRIVACY_AND_SAFETY.md` §4.6).
+    /// Un al dia, a les 19:00, i **cap si el dia ja té registre**. El text no té variant amb
+    /// detall: el detall seria dir a qui miri la pantalla que aquesta persona porta un registre
+    /// emocional (`PRIVACY_AND_SAFETY.md` §4.6).
+    ///
+    /// **Un sol avís al vespre** (Arnau, 2026-10-23): el dia que Viri parla, aquest no es
+    /// programa; l'avís de Viri ja porta els mateixos botons d'emoció. Si Viri calla (missatges
+    /// apagats o ratxa amagada), aquest segueix, també als dies espaiats de l'absència.
     fun emotion(
         inputs: ViraNotificationInputs,
         settings: ViraNotificationSettings,
@@ -233,6 +248,17 @@ object ViraNotificationPlanner {
             val day = today.plusDays(offset.toLong())
             val fire = day.atTime(settings.emotionTime.hour, settings.emotionTime.minute).atZone(zone).toInstant()
             if (!fire.isAfter(now) || muted?.contains(fire) == true) return@mapNotNull null
+            // Descans de 12–15: res que no s'hagi demanat a partir de les 21:30.
+            if (!ViraRestHours.allows(fire, settings.young, zone)) return@mapNotNull null
+            // «Avui no» a l'avís de Viri fa callar el vespre sencer, també aquest.
+            if (ViraViriQuiet.isQuiet(day, settings.quietUntil, zone)) return@mapNotNull null
+            if (ViraStreakNotifications.speaks(day, settings.viriSpeaks, settings.since, settings.quietUntil, now, zone)) {
+                return@mapNotNull null
+            }
+            when (ViraAbsence.allowance(day, settings.since ?: now, zone)) {
+                ViraAbsence.Allowance.NORMAL, ViraAbsence.Allowance.SPARSE -> Unit
+                ViraAbsence.Allowance.FAREWELL, ViraAbsence.Allowance.SILENT -> return@mapNotNull null
+            }
             // Només d'avui es pot saber si ja té registre; els següents els retira la propera
             // passada o registrar-ne un.
             if (offset == 0 && inputs.emotionEntries.any { LocalDate.ofInstant(it.createdAt, zone) == day }) {
@@ -302,6 +328,11 @@ object ViraNotificationPlanner {
                         notification.scheduledAtMillis.let { at -> at == null || planFire(item, zone)?.toEpochMilli() == at }
                 }
             }
+            ViraActionSet.DAY -> {
+                val day = LocalDate.ofInstant(notification.fireAt, zone)
+                !day.isBefore(LocalDate.ofInstant(now, zone)) &&
+                    ViraMorningNotification.message(inputs, day, zone, detail = false, locale = java.util.Locale.ROOT) != null
+            }
             ViraActionSet.VIRI -> {
                 val day = LocalDate.ofInstant(notification.fireAt, zone)
                 // El d'un dia passat ja no toca: el botó registraria l'emoció a avui, no a aquell dia.
@@ -318,7 +349,7 @@ object ViraNotificationPlanner {
 
     /// L'hora de l'avís d'una tasca: l'hora viu a part del dia i es recompon sobre el dia de
     /// l'ítem, menys l'antelació. Sense hora, cap.
-    private fun planFire(item: PlanItem, zone: ZoneId): Instant? {
+    internal fun planFire(item: PlanItem, zone: ZoneId): Instant? {
         val time = item.time ?: return null
         return at(LocalDate.ofInstant(item.day, zone), time, zone).minusSeconds((item.reminderOffsetMinutes ?: 0) * 60L)
     }
@@ -327,7 +358,7 @@ object ViraNotificationPlanner {
         weekdays.isEmpty() || day.dayOfWeek.iosWeekday() in weekdays
 
     /// L'hora i el minut de `time`, en hora local, sobre el dia `day`.
-    private fun at(day: LocalDate, time: Instant, zone: ZoneId): Instant {
+    internal fun at(day: LocalDate, time: Instant, zone: ZoneId): Instant {
         val clock = ZonedDateTime.ofInstant(time, zone)
         return day.atTime(clock.hour, clock.minute).atZone(zone).toInstant()
     }
