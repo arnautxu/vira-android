@@ -35,9 +35,16 @@ object ViraEveningHour {
         return rounded.coerceIn(EARLIEST, LATEST)
     }
 
+    /// Les hores dels últims `KEPT_DAYS` dies. El registre només es poda en apuntar-ne una de nova:
+    /// qui fa setmanes que no tanca cap dia encara hi té les d'abans, i no han de comptar.
+    fun recent(closings: Map<LocalDate, Int>, today: LocalDate): List<Int> {
+        val oldest = today.minusDays(KEPT_DAYS)
+        return closings.filterKeys { it.isAfter(oldest) }.values.toList()
+    }
+
     /// L'hora de l'avís d'avui: l'apresa o la de sempre.
-    fun time(p: SharedPreferences): ViraClock {
-        val minutes = learned(closings(p).values)
+    fun time(p: SharedPreferences, now: Instant, zone: ZoneId): ViraClock {
+        val minutes = learned(recent(closings(p), LocalDate.ofInstant(now, zone)))
             ?: (ViraNotificationPreferences.VIRI_DEFAULT_HOUR * 60 + ViraNotificationPreferences.VIRI_DEFAULT_MINUTE)
         return ViraClock(minutes / 60, minutes % 60)
     }

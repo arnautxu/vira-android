@@ -17,6 +17,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
 
@@ -70,6 +71,23 @@ class ViraCardTalliesTest {
         db.planItems().deleteAll()
         assertFalse("esborrar la tasca feta no fa baixar res", tallies.repair(db, ZoneOffset.UTC))
         assertEquals(1, tallies.value(ViraCardTallies.Kind.TASKS_DONE))
+    }
+
+    @Test
+    fun duesTasquesDinsDelDesferNoEnFanTres() = runBlocking {
+        val now = Instant.parse("2026-10-24T10:00:00Z")
+        // A i B marcades dins de la mateixa finestra: A ja ha sumat el seu, B encara no.
+        db.planItems().upsertRaw(listOf(
+            PlanItem(title = "A", statusRaw = PlanItemStatus.DONE.raw, completedAt = now.minusSeconds(3)),
+            PlanItem(title = "B", statusRaw = PlanItemStatus.DONE.raw, completedAt = now.minusSeconds(1)),
+        ))
+        tallies.add(1, ViraCardTallies.Kind.TASKS_DONE)
+        assertFalse(tallies.repair(db, ZoneOffset.UTC, now))
+        tallies.add(1, ViraCardTallies.Kind.TASKS_DONE)
+        assertEquals(2, tallies.value(ViraCardTallies.Kind.TASKS_DONE))
+        // Passat el Desfer, la reparació ja hi coincideix.
+        assertFalse(tallies.repair(db, ZoneOffset.UTC, now.plus(ViraCardTallies.SETTLE).plusSeconds(1)))
+        assertEquals(2, tallies.value(ViraCardTallies.Kind.TASKS_DONE))
     }
 
     @Test

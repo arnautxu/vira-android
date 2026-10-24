@@ -5,6 +5,7 @@ import cat.vira.android.core.data.model.Habit
 import cat.vira.android.core.data.model.Medication
 import cat.vira.android.core.data.model.PlanItem
 import cat.vira.android.core.data.model.PlanItemStatus
+import cat.vira.android.features.settings.InMemoryPreferences
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -81,6 +82,24 @@ class ViraNotificationRulesTest {
         assertEquals(18 * 60 + 45, ViraEveningHour.learned(listOf(19 * 60 + 50, 19 * 60 + 40, 19 * 60 + 45)))
     }
 
+    @Test
+    fun lHoraApresaNoFaServirDiesDeFaMesDe14Dies() {
+        val old = mapOf(today.minusDays(20) to 18 * 60, today.minusDays(19) to 18 * 60, today.minusDays(15) to 18 * 60)
+        assertTrue("sense dies nous, els vells no compten", ViraEveningHour.recent(old, today).isEmpty())
+        val mixed = old + (today.minusDays(2) to 20 * 60)
+        assertEquals(listOf(20 * 60), ViraEveningHour.recent(mixed, today))
+    }
+
+    // Medicació amagada
+
+    @Test
+    fun ambElModulDeMedicacioAmagatNoSurtenElsSeusAvisos() {
+        val on = InMemoryPreferences()
+        assertTrue(ViraNotificationPreferences.medicationEnabled(on))
+        val hidden = InMemoryPreferences(mapOf(ViraNotificationPreferences.MODULE_MEDICATION_ENABLED to false))
+        assertFalse(ViraNotificationPreferences.medicationEnabled(hidden))
+    }
+
     // Descans de 12–15
 
     @Test
@@ -147,6 +166,17 @@ class ViraNotificationRulesTest {
         assertTrue(first.body.contains("Mates"))
         // Els dies següents són buits: conviden a apuntar.
         assertEquals(text.get(R.string.notification_morning_empty), planned[1].body)
+    }
+
+    @Test
+    fun elTeuDiaTriaLaPrimeraPerLHoraDeLaTascaINoPerLaDeLAvis() {
+        val day = today.atStartOfDay(zone).toInstant()
+        val items = listOf(
+            PlanItem(title = "Mates", day = day, time = at(today, 9), reminderOffsetMinutes = 60),
+            PlanItem(title = "Angles", day = day, time = at(today, 8, 30)),
+        )
+        val said = ViraMorningNotification.message(ViraNotificationInputs(planItems = items), today, zone, true, Locale.ROOT)
+        assertEquals("Angles", (said as ViraMorningNotification.Message.Pending).first?.first)
     }
 
     @Test

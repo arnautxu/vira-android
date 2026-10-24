@@ -3,6 +3,8 @@ package cat.vira.android.core.notifications
 import android.content.SharedPreferences
 import androidx.core.content.edit
 import cat.vira.android.core.data.ViraPreferences
+import java.time.Instant
+import java.time.ZoneId
 
 /// Els interruptors i les hores dels avisos, amb **els mateixos noms que l'iPhone**
 /// (`ViraPreferences.swift`) i els mateixos valors de fàbrica que hi registra `ViraApp.init`.
@@ -23,6 +25,10 @@ object ViraNotificationPreferences {
     const val REMINDERS_MEDICATION_ENABLED = "settings.remindersMedicationEnabled"
     const val REMINDERS_PLAN_ENABLED = "settings.remindersPlanEnabled"
     const val REMINDERS_EMOTION_ENABLED = "settings.remindersEmotionEnabled"
+
+    /// El mòdul de medicació (Ajustos → Mòduls). No és una clau d'avisos —`reset` no la toca—, però
+    /// apagar-lo també els apaga (`medicationEnabled`).
+    const val MODULE_MEDICATION_ENABLED = "settings.moduleMedicationEnabled"
 
     /// Hora del recordatori de registre emocional. Sense valor desat, les 19:00.
     const val EMOTION_REMINDER_HOUR = "settings.emotionReminderHour"
@@ -70,7 +76,10 @@ object ViraNotificationPreferences {
 
     fun remindersEnabled(p: SharedPreferences) = p.getBoolean(REMINDERS_ENABLED, true)
     fun habitsEnabled(p: SharedPreferences) = p.getBoolean(REMINDERS_HABITS_ENABLED, true)
-    fun medicationEnabled(p: SharedPreferences) = p.getBoolean(REMINDERS_MEDICATION_ENABLED, true)
+    /// Amb el mòdul de medicació amagat (Ajustos → Mòduls), els seus controls d'avisos no hi són:
+    /// els avisos tampoc, o no hi hauria manera d'apagar-los.
+    fun medicationEnabled(p: SharedPreferences) =
+        p.getBoolean(REMINDERS_MEDICATION_ENABLED, true) && p.getBoolean(MODULE_MEDICATION_ENABLED, true)
     fun planEnabled(p: SharedPreferences) = p.getBoolean(REMINDERS_PLAN_ENABLED, true)
     fun emotionEnabled(p: SharedPreferences) = p.getBoolean(REMINDERS_EMOTION_ENABLED, true)
     fun morningEnabled(p: SharedPreferences) = p.getBoolean(REMINDERS_MORNING_ENABLED, true)
@@ -89,7 +98,7 @@ object ViraNotificationPreferences {
     )
 
     /// L'hora de l'avís de Viri: l'apresa (`ViraEveningHour`).
-    fun viriTime(p: SharedPreferences) = ViraEveningHour.time(p)
+    fun viriTime(p: SharedPreferences, now: Instant, zone: ZoneId) = ViraEveningHour.time(p, now, zone)
 }
 
 /// Una hora del dia, sense dia.
