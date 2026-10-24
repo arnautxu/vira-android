@@ -86,6 +86,10 @@ object ViraPalette {
 
     /// Vel clar sobre una il·lustració clara, just on hi va text fosc.
     val lightArtworkVeil = ViraTone(0xFFFFFFFF)
+    /// Etiqueta «Nova» i avisos breus (`feedbackFill` de l'iPhone). El text va amb [onFeedback],
+    /// fosc de la mateixa família: blanc sobre aquest groc dona 1,8:1.
+    val feedbackFill = ViraTone(0xFFFFC33E, 0xFFF0C24E)
+    val onFeedback = ViraTone(0xFF452D00, 0xFF2B2107)
 
     /// Text sobre una il·lustració fosca d'aparença fixa.
     val onDarkArtwork = ViraTone(0xFFF6F2F8)

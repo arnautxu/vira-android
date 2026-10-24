@@ -1,5 +1,6 @@
 package cat.vira.android.features.progress.logic
 
+import cat.vira.android.core.data.ViraCardTallies
 import cat.vira.android.core.data.ViraStore
 import cat.vira.android.core.data.model.Streak
 import java.time.Instant
@@ -91,6 +92,9 @@ object StreakRules {
         val missed = maxOf(0L, days.daysBetween(last, today) - 1).toInt()
         // Una ratxa ja reiniciada (0) no té res a protegir: no es gasta cap dia guardat.
         if (missed > 0 && s.currentDays > 0) s = spend(s, missed, today, days).first
+        // «Tornem-hi»: tornar després d'una setmana sense que el dia compti. Celebra que tornes, no
+        // compta el que no hi eres (`ViraCardTallies`).
+        if (missed >= ViraCardTallies.COMEBACK_GAP_DAYS) ViraCardTallies.shared?.add(1, ViraCardTallies.Kind.COMEBACKS)
 
         val current = if (s.currentDays == 0) 1 else s.currentDays + 1
         val milestone = current.takeIf { s.isVisible && it in milestoneDays }

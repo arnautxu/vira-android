@@ -5,6 +5,15 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Text
+import androidx.compose.ui.text.style.TextAlign
+import cat.vira.android.core.design.tokens.ViraFont
+import cat.vira.android.core.design.tokens.ViraSpacing
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
@@ -44,8 +53,28 @@ fun ShopRevealScreen(item: SkinItem, onContinue: () -> Unit, celebrationsEnabled
         eyebrow = stringResource(item.tier.nameRes),
         message = stringResource(R.string.shop_reveal_message, stringResource(item.nameRes)),
         celebrationsEnabled = celebrationsEnabled,
+        extra = { ShopViriLine(stringResource(item.tier.revealLineRes)) },
         sound = item.tier.revealSound,
     ) { RevealHero(item) }
+}
+
+/// La frase de Viri en sortir del vestidor: primera persona, ≤15 paraules, cap pressa.
+val SkinTier.revealLineRes: Int
+    get() = when (this) {
+        SkinTier.Common -> R.string.shop_reveal_viri_common
+        SkinTier.Special -> R.string.shop_reveal_viri_special
+        SkinTier.Epic -> R.string.shop_reveal_viri_epic
+        SkinTier.Legendary -> R.string.shop_reveal_viri_legendary
+    }
+
+/// El que diu Viri, en una bafarada. És l'única aparició expressiva de la pantalla.
+@Composable
+private fun ShopViriLine(text: String) {
+    Text(
+        text, style = ViraFont.callout, color = ViraColor.textPrimary, textAlign = TextAlign.Center,
+        modifier = Modifier.background(ViraColor.surfaceElevated, RoundedCornerShape(ViraRadius.m))
+            .padding(horizontal = ViraSpacing.m, vertical = ViraSpacing.xs),
+    )
 }
 
 /// Cada raresa té el seu so, de més curt i senzill a més ple. Mai sona a màquina escurabutxaques.
@@ -73,6 +102,10 @@ private fun RevealHero(item: SkinItem) {
     val rays = ViraColor.onCard(area).copy(alpha = 0.14f)
     Box(Modifier.clearAndSetSemantics { }, contentAlignment = Alignment.Center) {
         ShopRays(rays, Modifier.size(width * 2.2f).rotate(angle))
+        if (item.tier == SkinTier.Legendary) {
+            // L'anell daurat només el porten les llegendàries: és el graó que més brilla.
+            Box(Modifier.size(width * 1.3f).border(3.dp, ViraColor.onCard(area).copy(alpha = 0.35f), CircleShape))
+        }
         Box(Modifier.size(width).shopFrame(area, ViraColor.onCard(area), radius = ViraRadius.dramatic)) {
             SkinPortrait(item.backdropArt, item.cutoutArt, Modifier.matchParentSize())
         }

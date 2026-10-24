@@ -23,7 +23,11 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.unit.dp
 import cat.vira.android.R
+import cat.vira.android.core.design.tokens.ViraRadius
 import cat.vira.android.core.design.components.viraPressable
 import cat.vira.android.core.design.tokens.ViraArea
 import cat.vira.android.core.design.tokens.ViraColor
@@ -31,7 +35,7 @@ import cat.vira.android.core.design.tokens.ViraFont
 import cat.vira.android.core.design.tokens.ViraShopBackdrop
 import cat.vira.android.core.design.tokens.ViraSpacing
 
-/// El que la Botiga ensenya d'una peça (`ShopDisplayItem`): una skin, un badge o el Viri de sempre.
+/// El que la Botiga ensenya d'una peça (`ShopDisplayItem`): una skin o el Viri de sempre.
 data class ShopDisplayItem(
     val id: String,
     @DrawableRes val art: Int?,
@@ -41,8 +45,6 @@ data class ShopDisplayItem(
     val price: Int?,
     val tier: SkinTier?,
     val backdrop: ViraShopBackdrop,
-    /// Una skin és una escena que omple el marc; un badge és un emblema centrat sobre el color.
-    val isEmblem: Boolean = false,
 ) {
     companion object {
         /// Treure's una skin no costa res ni ha de semblar una pèrdua.
@@ -55,9 +57,6 @@ data class ShopDisplayItem(
 
 val SkinItem.display: ShopDisplayItem
     get() = ShopDisplayItem(key, backdropArt, cutoutArt, nameRes, price, tier, shopBackdrop)
-
-val BadgeItem.display: ShopDisplayItem
-    get() = ShopDisplayItem(key, pictogram, null, nameRes, price, null, shopBackdrop, isEmblem = true)
 
 /// Què diu el botó de preu d'una peça.
 fun shopPriceKind(price: Int?, balance: Int, isOwned: Boolean, isEquipped: Boolean): ShopPriceKind = when {
@@ -73,11 +72,17 @@ fun shopStatusDescription(kind: ShopPriceKind, isDefault: Boolean = false): Stri
     ShopPriceKind.Equipped -> stringResource(R.string.shop_equipped)
     ShopPriceKind.Owned -> stringResource(if (isDefault) R.string.shop_default_detail else R.string.shop_owned)
     is ShopPriceKind.Missing -> stringResource(R.string.shop_missing, kind.amount.viraFormatted())
-    is ShopPriceKind.Price -> stringResource(R.string.shop_price, kind.amount.viraFormatted())
+    is ShopPriceKind.Price -> listOf(
+        stringResource(R.string.shop_ready_tag), stringResource(R.string.shop_price, kind.amount.viraFormatted()),
+    ).joinToString(", ")
 }
 
 /// Una fitxa de la graella (`ShopItemCard`): targeta del color de la raresa, l'escena a dalt, el nom
 /// i el botó de preu a sota. El preu no apaga mai la peça: si no t'hi arribes, el botó diu quant falta.
+///
+/// Empenta (Arnau, 2026-10-22): si ja te la pots comprar, porta l'etiqueta «Ja pots!» a dalt i la vora
+/// daurada; si encara no, una barreta del que hi portes sobre el «Falten…». L'etiqueta és text i la
+/// barreta repeteix el que ja diu el botó: cap de les dues informa només amb color.
 @Composable
 fun ShopItemCard(
     item: ShopDisplayItem,
@@ -109,19 +114,25 @@ fun ShopItemCard(
                 selected = isEquipped
                 onClick(label = hint) { action(); true }
             }
+            .shopTierShine(item.tier)
             .shopFrame(area, ink)
+            .then(if (kind is ShopPriceKind.Price) Modifier.border(3.dp, ViraColor.cardFill(ViraArea.Rewards), RoundedCornerShape(ViraRadius.l)) else Modifier)
             .viraPressable(onClick = action),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(ViraSpacing.xxs),
     ) {
         Box(Modifier.fillMaxWidth().aspectRatio(1f).clipToBounds()) {
             SkinPortrait(item.art, item.cutout, Modifier.matchParentSize())
+            if (kind is ShopPriceKind.Price) ShopReadyTag(Modifier.align(Alignment.TopStart).padding(ViraSpacing.xxs))
         }
         Text(
             name, style = ViraFont.headline, color = ink, textAlign = TextAlign.Center, maxLines = 2,
             modifier = Modifier.padding(horizontal = ViraSpacing.xxs),
         )
         Spacer(Modifier.weight(1f))
+        if (kind is ShopPriceKind.Missing && item.price != null) {
+            ShopMiniBar(balance, item.price, ink, Modifier.padding(horizontal = ViraSpacing.xs))
+        }
         ShopPriceLabel(kind, Modifier.padding(start = ViraSpacing.xs, end = ViraSpacing.xs, bottom = ViraSpacing.xs))
     }
 }

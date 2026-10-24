@@ -39,6 +39,8 @@ object ViraColor {
     val onAccent: Color @Composable @ReadOnlyComposable get() = ViraPalette.onAccent.resolve()
     val onBrandArtwork: Color @Composable @ReadOnlyComposable get() = ViraPalette.onBrandArtwork.resolve()
     val lightArtworkVeil: Color @Composable @ReadOnlyComposable get() = ViraPalette.lightArtworkVeil.resolve()
+    val feedbackFill: Color @Composable @ReadOnlyComposable get() = ViraPalette.feedbackFill.resolve()
+    val onFeedback: Color @Composable @ReadOnlyComposable get() = ViraPalette.onFeedback.resolve()
     val onDarkArtwork: Color @Composable @ReadOnlyComposable get() = ViraPalette.onDarkArtwork.resolve()
     val providerSurface: Color @Composable @ReadOnlyComposable get() = ViraPalette.providerSurface.resolve()
     val onProviderSurface: Color @Composable @ReadOnlyComposable get() = ViraPalette.onProviderSurface.resolve()

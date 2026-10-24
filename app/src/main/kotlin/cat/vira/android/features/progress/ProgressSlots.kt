@@ -59,7 +59,7 @@ internal object ProgressSlots {
     /// La Botiga: `ShopScreen(onBack)`. S'hi arriba des de «Vesteix-lo» i des de la fitxa «Botiga».
     /// Les pantalles de Botiga porten la seva barra amb la fletxa; el marcador, la nostra.
     @Composable
-    fun Shop(onBack: () -> Unit) = PendingPage(onBack)
+    fun Shop(onBack: () -> Unit) = cat.vira.android.features.shop.ShopScreen(onBack)
 
     /// Els meus premis: `PersonalRewardsScreen(onBack)`.
     @Composable
@@ -67,7 +67,7 @@ internal object ProgressSlots {
 
     /// La col·lecció de cartes: `CardsScreen(onBack)`. Només amb `ViraReleaseGate.cards`.
     @Composable
-    fun Cards(onBack: () -> Unit) = PendingPage(onBack)
+    fun Cards(onBack: () -> Unit) = cat.vira.android.features.shop.CardsScreen(onBack)
 
     /// El Viri amb la skin posada, omplint el marc: `EquippedSkinPortrait(modifier)`, amb
     /// `EquippedAccessory` a dalt a la dreta. Sense skin, el Viri de sempre.

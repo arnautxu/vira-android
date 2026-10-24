@@ -82,6 +82,7 @@ fun ProfileCustomizeSheet(onDismiss: () -> Unit) {
     val profile by data.profile.collectAsStateWithLifecycle(null)
     val skins by data.skins.collectAsStateWithLifecycle(emptyList())
     val badges by data.badges.collectAsStateWithLifecycle(emptyList())
+    val tallies = rememberCardTallies(data.preferences)
 
     fun saveNickname(name: String) = scope.launch {
         val current = data.store.profile()
@@ -104,6 +105,7 @@ fun ProfileCustomizeSheet(onDismiss: () -> Unit) {
                 ownedBadgeKeys = badges.map { it.key }.toSet(),
                 counter = counter,
                 streak = streak,
+                tallies = tallies,
                 onDone = { name -> saveNickname(name); onDismiss() },
                 onSaveNickname = { saveNickname(it) },
                 onEquip = { key ->
@@ -133,6 +135,7 @@ fun ProfileCustomizeContent(
     onEquip: (String?) -> Unit,
     onToggleBadge: (String) -> Unit,
     modifier: Modifier = Modifier,
+    tallies: Tallies = Tallies.EMPTY,
 ) {
     var draft by rememberSaveable { mutableStateOf(nickname) }
     Column(
@@ -194,7 +197,7 @@ fun ProfileCustomizeContent(
                 stringResource(R.string.profile_customize_badges_hint, ViraBadges.SLOTS.viraFormatted()),
                 style = ViraFont.footnote, color = ViraColor.textSecondary,
             )
-            BadgePickerGrid(counter, streak, pinnedKeys, ownedBadgeKeys, onToggleBadge)
+            BadgePickerGrid(counter, streak, pinnedKeys, ownedBadgeKeys, onToggleBadge, tallies = tallies)
         }
     }
 }
@@ -239,8 +242,8 @@ private fun SkinChoice(item: SkinItem?, isEquipped: Boolean, onClick: () -> Unit
     }
 }
 
-/// El que pots penjar al banner (`BadgePickerGrid`): tot el que es compra, encara que no sigui teu
-/// (amb el preu), i **només les cartes ja guanyades**. L'estat mai és només la vora: «Penjat» també
+/// El que pots penjar al banner (`BadgePickerGrid`): **només el que ja és teu**, les cartes guanyades i
+/// les insígnies que vas comprar (des del 2026-10-22 la Botiga ja no en ven). L'estat mai és només la vora: «Penjat» també
 /// en text.
 @Composable
 fun BadgePickerGrid(
@@ -250,10 +253,15 @@ fun BadgePickerGrid(
     ownedKeys: Set<String>,
     onToggle: (String) -> Unit,
     modifier: Modifier = Modifier,
+    tallies: Tallies = Tallies.EMPTY,
 ) {
     fun available(item: BadgeItem) =
-        if (item.isEarned) CardItem.item(item.key)?.isUnlocked(counter, streak) ?: false else item.key in ownedKeys
-    val visible = BadgeItem.catalog.filter { !it.isEarned || available(it) }
+        if (item.isEarned) CardItem.item(item.key)?.isUnlocked(counter, streak, tallies) ?: false else item.key in ownedKeys
+    val visible = BadgeItem.catalog.filter(::available)
+    if (visible.isEmpty()) {
+        Text(stringResource(R.string.profile_badges_none), style = ViraFont.callout, color = ViraColor.textSecondary, modifier = modifier.fillMaxWidth())
+        return
+    }
     val env = LocalViraEnvironment.current
     val columns = if (env.isAccessibilitySize) 1 else 2
     ShopGrid(visible, columns, modifier, spacing = ViraSpacing.rowGap) { item, cellModifier ->

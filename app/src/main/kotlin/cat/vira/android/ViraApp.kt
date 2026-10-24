@@ -10,6 +10,7 @@ import cat.vira.android.app.ViraIncomingLinks
 import cat.vira.android.app.processCompletionQueue
 import cat.vira.android.core.backend.ViraBackend
 import cat.vira.android.core.backend.sync.ViraSyncWorker
+import cat.vira.android.core.data.ViraCardTallies
 import cat.vira.android.core.data.ViraDatabase
 import cat.vira.android.core.data.ViraPreferences
 import cat.vira.android.core.data.ViraStore
@@ -22,6 +23,7 @@ import cat.vira.android.core.notifications.ViraNotifications
 import cat.vira.android.features.emotions.ViraEmotionCheckIn
 import cat.vira.android.features.plan.PlanNotificationEffects
 import cat.vira.android.features.settings.ViraSimpleSettings
+import cat.vira.android.features.shop.ViraCardCelebrations
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -31,7 +33,14 @@ import kotlinx.coroutines.launch
 class ViraApp : Application(), ViraNotificationHost {
 
     /// Dades, compte i sincronització. Es crea el primer cop que algú la demana.
-    val backend: ViraBackend by lazy { ViraBackend(this) }
+    val backend: ViraBackend by lazy {
+        // El que baixa del compte ja es va guanyar en un altre telèfon: les cartes que en surtin es
+        // donen per vistes, sense festa (`ViraCardCelebrations.absorb`).
+        ViraBackend(this, afterProgressApplied = { db ->
+            ViraCardCelebrations(ViraPreferences.open(this))
+                .absorb(db.progressCounters().all().firstOrNull(), db.streaks().all().firstOrNull())
+        })
+    }
 
     /// Els enllaços que han obert l'app i encara no ha fet servir ningú (`ViraIncomingLinks`).
     val incomingLinks = ViraIncomingLinks()
@@ -67,6 +76,8 @@ class ViraApp : Application(), ViraNotificationHost {
 
     override fun onCreate() {
         super.onCreate()
+        // Els recomptes de les cartes, abans que res pugui donar monedes (`ViraRewards`).
+        ViraCardTallies.shared = ViraCardTallies(ViraPreferences.open(this))
         ProcessLifecycleOwner.get().lifecycle.addObserver(ForegroundSync())
         ViraSyncWorker.schedule(this)
         ViraNotificationChannel.register(this)
