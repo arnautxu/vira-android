@@ -212,7 +212,7 @@ object ViraNotifications {
             refreshShown(context, streakPrefixes) { true }
             return
         }
-        val time = ViraNotificationPreferences.viriTime(preferences)
+        val time = ViraNotificationPreferences.viriTime(preferences, now, zone)
         val muted = ViraNotificationPlanner.muteWindow(host.notificationDatabase.focusSessions().all(), now)
         val (event, eventStamp) = ViraStreakNotifications.pendingNews(preferences, time, now, zone, muted) { stamp ->
             scheduler.armed().any { it.id.endsWith(ViraStreakNotifications.NEWS_SUFFIX) && it.scheduledAtMillis == stamp }
@@ -308,7 +308,7 @@ object ViraNotifications {
                 // `dayIsOpen` parla d'avui: un recordatori d'ahir endarrerit passada la mitjanit, no.
                 // I si mentrestant s'ha canviat l'hora de Viri, el de l'hora d'abans tampoc.
                 val fire = notification.fireAt.atZone(zone)
-                val time = ViraNotificationPreferences.viriTime(ViraPreferences.open(context))
+                val time = ViraNotificationPreferences.viriTime(ViraPreferences.open(context), now, zone)
                 state.dayIsOpen && fire.toLocalDate() == LocalDate.ofInstant(now, zone) &&
                     fire.hour == time.hour && fire.minute == time.minute
             }
@@ -353,7 +353,7 @@ object ViraNotifications {
 
     /// Android només guarda una referència feble a l'escoltador: ha de viure aquí.
     private val preferenceListener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-        if (key == null || key in ViraNotificationPreferences.KEYS) {
+        if (key == null || key in ViraNotificationPreferences.KEYS || key == ViraNotificationPreferences.MODULE_MEDICATION_ENABLED) {
             preferenceContext?.let { context -> watchScope.launch { reschedule(context) } }
         }
     }

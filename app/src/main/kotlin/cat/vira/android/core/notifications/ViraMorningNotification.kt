@@ -40,12 +40,12 @@ object ViraMorningNotification {
     fun message(inputs: ViraNotificationInputs, day: LocalDate, zone: ZoneId, detail: Boolean, locale: Locale): Message? {
         val items = inputs.planItems.filter { LocalDate.ofInstant(it.day, zone) == day }
         val pending = items.filter { it.status == PlanItemStatus.PENDING }
+        // La primera per l'hora de la tasca, no per la de l'avís: «Mates» a les 9:00 amb avís una
+        // hora abans no va davant d'«Anglès» a les 8:30 sense avís.
         val first = pending
-            .mapNotNull { item -> ViraNotificationPlanner.planFire(item, zone)?.let { item to it } }
+            .mapNotNull { item -> item.time?.let { item to ViraNotificationPlanner.at(day, it, zone) } }
             .minByOrNull { it.second }
-        // L'hora de la tasca, no la de l'avís: «Mates, a les 9:00» encara que avisi abans.
-        val firstTimed = if (detail) first?.let { (item, fire) ->
-            val time = item.time?.let { ViraNotificationPlanner.at(day, it, zone) } ?: fire
+        val firstTimed = if (detail) first?.let { (item, time) ->
             item.title to DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(locale).format(time.atZone(zone))
         } else null
         return message(items.size, pending.size, firstTimed)

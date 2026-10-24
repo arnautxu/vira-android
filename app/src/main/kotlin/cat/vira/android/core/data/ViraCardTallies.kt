@@ -5,6 +5,7 @@ import cat.vira.android.core.data.model.FocusKind
 import cat.vira.android.core.data.model.PlanItemStatus
 import cat.vira.android.core.data.model.kind
 import cat.vira.android.core.data.model.status
+import java.time.Duration
 import java.time.Instant
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
@@ -64,10 +65,17 @@ class ViraCardTallies(private val preferences: SharedPreferences) {
     /// Puja cada recompte fins al que diuen les dades del telèfon. Retorna si n'ha pujat algun: vol
     /// dir que hi havia dades d'abans (l'actualització que porta aquestes cartes, o un compte que
     /// acaba de baixar) i les cartes que en surtin no s'han de celebrar com si fossin d'ara.
-    suspend fun repair(db: ViraDatabase, zone: ZoneId = ZoneId.systemDefault()): Boolean {
+    ///
+    /// Les tasques fetes fa menys de [SETTLE] no hi compten: poden ser dins del «Desfer», amb la
+    /// recompensa —i el seu [add]— encara per arribar. Comptades aquí i sumades després, dues tasques
+    /// marcades dins de la mateixa finestra en feien tres. La passada següent ja les compta.
+    suspend fun repair(db: ViraDatabase, zone: ZoneId = ZoneId.systemDefault(), now: Instant = Instant.now()): Boolean {
         val sessions = db.focusSessions().all().filter { it.completed && it.kind == FocusKind.FOCUS }
+        val settled = now.minus(SETTLE)
         val floors = mapOf(
-            Kind.TASKS_DONE to db.planItems().all().count { it.status == PlanItemStatus.DONE },
+            Kind.TASKS_DONE to db.planItems().all().count {
+                it.status == PlanItemStatus.DONE && (it.completedAt == null || !it.completedAt.isAfter(settled))
+            },
             Kind.FOCUS_SECONDS to sessions.sumOf { maxOf(0, it.actualSeconds) },
             Kind.CHALLENGES_DONE to db.challengeClaims().all().count { countsChallenge(it.key) },
             Kind.REWARDS_REDEEMED to db.personalRewards().all().sumOf { maxOf(0, it.redeemedCount) },
@@ -82,6 +90,10 @@ class ViraCardTallies(private val preferences: SharedPreferences) {
     companion object {
         /// Dies seguits sense que el dia compti a partir dels quals tornar és «Tornem-hi».
         const val COMEBACK_GAP_DAYS = 7
+
+        /// Més que el «Desfer» més llarg: 5 s a l'iPhone, fins a 2 min a Android amb «Temps per
+        /// actuar» (`ViraCompletionQueue`).
+        val SETTLE: Duration = Duration.ofMinutes(3)
 
         /// El de l'app, que hi posa `ViraApp` en arrencar (l'`UserDefaults.standard` de l'iPhone).
         /// Sense ell (les proves), [ViraRewards] no suma res en el moment i només compta [repair].
