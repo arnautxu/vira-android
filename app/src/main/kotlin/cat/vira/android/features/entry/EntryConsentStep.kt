@@ -25,7 +25,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import cat.vira.android.R
 import cat.vira.android.core.backend.ViraBackendError
-import cat.vira.android.core.design.tokens.ViraArea
 import cat.vira.android.core.design.tokens.ViraColor
 import cat.vira.android.core.design.tokens.ViraFont
 import cat.vira.android.core.design.tokens.ViraSpacing
@@ -62,7 +61,7 @@ fun EntryConsentStep(services: EntryServices, onContinue: () -> Unit) {
     // que manté el pas a la pantalla quan l'ha obert `ViraAuthGate`.
     var isChangingEmail by rememberSaveable { mutableStateOf(false) }
     val plan = EntryConsentWriter.plan(ageRange.value)
-    val ink = ViraColor.onCard(ViraArea.Rewards)
+    val ink = ViraColor.textPrimary
 
     fun submit() {
         if (isWorking) return
@@ -145,7 +144,7 @@ fun EntryConsentStep(services: EntryServices, onContinue: () -> Unit) {
             enabled = isValid && !isWorking,
             isLoading = isWorking,
         )
-        Text(stringResource(R.string.account_consent_footnote), style = ViraFont.footnote, color = ink)
+        Text(stringResource(R.string.account_consent_footnote), style = ViraFont.footnote, color = ViraColor.textSecondary)
     }
 }
 

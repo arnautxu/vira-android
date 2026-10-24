@@ -42,17 +42,17 @@ class EntryStepTest {
 
     @Test
     fun `el cami curt es el nou ordre, primer el valor i despres el compte`() {
-        assertEquals(listOf(WELCOME, START, AGE, PRIVACY, FIRST_ACTION, DONE, ACCOUNT, CONSENT, NICKNAME, NOTIFICATIONS), EntryStep.full)
+        assertEquals(listOf(WELCOME, START, AGE, PRIVACY, FIRST_ACTION, DONE, NOTIFICATIONS, ACCOUNT, CONSENT), EntryStep.full)
     }
 
     @Test
     fun `jove amb backend veu E1-E7 i, amb compte nou, E8-E10`() {
         assertEquals(
-            listOf(WELCOME, START, AGE, PRIVACY, FIRST_ACTION, DONE, ACCOUNT, NICKNAME, NOTIFICATIONS),
+            listOf(WELCOME, START, AGE, PRIVACY, FIRST_ACTION, DONE, NOTIFICATIONS, ACCOUNT),
             visible(requiresAccount = true, user = null),
         )
         assertEquals(
-            listOf(WELCOME, START, AGE, PRIVACY, FIRST_ACTION, DONE, CONSENT, NICKNAME, NOTIFICATIONS),
+            listOf(WELCOME, START, AGE, PRIVACY, FIRST_ACTION, DONE, NOTIFICATIONS, CONSENT),
             visible(requiresAccount = true, user = user(ViraAccountRole.TEEN, ViraConsentStatus.MISSING)),
         )
     }
@@ -86,7 +86,7 @@ class EntryStepTest {
 
     @Test
     fun `sense backend ni compte ni permis, i la resta sencera`() {
-        assertEquals(listOf(WELCOME, START, AGE, PRIVACY, FIRST_ACTION, DONE, NICKNAME, NOTIFICATIONS), visible(requiresAccount = false, user = null))
+        assertEquals(listOf(WELCOME, START, AGE, PRIVACY, FIRST_ACTION, DONE, NOTIFICATIONS), visible(requiresAccount = false, user = null))
     }
 
     @Test
@@ -130,7 +130,7 @@ class EntryStepTest {
 
     @Test
     fun `saltar sense backend tanca el flux`() {
-        for (from in listOf(START, AGE, PRIVACY, FIRST_ACTION, DONE, NICKNAME, NOTIFICATIONS)) {
+        for (from in listOf(START, AGE, PRIVACY, FIRST_ACTION, DONE, NOTIFICATIONS)) {
             assertNull(EntryStep.skipTarget(from, EntryStep.full, false, null))
         }
     }
@@ -142,8 +142,22 @@ class EntryStepTest {
 
     @Test
     fun `ara no passa per sobre de la celebracio`() {
-        assertEquals(ACCOUNT, EntryStep.afterSkippedAction(EntryStep.full, true, null))
-        assertEquals(NICKNAME, EntryStep.afterSkippedAction(EntryStep.full, false, null))
+        assertEquals(NOTIFICATIONS, EntryStep.afterSkippedAction(EntryStep.full, true, null))
+        assertEquals(NOTIFICATIONS, EntryStep.afterSkippedAction(EntryStep.full, false, null))
+    }
+
+    @Test
+    fun `els avisos es demanen just despres de fet, abans del compte`() {
+        val full = EntryStep.full
+        assertEquals(full.indexOf(DONE) + 1, full.indexOf(NOTIFICATIONS))
+        assertTrue(full.indexOf(NOTIFICATIONS) < full.indexOf(ACCOUNT))
+        assertEquals(NOTIFICATIONS, EntryStep.next(DONE, full, true, null))
+        assertEquals(ACCOUNT, EntryStep.next(NOTIFICATIONS, full, true, null))
+    }
+
+    @Test
+    fun `el nom ja no es al cami curt`() {
+        assertFalse(NICKNAME in EntryStep.full)
     }
 
     @Test

@@ -43,39 +43,34 @@ import cat.vira.android.core.design.components.viraPressable
 import cat.vira.android.core.design.tokens.ViraArea
 import cat.vira.android.core.design.tokens.ViraColor
 import cat.vira.android.core.design.tokens.ViraFont
-import cat.vira.android.core.design.tokens.ViraGradient
 import cat.vira.android.core.design.tokens.ViraRadius
 import cat.vira.android.core.design.tokens.ViraSpacing
 import cat.vira.android.core.design.tokens.ViraTouch
 
 /// Peces visuals del flux d'entrada (`EntryFlowChrome.swift`).
 ///
-/// El tractament és el de marca: degradat lila fort a tota pantalla, Viri gran a sobre d'una
-/// **fulla groga** enganxada al peu, i tot el text i els controls dins de la fulla. La regla que no
-/// es relaxa: **cap text seu directament sobre el degradat ni sobre la il·lustració**, i mai blanc
-/// sobre groc (`onCard(Rewards)`, el marró fosc del sistema). El botó d'acció segueix sent lila.
+/// ## Tractament (Arnau, 2026-10-21)
+/// - **Viri té casa**: cada pas porta una escena sencera del món lila (`EntryScene`), a sang i
+///   sota la capçalera, en lloc d'un retall sobre un degradat.
+/// - **La fulla és blanca** (`surfaceElevated`, fosca en mode fosc), amb `textPrimary` i
+///   `textSecondary`. El groc torna a ser només dels premis.
+/// - El que no es negocia continua igual: **cap text sobre la il·lustració**. La frase de Viri va
+///   en una bombolla (`EntryViriLine`), i els botons de la capçalera són superfícies.
 
-/// Degradat de marca a pantalla completa: l'escenari de tots els passos.
+/// El logotip horitzontal, **lila dins de la fulla** de la benvinguda. Porta nom per a TalkBack:
+/// aquí és l'única cosa que diu de qui és l'app abans d'entrar-hi.
 @Composable
-fun EntryBackdrop(modifier: Modifier = Modifier) {
-    Box(modifier.fillMaxSize().background(ViraGradient.card(ViraArea.Today)))
-}
-
-/// El logotip horitzontal, blanc sobre el degradat. Porta nom per a TalkBack: aquí és l'única cosa
-/// que diu de qui és l'app abans d'entrar-hi.
-@Composable
-fun EntryLogo(modifier: Modifier = Modifier, width: Dp = 148.dp) {
+fun EntryLogo(modifier: Modifier = Modifier, width: Dp = 96.dp) {
     Image(
         painter = painterResource(R.drawable.vira_logotype),
         contentDescription = "Vira",
         contentScale = ContentScale.Fit,
-        colorFilter = ColorFilter.tint(ViraColor.lightArtworkVeil),
+        colorFilter = ColorFilter.tint(ViraColor.accent(ViraArea.Today)),
         modifier = modifier.width(width),
     )
 }
 
-/// La pastilla groga, amb el mateix arrodoniment a les quatre cantonades. Es queda per als passos
-/// ensenyats sols (captures) i per al tutorial.
+/// Targeta blanca solta: la fan servir les captures de cada pas, que l'ensenyen sense l'escena.
 @Composable
 fun EntryCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
     val shape = RoundedCornerShape(ViraRadius.l)
@@ -83,39 +78,44 @@ fun EntryCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.()
         modifier = modifier
             .fillMaxWidth()
             .shadow(20.dp, shape, ambientColor = ViraColor.shadow.copy(alpha = 0.18f), spotColor = ViraColor.shadow.copy(alpha = 0.18f))
-            .background(ViraGradient.card(ViraArea.Rewards), shape)
+            .background(ViraColor.surfaceElevated, shape)
             .padding(ViraSpacing.m),
         verticalArrangement = Arrangement.spacedBy(ViraSpacing.s),
         content = content,
     )
 }
 
-/// La fulla groga del flux, **enganxada al peu** (Arnau, 2026-10-10): només té arrodonides les dues
-/// cantonades de dalt, i Viri hi seu a sobre.
+/// Quant tapa la fulla l'escena per sota: prou perquè les cantonades arrodonides es vegin sobre la
+/// il·lustració i no sobre un forat.
+val EntrySheetOverlap = 30.dp
+
+/// La fulla del flux, **enganxada al peu**, amb les dues cantonades de dalt arrodonides. Blanca en
+/// clar i `surfaceElevated` fosc en fosc, com qualsevol full de l'app.
 @Composable
 fun Modifier.entrySheetBackground(): Modifier {
     val radius = ViraRadius.l + ViraSpacing.s
     val shape = RoundedCornerShape(topStart = radius, topEnd = radius)
     return this
-        .shadow(20.dp, shape, ambientColor = ViraColor.shadow.copy(alpha = 0.18f), spotColor = ViraColor.shadow.copy(alpha = 0.18f))
-        .background(ViraGradient.card(ViraArea.Rewards), shape)
+        .shadow(16.dp, shape, ambientColor = ViraColor.shadow.copy(alpha = 0.12f), spotColor = ViraColor.shadow.copy(alpha = 0.12f))
+        .background(ViraColor.surfaceElevated, shape)
 }
 
-/// Títol i missatge del pas, **dins** de la fulla.
+/// Títol i missatge del pas, a dalt de la fulla.
 @Composable
 fun EntryHeading(title: String, message: String? = null) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(ViraSpacing.xs)) {
-        Text(title, style = ViraFont.title, color = ViraColor.onCard(ViraArea.Rewards), modifier = Modifier.semantics { heading() })
+        Text(title, style = ViraFont.title, color = ViraColor.textPrimary, modifier = Modifier.semantics { heading() })
         if (message != null) {
-            Text(message, style = ViraFont.body, color = ViraColor.onCard(ViraArea.Rewards))
+            Text(message, style = ViraFont.body, color = ViraColor.textSecondary)
         }
     }
 }
 
-/// Botó principal del pas. Lila: el groc és per a superfícies i el lila per a accions.
+/// Botó principal del pas: el lila d'acció de sempre.
 ///
 /// Amb `isLoading` el text cedeix el lloc a un indicador, però **es queda** com a nom per a
-/// TalkBack: el botó segueix dient què fa mentre ho fa.
+/// TalkBack: el botó segueix dient què fa mentre ho fa. Desactivat, gris de text: el blanc sobre
+/// el gris quasi no es veia al full blanc.
 @Composable
 fun EntryPrimaryButton(
     text: String,
@@ -149,8 +149,9 @@ fun EntryPrimaryButton(
     }
 }
 
-/// Enllaç secundari dins de la fulla ("Ara no", "Obre Ajustos"). Va en `onCard(Rewards)`, **no** en
-/// lila: el lila sobre el groc queda per sota del 4,5:1, i el botó principal ja marca on és l'acció.
+/// Enllaç secundari dins de la fulla ("Ara no", "Ja tinc compte", "Sóc pare o mare", "Obre
+/// Ajustos"): `textSecondary` en negreta. És la sortida discreta; el botó lila ja marca on és
+/// l'acció. A lletra gran fa dues línies abans que tallar-se.
 @Composable
 fun EntryLinkButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, centered: Boolean = true) {
     Box(
@@ -163,34 +164,36 @@ fun EntryLinkButton(text: String, onClick: () -> Unit, modifier: Modifier = Modi
         Text(
             text,
             style = ViraFont.callout.copy(fontWeight = FontWeight.Bold),
-            color = ViraColor.onCard(ViraArea.Rewards),
+            color = ViraColor.textSecondary,
             textAlign = if (centered) TextAlign.Center else TextAlign.Start,
         )
     }
 }
 
-/// Acció secundària **sobre el degradat** ("Ja tinc compte"): píndola groga plena amb text fosc. El
-/// text blanc pelat sobre el lila només hi donaria 3,1:1.
+/// Acció secundària a tota amplada ("Amb el correu"): contorn lila i text lila, sense farciment.
+/// Pesa menys que el botó principal i més que un enllaç.
 @Composable
 fun EntrySecondaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val shape = RoundedCornerShape(ViraRadius.m)
+    val accent = ViraColor.accent(ViraArea.Today)
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
             .fillMaxWidth()
             .defaultMinSize(minHeight = ViraTouch.comfortable)
-            .clip(CircleShape)
-            .background(ViraGradient.card(ViraArea.Rewards), CircleShape)
+            .clip(shape)
+            .border(1.5.dp, accent, shape)
             .viraPressable(onClick = onClick)
             .padding(horizontal = ViraSpacing.m),
     ) {
-        Text(text, style = ViraFont.headline, color = ViraColor.onCard(ViraArea.Rewards), textAlign = TextAlign.Center)
+        Text(text, style = ViraFont.headline, color = accent, textAlign = TextAlign.Center)
     }
 }
 
-/// Píndola `surfaceElevated` amb text `accent(Today)` (5,51:1): les accions de la capçalera i
-/// l'enllaç "Sóc pare o mare". Sempre sobre una superfície, mai text pelat sobre el degradat.
+/// Píndola `surfaceElevated` amb text `textPrimary` en negreta: les accions de la capçalera
+/// ("Saltar", "Ara no", "Entra"). Sempre una superfície sobre l'escena, i mai es talla.
 @Composable
-fun EntryCapsuleButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, bold: Boolean = false) {
+fun EntryCapsuleButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
@@ -200,15 +203,12 @@ fun EntryCapsuleButton(text: String, onClick: () -> Unit, modifier: Modifier = M
             .viraPressable(onClick = onClick)
             .padding(horizontal = ViraSpacing.m),
     ) {
-        Text(
-            text,
-            style = ViraFont.callout.copy(fontWeight = if (bold) FontWeight.Bold else FontWeight.Medium),
-            color = ViraColor.accent(ViraArea.Today),
-        )
+        Text(text, style = ViraFont.callout.copy(fontWeight = FontWeight.SemiBold), color = ViraColor.textPrimary, maxLines = 1, softWrap = false)
     }
 }
 
-/// Botó enrere de la capçalera: el chevron dins d'un cercle `surfaceElevated` de 48 dp.
+/// Botó enrere de la capçalera: el chevron `textPrimary` dins d'un cercle `surfaceElevated` de 48 dp,
+/// com «Saltar» a l'altra banda.
 @Composable
 fun EntryBackButton(onClick: () -> Unit, label: String) {
     Box(
@@ -223,24 +223,24 @@ fun EntryBackButton(onClick: () -> Unit, label: String) {
                 role = Role.Button
             },
     ) {
-        EntryGlyphIcon(EntryGlyph.BACK, ViraColor.accent(ViraArea.Today), side = 20.dp)
+        EntryGlyphIcon(EntryGlyph.BACK, ViraColor.textPrimary, side = 20.dp)
     }
 }
 
-/// Contorn de qualsevol control dins de la fulla: sobre el groc, un farciment clar no es
-/// distingiria; el que els separa és el traç.
+/// Contorn d'un camp dins de la fulla: el traç és el que diu on comença el control
+/// (`controlBorder`, ≥3:1 sobre la fulla en clar i en fosc).
 @Composable
-fun Modifier.entryFieldBorder(): Modifier = border(
-    1.5.dp,
-    ViraColor.controlBorder(on = ViraColor.onCard(ViraArea.Rewards)),
-    RoundedCornerShape(ViraRadius.m),
-)
+fun Modifier.entryFieldBorder(): Modifier = border(1.5.dp, ViraColor.controlBorder, RoundedCornerShape(ViraRadius.m))
 
-/// Marc dels passos ensenyats sols (captures): el pas dins de la pastilla, sobre el degradat.
+/// Fons d'una fila agrupada dins de la fulla (interruptors, la vista prèvia de l'avís): el gris de
+/// les llistes de l'app, sense contorn.
+@Composable
+fun Modifier.entryGroupedRow(): Modifier = background(ViraColor.backgroundGrouped, RoundedCornerShape(ViraRadius.m))
+
+/// Marc dels passos ensenyats sols (captures): el pas dins d'una targeta blanca.
 @Composable
 fun EntryStepPreview(content: @Composable ColumnScope.() -> Unit) {
-    Box(Modifier.fillMaxWidth()) {
-        EntryBackdrop(Modifier.matchParentSize())
+    Box(Modifier.fillMaxWidth().background(ViraColor.backgroundGrouped)) {
         EntryCard(Modifier.padding(ViraSpacing.screenMargin), content = content)
     }
 }

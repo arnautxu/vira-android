@@ -86,6 +86,8 @@ import cat.vira.android.core.design.tokens.ViraTouch
 import java.time.LocalDate
 import java.time.format.TextStyle
 import java.util.Locale
+import cat.vira.android.features.entry.ViraTutorialStep
+import cat.vira.android.features.entry.LocalViraShowTutorialStop
 
 private val area = ViraArea.Plan
 
@@ -108,6 +110,7 @@ fun HabitsSection(snapshot: PlanSnapshot, actions: PlanActions, chrome: PlanChro
         }
     }
 
+    val showTutorialStop = LocalViraShowTutorialStop.current
     val detail = detailId?.let { id -> habits.firstOrNull { it.id.toString() == id } }
     if (detail != null) {
         BackHandler { detailId = null }
@@ -120,6 +123,8 @@ fun HabitsSection(snapshot: PlanSnapshot, actions: PlanActions, chrome: PlanChro
                 actionTitle = stringResource(R.string.habits_new),
                 onAction = { creating = true },
                 icon = { ViraPictogram(R.drawable.picto_habits, size = 56.dp) },
+                helpTitle = stringResource(R.string.tutorial_how_it_works),
+                onHelp = { showTutorialStop(ViraTutorialStep.PLAN) },
             )
         }
     } else {

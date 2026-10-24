@@ -122,3 +122,19 @@ class EntryConsentWriter(
         )
     }
 }
+
+/// Què ha fet qui acaba d'entrar, sense el detall (`EntryFirstActionKind` de l'iPhone). Es desa a
+/// `settings.entryFirstAction` perquè el tomb, que surt quan el flux ja no hi és, sàpiga de què parlar.
+enum class EntryFirstActionKind(val raw: String) {
+    TASK("task"), CHECK_IN("checkIn"), FOCUS("focus");
+
+    companion object {
+        fun of(outcome: EntryFirstActionOutcome): EntryFirstActionKind = when (outcome) {
+            is EntryFirstActionOutcome.Task -> TASK
+            is EntryFirstActionOutcome.CheckIn -> CHECK_IN
+            is EntryFirstActionOutcome.Focus -> FOCUS
+        }
+
+        fun from(raw: String): EntryFirstActionKind? = entries.firstOrNull { it.raw == raw }
+    }
+}

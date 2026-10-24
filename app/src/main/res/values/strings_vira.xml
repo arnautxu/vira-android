@@ -1621,7 +1621,6 @@
     <string name="onboarding_personalization_title">What should I call you?</string>
     <string name="onboarding_privacy_fact_sensitive">Emotions and medication, only with the required consent.</string>
     <string name="onboarding_privacy_fact_sync">With an account, your plan and progress are saved and synced.</string>
-    <string name="onboarding_privacy_message">With an account, your plan and progress sync. Emotions and medication sync only with the required consent.</string>
     <string name="onboarding_privacy_title">Your data</string>
     <string name="onboarding_progress">Step %1$d of %2$d</string>
     <string name="onboarding_progress_short">%1$d of %2$d</string>
@@ -1656,10 +1655,6 @@
     <string name="onboarding_viri_start">Three questions, then we start.</string>
     <string name="onboarding_viri_task">One thing for today. Just one.</string>
     <string name="onboarding_viri_welcome">Hi! I\'m Viri.</string>
-    <string name="onboarding_welcome_cta_emotions">handling my emotions</string>
-    <string name="onboarding_welcome_cta_focus">focusing</string>
-    <string name="onboarding_welcome_cta_organize">getting organised</string>
-    <string name="onboarding_welcome_cta_prefix">I want to start</string>
     <string name="onboarding_welcome_headline">Your day, made easier</string>
     <string name="onboarding_welcome_message">I help you plan your day, notice how you feel, and focus.</string>
     <string name="onboarding_welcome_start">Let\'s go</string>
@@ -2540,7 +2535,6 @@
     <string name="tutorial_action_next">Next</string>
     <string name="tutorial_action_start">Let\'s start</string>
     <string name="tutorial_emotions_faces">Tap a face and it\'s noted. No good days or bad days.</string>
-    <string name="tutorial_emotions_message">Log how you feel and see how the week went.</string>
     <string name="tutorial_emotions_title">How you are</string>
     <string name="tutorial_how_it_works">How does it work?</string>
     <string name="tutorial_integrations_message">Vira can work with what you already use.</string>
@@ -2549,10 +2543,7 @@
     <string name="tutorial_intro_message">Four places and you\'ve got it all. You can watch it again in Settings.</string>
     <string name="tutorial_intro_title">Want a quick tour?</string>
     <string name="tutorial_plan_add">Use + to add anything.</string>
-    <string name="tutorial_plan_message">Calendar, habits and medication. Everything with a time lives here.</string>
     <string name="tutorial_plan_sections">Calendar, habits and medication, each in its place.</string>
-    <string name="tutorial_plan_title">Your plan</string>
-    <string name="tutorial_profile_message">Your streak, rewards and shop. Nothing gets lost along the way.</string>
     <string name="tutorial_profile_more">Further down: the shop and your cards.</string>
     <string name="tutorial_profile_streak">Your streak. If you can\'t make it one day, you have saved days.</string>
     <string name="tutorial_profile_title">Viri and progress</string>
@@ -2568,9 +2559,7 @@
     <string name="tutorial_today_title">Your day</string>
     <string name="tutorial_today_tried">Done. If that was a mistake, tap the circle again.</string>
     <string name="tutorial_today_try">Try it: tap the circle for “%1$s”.</string>
-    <string name="tutorial_widgets_how">Touch and hold the Home Screen or Lock Screen, tap Edit and look for Vira.</string>
     <string name="tutorial_widgets_lead">Your day and your streak, on the Home Screen.</string>
-    <string name="tutorial_widgets_message">Your day\'s plan and your streak, right on the Home Screen. You can tick a task without opening the app.</string>
     <string name="tutorial_widgets_step1">Touch and hold the Home Screen.</string>
     <string name="tutorial_widgets_step2">Tap Edit, then Add Widget.</string>
     <string name="tutorial_widgets_step3">Search for Vira and pick one. You can tick things off without opening the app.</string>

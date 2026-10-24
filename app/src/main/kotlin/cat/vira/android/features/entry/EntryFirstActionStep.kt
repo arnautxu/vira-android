@@ -20,8 +20,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -30,6 +29,7 @@ import cat.vira.android.core.design.LocalViraEnvironment
 import cat.vira.android.core.design.PendingScreen
 import cat.vira.android.core.design.tokens.ViraColor
 import cat.vira.android.core.design.tokens.ViraSpacing
+import cat.vira.android.core.sound.ViraSound
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -70,7 +70,7 @@ private val SUGGESTIONS = listOf(
 @Composable
 fun EntryFirstTaskStep(services: EntryServices, onDone: (EntryFirstActionOutcome) -> Unit) {
     val scope = rememberCoroutineScope()
-    val haptics = LocalHapticFeedback.current
+    val context = LocalContext.current
     var title by rememberSaveable { mutableStateOf("") }
     var isSaving by remember { mutableStateOf(false) }
     var failed by remember { mutableStateOf(false) }
@@ -91,7 +91,7 @@ fun EntryFirstTaskStep(services: EntryServices, onDone: (EntryFirstActionOutcome
             }
             isSaving = false
             if (saved != null) {
-                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                ViraSound.saved(context)
                 onDone(EntryFirstActionOutcome.Task(saved))
             }
         }
@@ -227,7 +227,6 @@ private fun EntryPendingHost(onClose: () -> Unit) {
             stringResource(R.string.action_close),
             onClose,
             Modifier.align(Alignment.TopEnd).padding(ViraSpacing.s),
-            bold = true,
         )
     }
 }

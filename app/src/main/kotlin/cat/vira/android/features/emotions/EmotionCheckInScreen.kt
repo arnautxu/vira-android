@@ -3,14 +3,10 @@ package cat.vira.android.features.emotions
 import cat.vira.android.core.sound.ViraHaptics
 import cat.vira.android.core.sound.ViraSound
 import androidx.compose.ui.platform.LocalContext
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,8 +14,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -34,6 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -50,6 +50,10 @@ import cat.vira.android.core.design.tokens.ViraFont
 import cat.vira.android.core.design.tokens.ViraGradient
 import cat.vira.android.core.design.tokens.ViraSpacing
 import cat.vira.android.core.design.tokens.ViraTouch
+import cat.vira.android.features.entry.ViraTip
+import cat.vira.android.features.entry.ViraTipRow
+import cat.vira.android.features.entry.ViraTutorialTarget
+import cat.vira.android.features.entry.viraTutorialTarget
 import kotlinx.coroutines.launch
 
 /// Check-in emocional: la pantalla més important del producte (`EmotionCheckInView` de l'iPhone).
@@ -154,6 +158,7 @@ internal fun EmotionCheckInContent(
         verticalArrangement = Arrangement.spacedBy(ViraSpacing.l),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        ViraTipRow(ViraTip.EMOTION)
         Text(
             stringResource(R.string.emotions_breathe),
             style = ViraFont.callout,
@@ -166,6 +171,8 @@ internal fun EmotionCheckInContent(
         }
         EmotionFaceGrid(
             count = primary.size + if (other.isEmpty()) 0 else 1,
+            // La primera fila de cares és la que il·lumina el tomb (`ViraTutorialStep`).
+            firstRow = Modifier.viraTutorialTarget(ViraTutorialTarget.EmotionFaces),
         ) { index, size ->
             if (index < primary.size) {
                 EmotionButton(primary[index], size) { onSelect(primary[index]) }
@@ -199,7 +206,7 @@ private fun CustomizeAction(onClick: () -> Unit) {
 /// una columna quan la lletra creix. I el mínim tampoc baixa d'**un terç de l'ample**: una cara
 /// petita deixaria entrar-ne una quarta, i la graella deixaria de ser de 3 × 3.
 @Composable
-internal fun EmotionFaceGrid(count: Int, cell: @Composable (index: Int, size: Dp) -> Unit) {
+internal fun EmotionFaceGrid(count: Int, firstRow: Modifier = Modifier, cell: @Composable (index: Int, size: Dp) -> Unit) {
     val scaled = ViraTouch.emotion * LocalDensity.current.fontScale
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val gap = ViraSpacing.xs
@@ -207,8 +214,8 @@ internal fun EmotionFaceGrid(count: Int, cell: @Composable (index: Int, size: Dp
         val minimum = maxOf(face, (maxWidth - gap * 2) / 3)
         val columns = ((maxWidth + gap) / (minimum + gap)).toInt().coerceAtLeast(1)
         Column(verticalArrangement = Arrangement.spacedBy(ViraSpacing.l)) {
-            (0 until count).chunked(columns).forEach { row ->
-                Row(horizontalArrangement = Arrangement.spacedBy(gap), verticalAlignment = Alignment.Top) {
+            (0 until count).chunked(columns).forEachIndexed { number, row ->
+                Row(if (number == 0) firstRow else Modifier, horizontalArrangement = Arrangement.spacedBy(gap), verticalAlignment = Alignment.Top) {
                     row.forEach { index -> Column(Modifier.weight(1f)) { cell(index, face) } }
                     repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
                 }

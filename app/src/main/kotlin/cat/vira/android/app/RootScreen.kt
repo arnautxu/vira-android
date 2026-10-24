@@ -18,7 +18,6 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
@@ -44,7 +43,12 @@ import cat.vira.android.core.design.components.ViraTopBar
 import cat.vira.android.core.design.tokens.ViraColor
 import cat.vira.android.core.notifications.ViraNotifications
 import cat.vira.android.features.emotions.EmotionsScreen
+import cat.vira.android.features.entry.LocalViraShowTutorialStop
+import cat.vira.android.features.entry.LocalViraTipPreferences
+import cat.vira.android.features.entry.LocalViraTutorialTargets
 import cat.vira.android.features.entry.ViraTutorialOverlay
+import cat.vira.android.features.entry.ViraTutorialTarget
+import cat.vira.android.features.entry.viraTutorialTarget
 import cat.vira.android.features.focus.FocusResumeEffect
 import cat.vira.android.features.plan.PlanScreen
 import cat.vira.android.features.progress.ProgressScreen
@@ -86,7 +90,11 @@ fun RootScreen() {
     // Una sessió en marxa torna a la vista quan l'app torna a primer pla (des de l'avís fix).
     FocusResumeEffect { navigator.startFocus(navigator.focusLink) }
 
-    CompositionLocalProvider(LocalViraNavigator provides navigator) {
+    // Les pistes d'un sol ús llegeixen aquestes preferències; a les captures no n'hi ha i no surten.
+    CompositionLocalProvider(
+        LocalViraNavigator provides navigator,
+        LocalViraTipPreferences provides LocalViraBackend.current.preferences,
+    ) {
         ViraCompletionQueue {
             NavHost(
                 navController = navController,
@@ -144,36 +152,44 @@ private fun MainTabs(navigator: ViraNavigator) {
     // Sense alliberar en desaparèixer: el bloqueig de l'app treu les pestanyes un moment i el tutorial
     // torna en desbloquejar. La propera composició ja hi posa el valor bo.
     SideEffect { celebrations.tutorialVisible = tutorial.holdsCelebrations }
-    val tabBounds = remember { mutableStateMapOf<String, Rect>() }
     val profile = rememberProfileSummary()
 
     // Enrere des d'una altra pestanya torna a Avui, que és on s'obre l'app; des d'Avui, surt.
     BackHandler(enabled = tab != ViraTab.Today) { navigator.open(ViraTab.Today) }
-    // Amb el tutorial a la pantalla, Enrere és «Saltar»: compta com a vist, igual que el botó.
-    BackHandler(enabled = tutorial.step != null) { tutorial.finish() }
+    // Amb el tomb a la pantalla, Enrere és «Salta el tomb»: compta com a vist, igual que el botó.
+    BackHandler(enabled = tutorial.step != null) { tutorial.skip() }
 
     Box(Modifier.fillMaxSize()) {
-        // La cortina és modal també per a TalkBack: l'arbre de sota no es pot recórrer.
-        Box(if (tutorial.step != null) Modifier.clearAndSetSemantics {} else Modifier) {
-            ViraRootLayout(
-                selectedTab = tab,
-                profile = profile,
-                onTabTap = navigator::open,
-                onFocus = { navigator.startFocus() },
-                onProfile = { navigator.navigate(ViraDestination.Profile) },
-                onSettings = navigator::openSettings,
-                onHelp = navigator::openHelp,
-                onTabBounds = { key, bounds -> tabBounds[key] = bounds },
-                avatar = { EquippedSkinAvatar(size = 40.dp) },
-                streakPanel = { dismiss -> ViraTopBarStreakPanel(profile.streakCountsToday, dismiss) },
-                coinsPanel = { dismiss -> ViraTopBarCoinsPanel(profile.coins ?: 0, dismiss) },
-            ) {
-                stateHolder.SaveableStateProvider(tab.route) {
-                    when (tab) {
-                        ViraTab.Today -> TodayScreen()
-                        ViraTab.Plan -> PlanScreen()
-                        ViraTab.Emotions -> EmotionsScreen()
-                        ViraTab.Progress -> ProgressScreen()
+        // Les peces que el tomb il·lumina diuen on són des de dins de cada pestanya, i «Com funciona?»
+        // d'un estat buit n'obre una parada sola.
+        CompositionLocalProvider(
+            LocalViraTutorialTargets provides tutorial.targets,
+            LocalViraShowTutorialStop provides tutorial::showStop,
+        ) {
+            // La cortina és modal també per a TalkBack: l'arbre de sota no es pot recórrer.
+            Box(if (tutorial.step != null) Modifier.clearAndSetSemantics {} else Modifier) {
+                ViraRootLayout(
+                    selectedTab = tab,
+                    profile = profile,
+                    onTabTap = navigator::open,
+                    onFocus = { navigator.startFocus() },
+                    onProfile = { navigator.navigate(ViraDestination.Profile) },
+                    onSettings = navigator::openSettings,
+                    onHelp = navigator::openHelp,
+                    onTabBounds = { key, bounds ->
+                        ViraTab.fromRoute(key)?.let { tutorial.targets.report(ViraTutorialTarget.Tab(it), 0, bounds) }
+                    },
+                    avatar = { EquippedSkinAvatar(size = 40.dp) },
+                    streakPanel = { dismiss -> ViraTopBarStreakPanel(profile.streakCountsToday, dismiss) },
+                    coinsPanel = { dismiss -> ViraTopBarCoinsPanel(profile.coins ?: 0, dismiss) },
+                ) {
+                    stateHolder.SaveableStateProvider(tab.route) {
+                        when (tab) {
+                            ViraTab.Today -> TodayScreen()
+                            ViraTab.Plan -> PlanScreen()
+                            ViraTab.Emotions -> EmotionsScreen()
+                            ViraTab.Progress -> ProgressScreen()
+                        }
                     }
                 }
                 ShopGoalBanner(celebrations.isCelebrating) { navigator.navigate(ViraDestination.Shop) }
@@ -185,10 +201,13 @@ private fun MainTabs(navigator: ViraNavigator) {
             val shown = step ?: tutorial.lastStep ?: return@AnimatedVisibility
             ViraTutorialOverlay(
                 step = shown,
-                spotlight = shown.tab?.let { tabBounds[it.route] },
+                route = tutorial.route,
+                frames = tutorial.targets.frames,
                 prefs = tutorial.prefs,
                 onNext = tutorial::advance,
-                onSkip = tutorial::finish,
+                onSkip = tutorial::skip,
+                context = tutorial.context,
+                onTry = tutorial::tryIt,
             )
         }
     }
@@ -224,6 +243,7 @@ fun ViraRootLayout(
             onProfile = onProfile,
             onSettings = onSettings,
             onHelp = onHelp,
+            helpModifier = Modifier.viraTutorialTarget(ViraTutorialTarget.HelpNow),
             avatar = avatar,
             streakPanel = streakPanel,
             coinsPanel = coinsPanel,

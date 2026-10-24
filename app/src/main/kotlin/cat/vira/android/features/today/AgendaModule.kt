@@ -16,11 +16,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -47,7 +48,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import cat.vira.android.R
-import cat.vira.android.core.design.viraLocale
 import cat.vira.android.core.data.model.PlanItem
 import cat.vira.android.core.design.LocalViraEnvironment
 import cat.vira.android.core.design.components.ViraCompletionCheck
@@ -62,6 +62,10 @@ import cat.vira.android.core.design.tokens.ViraRadius
 import cat.vira.android.core.design.tokens.ViraSpacing
 import cat.vira.android.core.design.tokens.ViraTouch
 import cat.vira.android.core.design.tokens.viraSpec
+import cat.vira.android.core.design.viraLocale
+import cat.vira.android.features.entry.LocalViraShowTutorialStop
+import cat.vira.android.features.entry.ViraTutorialStep
+import cat.vira.android.features.entry.viraTutorialTry
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -93,21 +97,44 @@ internal fun AgendaModule(
     ) {
         Header(entries, onAdd)
         if (entries.isEmpty()) {
-            Text(
-                stringResource(R.string.today_empty_message),
-                style = ViraFont.footnote,
-                color = ViraColor.onCard(area),
-                modifier = Modifier.fillMaxWidth().padding(ViraSpacing.m),
-            )
+            EmptyRow()
         } else {
+            // La primera tasca del pla per marcar és la que el tomb deixa provar: mai una presa
+            // de medicació ni un esdeveniment del calendari.
+            val tryIndex = entries.indexOfFirst { it.planItem != null && !it.isDone }
             entries.forEachIndexed { index, entry ->
                 if (index > 0) HorizontalDivider(color = ViraColor.onCard(area).copy(alpha = 0.25f))
                 androidx.compose.runtime.key(entry.id) {
-                    AgendaModuleRow(entry, completion, zone, onToggle = { onToggle(entry) }, onEdit = onEdit, onDelete = onDelete)
+                    AgendaModuleRow(
+                        entry, completion, zone, onToggle = { onToggle(entry) }, onEdit = onEdit, onDelete = onDelete,
+                        tutorialPart = index, isTutorialTry = index == tryIndex,
+                    )
                 }
             }
         }
         Footer(onOpenCalendar)
+    }
+}
+
+/// Sense res per avui: el missatge i «Com funciona?», una parada del tomb per a qui el va saltar.
+@Composable
+private fun EmptyRow() {
+    val ink = ViraColor.onCard(ViraArea.Plan)
+    val showStop = LocalViraShowTutorialStop.current
+    Column(
+        Modifier.fillMaxWidth().padding(ViraSpacing.m),
+        verticalArrangement = Arrangement.spacedBy(ViraSpacing.xxs),
+    ) {
+        Text(stringResource(R.string.today_empty_message), style = ViraFont.footnote, color = ink)
+        Text(
+            stringResource(R.string.tutorial_how_it_works),
+            style = ViraFont.callout,
+            color = ink,
+            modifier = Modifier
+                .defaultMinSize(minHeight = ViraTouch.minimum)
+                .viraPressable(role = Role.Button) { showStop(ViraTutorialStep.TODAY) }
+                .wrapContentHeight(Alignment.CenterVertically),
+        )
     }
 }
 
@@ -196,6 +223,8 @@ private fun AgendaModuleRow(
     onToggle: () -> Unit,
     onEdit: (PlanItem) -> Unit,
     onDelete: (PlanItem) -> Unit,
+    tutorialPart: Int = 0,
+    isTutorialTry: Boolean = false,
 ) {
     val ink = ViraColor.onCard(ViraArea.Plan)
     val stacked = LocalViraEnvironment.current.isAccessibilitySize
@@ -248,7 +277,7 @@ private fun AgendaModuleRow(
                                 RowPictogram(entry, size = 34.dp)
                                 TimeLabel(entry.time, zone, ink)
                                 Spacer(Modifier.weight(1f))
-                                Check(entry, ink, onToggle)
+                                Check(entry, ink, onToggle, tutorialPart, isTutorialTry)
                             }
                         }
                         Text(
@@ -261,7 +290,7 @@ private fun AgendaModuleRow(
                             Text(stringResource(entry.typeLabel), style = ViraFont.footnote, color = ink)
                         }
                     }
-                    if (!stacked) Check(entry, ink, onToggle)
+                    if (!stacked) Check(entry, ink, onToggle, tutorialPart, isTutorialTry)
                 }
                 if (phase != null) {
                     TodayInlineCompletion(phase, ink, onUndo = { completion.undo(entry.id) })
@@ -293,13 +322,23 @@ private fun RowPictogram(entry: AgendaEntry, size: androidx.compose.ui.unit.Dp) 
 
 /// La medicació no celebra: el mòdul no dona XP ni ViriCoins ni ratxa (D-27).
 @Composable
-private fun Check(entry: AgendaEntry, ink: androidx.compose.ui.graphics.Color, onToggle: () -> Unit) {
+private fun Check(
+    entry: AgendaEntry,
+    ink: androidx.compose.ui.graphics.Color,
+    onToggle: () -> Unit,
+    tutorialPart: Int,
+    isTutorialTry: Boolean,
+) {
     if (!entry.canToggle) return
     ViraCompletionCheck(
         isDone = entry.isDone,
         celebrates = !entry.isMedication && !entry.isExternal,
         ink = ink,
-        modifier = Modifier.clip(CircleShape).viraPressable(role = Role.Checkbox, onClick = onToggle).clearSemantics(),
+        modifier = Modifier
+            .viraTutorialTry(entry.title, isTutorialTry, tutorialPart, onToggle)
+            .clip(CircleShape)
+            .viraPressable(role = Role.Checkbox, onClick = onToggle)
+            .clearSemantics(),
     )
 }
 

@@ -33,12 +33,54 @@ class EntryNavigatorTest {
         nav.completeFirstAction(EntryFirstActionOutcome.Task("Deures"))
         assertEquals(EntryStep.DONE, nav.step)
         assertFalse(nav.canGoBack)
-        nav.advance(); assertEquals(EntryStep.ACCOUNT, nav.step)
-        // Enrere des del compte no torna a una primera acció ja feta ni a la celebració.
+        // Els avisos, just després de «Fet» (Arnau, 2026-10-23).
+        nav.advance(); assertEquals(EntryStep.NOTIFICATIONS, nav.step)
+        // Enrere des dels avisos no torna a una primera acció ja feta ni a la celebració.
         assertTrue(nav.canGoBack)
         nav.goBack(); assertEquals(EntryStep.PRIVACY, nav.step)
         // I tornant a continuar, la primera acció feta no es repeteix.
+        nav.advance(); assertEquals(EntryStep.NOTIFICATIONS, nav.step)
         nav.advance(); assertEquals(EntryStep.ACCOUNT, nav.step)
+    }
+
+    @Test
+    fun `la primera accio es recorda per al tomb, i ara no l'esborra`() {
+        val nav = navigator()
+        nav.startFresh(); nav.advance(); nav.advance(); nav.advance()
+        nav.completeFirstAction(EntryFirstActionOutcome.CheckIn(EntryReward(10, 10)))
+        assertEquals("checkIn", prefs.firstAction.value)
+        assertEquals(EntryFirstActionKind.CHECK_IN, EntryFirstActionKind.from(prefs.firstAction.value))
+        val again = navigator(start = EntryStep.FIRST_ACTION)
+        again.skipAction()
+        assertEquals("", prefs.firstAction.value)
+        assertEquals(null, EntryFirstActionKind.from(prefs.firstAction.value))
+    }
+
+    @Test
+    fun `a fet la frase es el titol, i la tasca porta on es`() {
+        val task = EntryNavigator(
+            EntryStep.full, prefs, { true }, { user }, { finished += 1 }, EntryStep.DONE, EntryFirstActionOutcome.Task("Deures"),
+        )
+        assertEquals(null, task.viriLine)
+        assertEquals(cat.vira.android.R.string.onboarding_viri_done, task.title)
+        assertEquals(cat.vira.android.R.string.onboarding_done_task_message, task.message)
+        val checkIn = navigator(start = EntryStep.DONE)
+        assertEquals(null, checkIn.message)
+    }
+
+    @Test
+    fun `el compte es presenta com a guardar el que has fet nomes al jove que es registra`() {
+        val nav = navigator()
+        nav.startFresh()
+        nav.go(EntryStep.ACCOUNT)
+        assertTrue(nav.savesFirstAction)
+        assertEquals(cat.vira.android.R.string.onboarding_account_title, nav.title)
+        assertEquals(cat.vira.android.R.string.account_landing_subtitle, nav.message)
+        val returning = navigator()
+        returning.signInFromWelcome()
+        assertFalse(returning.savesFirstAction)
+        assertEquals(null, returning.title)
+        assertEquals(null, returning.message)
     }
 
     @Test
@@ -111,10 +153,10 @@ class EntryNavigatorTest {
         nav.signInFromWelcome()
         assertEquals(EntryStep.ACCOUNT, nav.step)
         assertFalse(nav.isSigningUp)
-        assertFalse(nav.applies(EntryStep.NICKNAME))
+        assertFalse(nav.applies(EntryStep.NOTIFICATIONS))
         nav.toggleSigningUp()
         assertTrue(nav.isSigningUp)
-        assertTrue(nav.applies(EntryStep.NICKNAME))
+        assertTrue(nav.applies(EntryStep.NOTIFICATIONS))
         // Registrar-se passa abans per la privacitat; enrere torna a l'inici, no al registre.
         assertEquals(EntryStep.PRIVACY, nav.step)
         nav.goBack(); assertEquals(EntryStep.WELCOME, nav.step)

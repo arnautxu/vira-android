@@ -22,8 +22,8 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,13 +32,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.room.withTransaction
 import cat.vira.android.R
 import cat.vira.android.app.LocalViraBackend
 import cat.vira.android.app.LocalViraNavigator
 import cat.vira.android.app.PlanSection
 import cat.vira.android.app.rememberPreference
 import cat.vira.android.core.data.ViraStore
-import cat.vira.android.core.design.viraLocale
 import cat.vira.android.core.design.LocalViraEnvironment
 import cat.vira.android.core.design.components.LocalPresentCompletion
 import cat.vira.android.core.design.components.LocalUndoCompletion
@@ -52,12 +52,14 @@ import cat.vira.android.core.design.tokens.ViraColor
 import cat.vira.android.core.design.tokens.ViraMotion
 import cat.vira.android.core.design.tokens.ViraSpacing
 import cat.vira.android.core.design.tokens.ViraTouch
+import cat.vira.android.core.design.viraLocale
 import cat.vira.android.core.notifications.ViraNotifications
+import cat.vira.android.features.entry.ViraTutorialTarget
+import cat.vira.android.features.entry.viraTutorialTarget
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import androidx.room.withTransaction
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -209,7 +211,9 @@ fun PlanContent(
                 }
             },
             showsAllLabels = true,
-            modifier = Modifier.padding(horizontal = ViraSpacing.screenMargin),
+            modifier = Modifier
+                .viraTutorialTarget(ViraTutorialTarget.PlanSections)
+                .padding(horizontal = ViraSpacing.screenMargin),
         )
         Spacer(Modifier.padding(top = ViraSpacing.s))
         AnimatedContent(
@@ -261,14 +265,15 @@ private fun TitleRow(section: PlanSection, chrome: PlanChrome) {
                     PlanSection.Medication -> R.string.medication_new
                 },
             ),
+            modifier = Modifier.viraTutorialTarget(ViraTutorialTarget.PlanAdd, isActive = section == PlanSection.Calendar),
         ) { chrome.adding = section }
     }
 }
 
 @Composable
-private fun BarIcon(icon: PlanGlyphShape, label: String, onClick: () -> Unit) {
+private fun BarIcon(icon: PlanGlyphShape, label: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Box(
-        Modifier.size(ViraTouch.minimum).viraPressable(onClick = onClick).semantics { contentDescription = label },
+        modifier.size(ViraTouch.minimum).viraPressable(onClick = onClick).semantics { contentDescription = label },
         contentAlignment = Alignment.Center,
     ) {
         PlanGlyph(icon, ViraColor.accent(ViraArea.Plan), size = 22.dp)

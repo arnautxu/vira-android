@@ -1,6 +1,15 @@
 package cat.vira.android.features.entry
 
 import androidx.activity.compose.BackHandler
+import cat.vira.android.core.design.tokens.ViraColor
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.background
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -77,13 +86,14 @@ fun rememberLiveEntryServices(): EntryServices {
 
 /// El flux d'entrada de Vira, **primer el valor i després el compte** (`EntryFlowView.swift`).
 ///
-/// Capçalera (enrere · barra de progrés · acció; a la benvinguda, el logotip), **l'escenari amb
-/// Viri** (un posat per pas, la bombolla a sobre del cap) i **la fulla groga al peu**, que fa
-/// l'alçada del que porta fins a un sostre (el 70 % de la pantalla, el 86 % amb lletra gran); per
-/// sobre, es desplaça. Dins de la fulla l'ordre és **títol → controls → acció principal**, i la
-/// frase de Viri hi torna només a mides d'accessibilitat.
+/// **L'escena** (Arnau, 2026-10-21): una il·lustració sencera del món de Viri omple la pantalla, també
+/// per sota de la capçalera, i s'atura una mica per sota de la vora de la fulla. A sobre, **la
+/// capçalera** (enrere · «2 de 9» · acció, totes tres superfícies), **la bombolla de Viri** i **la
+/// fulla blanca al peu**, que fa l'alçada del que porta fins a un sostre (el 70 % de la pantalla, el
+/// 86 % amb lletra gran); per sobre, es desplaça. Dins de la fulla l'ordre és **títol → controls →
+/// acció principal**; a mides d'accessibilitat hi tornen també el «2 de 9» i la frase de Viri.
 ///
-/// `initialStep` i `initialOutcome` són per a les captures: un pas amb tot l'escenari.
+/// `initialStep`, `initialOutcome` i `initialSigningUp` són per a les captures: un pas amb tot l'escenari.
 @Composable
 fun EntryFlow(
     steps: List<EntryStep> = EntryStep.full,
@@ -91,11 +101,12 @@ fun EntryFlow(
     services: EntryServices = rememberLiveEntryServices(),
     initialStep: EntryStep? = null,
     initialOutcome: EntryFirstActionOutcome? = null,
+    initialSigningUp: Boolean = false,
 ) {
     val prefs = services.prefs
     val state by services.state.collectAsState()
     val isRecovering by services.isRecoveringPassword.collectAsState()
-    // Es llegeix aquí perquè la frase i el posat de Viri del permís canviïn quan surt el correu.
+    // Es llegeix aquí perquè la frase de Viri del permís canviï quan surt el correu.
     services.guardianReceipt.collectAsState().value
     val finish by rememberUpdatedState(onFinish)
     fun navigator() = EntryNavigator(
@@ -107,6 +118,7 @@ fun EntryFlow(
         initialStep = initialStep,
         initialOutcome = initialOutcome,
         guardianReceipt = { services.guardianReceipt.value },
+        initialSigningUp = initialSigningUp,
     )
     // Sobreviu a la recreació de l'activitat: vegeu `EntryNavigator.snapshot`.
     val nav = rememberSaveable(
@@ -117,6 +129,9 @@ fun EntryFlow(
         ),
     ) { navigator() }
     val environment = LocalViraEnvironment.current
+    val density = LocalDensity.current
+    // La frase de Viri va a l'escena. A mides d'accessibilitat torna a dins de la fulla: a l'escena
+    // no hi cabria i hi quedaria tallada.
     val lineOnStage = !environment.isAccessibilitySize
     val band = if (environment.isAccessibilitySize) 0.86f else 0.7f
 
@@ -136,9 +151,25 @@ fun EntryFlow(
     }
 
     val line = nav.viriLine?.let { stringResource(it) }
-    BoxWithConstraints(Modifier.fillMaxSize()) {
+    val onTop = nav.step == EntryStep.WELCOME
+    var headerHeight by remember { mutableStateOf(0.dp) }
+    var lineHeight by remember { mutableStateOf(0.dp) }
+    var sheetHeight by remember { mutableStateOf(0.dp) }
+    // El tros d'escena que es queda la bombolla, amb el seu marge.
+    val lineRoom = if (lineHeight > 0.dp) lineHeight + (if (onTop) EntryStageTopInset else ViraSpacing.s) else 0.dp
+    BoxWithConstraints(Modifier.fillMaxSize().background(ViraColor.surfaceElevated)) {
         val sheetMax = maxHeight * band
-        EntryBackdrop()
+        EntryScene(
+            scene = nav.step.scene(nav.intent),
+            coveredTop = headerHeight + (if (onTop) lineRoom else 0.dp),
+            coveredBottom = EntrySheetOverlap + (if (onTop) 0.dp else lineRoom),
+            minimumRoom = if (lineOnStage) 0.dp else 140.dp,
+            celebrates = nav.step == EntryStep.DONE && prefs.celebrationsEnabled.value,
+            reaction = nav.reaction,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height((maxHeight - sheetHeight + EntrySheetOverlap).coerceAtLeast(0.dp)),
+        )
         Column(
             Modifier
                 .fillMaxSize()
@@ -146,19 +177,25 @@ fun EntryFlow(
                 .semantics { isTraversalGroup = true },
         ) {
             // Per a TalkBack la capçalera va **al final**: frase de Viri → títol → controls → acció → saltar.
-            EntryHeader(nav, Modifier.statusBarsPadding().semantics { traversalIndex = 1f })
+            EntryHeader(
+                nav,
+                Modifier
+                    .statusBarsPadding()
+                    .onSizeChanged { headerHeight = with(density) { it.height.toDp() } }
+                    .semantics { traversalIndex = 1f },
+            )
             EntryStage(
-                pose = nav.stagePose,
                 line = if (lineOnStage) line else null,
-                celebrates = nav.step == EntryStep.DONE && prefs.celebrationsEnabled.value,
-                reaction = nav.reaction,
+                onTop = onTop,
+                onLineHeight = { lineHeight = with(density) { it.toDp() } },
                 modifier = Modifier.fillMaxWidth().weight(1f),
             )
             Box(
                 Modifier
                     .fillMaxWidth()
                     .heightIn(max = sheetMax)
-                    .then(if (nav.step != EntryStep.WELCOME) Modifier.entrySheetBackground() else Modifier),
+                    .onSizeChanged { sheetHeight = with(density) { it.height.toDp() } }
+                    .entrySheetBackground(),
             ) {
                 AnimatedContent(
                     targetState = nav.step,
@@ -178,15 +215,24 @@ fun EntryFlow(
                             .verticalScroll(rememberScrollState())
                             .windowInsetsPadding(WindowInsets.navigationBars)
                             .padding(horizontal = ViraSpacing.screenMargin)
-                            .padding(top = if (shown == EntryStep.WELCOME) 0.dp else ViraSpacing.l, bottom = ViraSpacing.m),
-                        verticalArrangement = Arrangement.spacedBy(ViraSpacing.s),
+                            .padding(top = ViraSpacing.xl, bottom = ViraSpacing.m)
+                            .semantics { isTraversalGroup = true },
+                        verticalArrangement = Arrangement.spacedBy(ViraSpacing.m),
                     ) {
-                        if (shown != EntryStep.WELCOME) {
-                            val shownLine = nav.viriLineFor(shown)?.let { stringResource(it) }
-                            if (!lineOnStage && shownLine != null) EntryViriLine(shownLine)
-                            nav.titleFor(shown)?.let { title ->
-                                EntryHeading(stringResource(title), shown.message?.let { stringResource(it) })
+                        if (!lineOnStage && nav.showsProgress && shown == nav.step) {
+                            val position = nav.progressPosition
+                            // A lletra gran la càpsula de la capçalera no hi és: aquí TalkBack diu la frase sencera.
+                            val progress = stringResource(R.string.onboarding_progress, position.position, position.total)
+                            EntryProgressCount(position.position, position.total, Modifier.clearAndSetSemantics { contentDescription = progress })
+                        }
+                        val shownLine = nav.viriLineFor(shown)?.let { stringResource(it) }
+                        if (!lineOnStage && shownLine != null) EntryViriLine(shownLine)
+                        if (shown == nav.step) {
+                            nav.title?.let { title ->
+                                EntryHeading(stringResource(title), nav.message?.let { stringResource(it) })
                             }
+                        } else {
+                            nav.titleFor(shown)?.let { EntryHeading(stringResource(it), shown.message?.let { stringResource(it) }) }
                         }
                         EntryStepContent(shown, nav, services)
                     }
@@ -215,14 +261,19 @@ private fun EntryStepContent(step: EntryStep, nav: EntryNavigator, services: Ent
                 EntryErrorText(ViraBackendError.UNAVAILABLE)
                 EntryPrimaryButton(stringResource(R.string.action_retry), nav::retryParentRole)
             }
-        } else EntryAccountStep(
-            services = services,
-            role = nav.role,
-            email = nav.email,
-            onEmailChange = { nav.email = it },
-            isSigningUp = nav.isSigningUp,
-            onForgotPassword = { nav.go(EntryStep.PASSWORD_RESET) },
-        )
+        } else Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(ViraSpacing.s)) {
+            // Què es guarda (2026-10-23): la fitxa del que s'acaba de fer, només a qui es registra.
+            val outcome = nav.outcome
+            if (nav.savesFirstAction && outcome != null) EntrySavedChip(outcome)
+            EntryAccountStep(
+                services = services,
+                role = nav.role,
+                email = nav.email,
+                onEmailChange = { nav.email = it },
+                isSigningUp = nav.isSigningUp,
+                onForgotPassword = { nav.go(EntryStep.PASSWORD_RESET) },
+            )
+        }
         EntryStep.PASSWORD_RESET -> EntryPasswordResetStep(services, nav.email, { nav.email = it }, nav::backFromPasswordReset)
         EntryStep.NEW_PASSWORD -> EntryNewPasswordStep(services, nav::finishRecovery)
         EntryStep.CONSENT -> EntryConsentStep(services, nav::advance)
@@ -232,59 +283,41 @@ private fun EntryStepContent(step: EntryStep, nav: EntryNavigator, services: Ent
     }
 }
 
-/// Capçalera (`EntryFlowView+Header.swift`). A la benvinguda, el logotip i res més; a la resta,
-/// enrere · barra · acció. **Amb lletra gran la barra baixa a una fila pròpia**: els botons creixen
-/// amb el text i la barra quedaria aixafada.
+/// Capçalera (`EntryFlowView+Header.swift`, Arnau, 2026-10-21): **enrere · progrés «2 de 9» ·
+/// acció**, sempre al mateix lloc i surant sobre l'escena. Les tres peces són superfícies, així que
+/// cap text va directament sobre la il·lustració. A la benvinguda, res: el logotip és a la fulla.
+/// **Amb lletra gran la càpsula del progrés desapareix** i «2 de 9» baixa a dalt de la fulla: entre
+/// dos botons que creixen no hi cabria.
 @Composable
 private fun EntryHeader(nav: EntryNavigator, modifier: Modifier) {
     val isAccessibilitySize = LocalViraEnvironment.current.isAccessibilitySize
-    Box(
-        modifier
-            .fillMaxWidth()
-            .defaultMinSize(minHeight = ViraTouch.minimum)
-            .padding(horizontal = ViraSpacing.screenMargin)
-            .padding(top = ViraSpacing.s, bottom = ViraSpacing.xs),
-        contentAlignment = Alignment.Center,
-    ) {
-        when {
-            nav.step == EntryStep.WELCOME -> EntryLogo()
-            isAccessibilitySize -> Column(verticalArrangement = Arrangement.spacedBy(ViraSpacing.s)) {
-                EntryHeaderControls(nav, withProgress = false)
-                if (nav.showsProgress) EntryHeaderProgress(nav)
+    Box(modifier.fillMaxWidth()) {
+        if (nav.step == EntryStep.WELCOME) return@Box
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .defaultMinSize(minHeight = ViraTouch.minimum)
+                .padding(horizontal = ViraSpacing.screenMargin)
+                .padding(vertical = ViraSpacing.xs),
+            horizontalArrangement = Arrangement.spacedBy(ViraSpacing.xs),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (nav.canGoBack) EntryBackButton(nav::goBack, stringResource(R.string.action_back))
+            if (nav.showsProgress && !isAccessibilitySize) {
+                val position = nav.progressPosition
+                EntryProgressBar(nav.progress, position.position, position.total, Modifier.weight(1f))
+            } else {
+                Spacer(Modifier.weight(1f))
             }
-            else -> EntryHeaderControls(nav, withProgress = true)
+            when {
+                nav.step == EntryStep.ACCOUNT -> EntryCapsuleButton(
+                    stringResource(if (nav.isSigningUp) R.string.account_email_sign_in_title else R.string.account_sign_up_action),
+                    nav::toggleSigningUp,
+                )
+                // "Ara no" i no "Saltar": passa per sobre de la celebració, que sense acció no té res a celebrar.
+                nav.step == EntryStep.FIRST_ACTION -> EntryCapsuleButton(stringResource(R.string.action_not_now), nav::skipAction)
+                nav.offersSkip -> EntryCapsuleButton(stringResource(R.string.action_skip), nav::skip)
+            }
         }
     }
-}
-
-@Composable
-private fun EntryHeaderControls(nav: EntryNavigator, withProgress: Boolean) {
-    Row(
-        Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(ViraSpacing.s),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        if (nav.canGoBack) EntryBackButton(nav::goBack, stringResource(R.string.action_back))
-        if (withProgress && nav.showsProgress) {
-            Box(Modifier.weight(1f)) { EntryHeaderProgress(nav) }
-        } else {
-            Spacer(Modifier.weight(1f))
-        }
-        when {
-            nav.step == EntryStep.ACCOUNT -> EntryCapsuleButton(
-                stringResource(if (nav.isSigningUp) R.string.account_email_sign_in_title else R.string.account_sign_up_action),
-                nav::toggleSigningUp,
-                bold = true,
-            )
-            // "Ara no" i no "Saltar": passa per sobre de la celebració, que sense acció no té res a celebrar.
-            nav.step == EntryStep.FIRST_ACTION -> EntryCapsuleButton(stringResource(R.string.action_not_now), nav::skipAction)
-            nav.offersSkip -> EntryCapsuleButton(stringResource(R.string.action_skip), nav::skip)
-        }
-    }
-}
-
-@Composable
-private fun EntryHeaderProgress(nav: EntryNavigator) {
-    val position = nav.progressPosition
-    EntryProgressBar(nav.progress, position.position, position.total)
 }

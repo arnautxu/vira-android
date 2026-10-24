@@ -1,6 +1,5 @@
 package cat.vira.android.features.entry
 
-import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import cat.vira.android.R
 import cat.vira.android.core.backend.ViraAccountRole
@@ -60,7 +59,6 @@ enum class EntryStep {
     @get:StringRes
     val message: Int?
         get() = when (this) {
-            PRIVACY -> R.string.onboarding_privacy_message
             ACCOUNT -> R.string.account_landing_subtitle
             PASSWORD_RESET -> R.string.account_password_reset_message
             NEW_PASSWORD -> R.string.account_password_new_message
@@ -108,8 +106,12 @@ enum class EntryStep {
 
     companion object {
         /// El camí de la primera obertura.
+        ///
+        /// **Sense el nom** (2026-10-22): eren deu passos abans de veure l'app, i el nom es tria
+        /// després, a Viri. **Els avisos, just després de «Fet»** (Arnau, 2026-10-23): el moment amb
+        /// més ganes de rebre un avís és quan acabes d'apuntar una cosa.
         val full: List<EntryStep> = listOf(
-            WELCOME, START, AGE, PRIVACY, FIRST_ACTION, DONE, ACCOUNT, CONSENT, NICKNAME, NOTIFICATIONS,
+            WELCOME, START, AGE, PRIVACY, FIRST_ACTION, DONE, NOTIFICATIONS, ACCOUNT, CONSENT,
         )
 
         /// El pas que ve després de `current` dins de `steps`, o `null` si el flux s'acaba.
@@ -147,20 +149,4 @@ enum class EntryStep {
         private fun needsConsent(user: ViraUser?): Boolean =
             user != null && user.role == ViraAccountRole.TEEN && user.consent == ViraConsentStatus.MISSING
     }
-}
-
-/// Quin posat de Viri surt a cada pas (Arnau, 2026-10-10). La primera acció el tria segons el que
-/// s'ha triat a "Per on comencem?".
-@DrawableRes
-fun EntryStep.viriPose(intent: EntryStartIntent): Int = when (this) {
-    EntryStep.WELCOME -> R.drawable.viri_entry_waving
-    EntryStep.START -> R.drawable.viri_entry_calendar
-    EntryStep.AGE -> R.drawable.viri_entry_thinking
-    EntryStep.PRIVACY, EntryStep.CONSENT -> R.drawable.viri_entry_angel
-    EntryStep.FIRST_ACTION ->
-        if (intent == EntryStartIntent.EMOTIONS) R.drawable.viri_emotion_content else R.drawable.viri_entry_writing
-    EntryStep.DONE -> R.drawable.viri_entry_trophy
-    EntryStep.ACCOUNT, EntryStep.PASSWORD_RESET, EntryStep.NEW_PASSWORD -> R.drawable.viri_entry_bodyguard
-    EntryStep.NOTIFICATIONS -> R.drawable.viri_phone
-    EntryStep.NICKNAME, EntryStep.CONNECTIONS -> R.drawable.viri_entry_celebrate
 }

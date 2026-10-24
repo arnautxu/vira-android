@@ -1,6 +1,5 @@
 package cat.vira.android.features.entry
 
-import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -27,6 +26,8 @@ class EntryNavigator(
     /// El correu al tutor acabat de demanar (`ViraSession.guardianReceipt`): canvia la frase i el
     /// posat de Viri al pas del permís.
     private val guardianReceipt: () -> ViraGuardianRequest? = { null },
+    /// Les captures obren el compte en mode registre, com el veu el jove que ve de «Fet».
+    initialSigningUp: Boolean = false,
 ) {
     var step: EntryStep by mutableStateOf(initialStep ?: steps.firstOrNull() ?: EntryStep.WELCOME)
         private set
@@ -41,7 +42,7 @@ class EntryNavigator(
         private set
 
     /// Entrar o registrar-se: el commuta el botó de la capçalera, no una altra pantalla.
-    var isSigningUp: Boolean by mutableStateOf(false)
+    var isSigningUp: Boolean by mutableStateOf(initialSigningUp)
         private set
 
     /// S'ha entrat per "Ja tinc compte": després del compte només li pot quedar el permís.
@@ -148,7 +149,8 @@ class EntryNavigator(
         EntryStep.AGE -> R.string.onboarding_viri_age
         EntryStep.PRIVACY -> R.string.onboarding_viri_privacy
         EntryStep.FIRST_ACTION -> intent.viriLine
-        EntryStep.DONE -> R.string.onboarding_viri_done
+        // A «Fet» la frase és el títol mateix: repetir-la a la bombolla seria dir-ho dos cops.
+        EntryStep.DONE -> null
         EntryStep.ACCOUNT -> if (role == ViraAccountRole.TEEN && isSigningUp) R.string.onboarding_viri_account else null
         EntryStep.CONSENT -> consentLine
         EntryStep.NICKNAME -> R.string.onboarding_viri_nickname
@@ -168,27 +170,31 @@ class EntryNavigator(
             else R.string.onboarding_viri_guardian
         }
 
-    /// El posat de l'escenari. Al permís, Viri pensa mentre es demana el correu i fa d'àngel un cop
-    /// enviat (maqueta del 2026-10-20).
-    @get:DrawableRes
-    val stagePose: Int
-        get() = when {
-            step != EntryStep.CONSENT -> step.viriPose(intent)
-            guardianReceipt() == null -> R.drawable.viri_entry_thinking
-            else -> R.drawable.viri_entry_angel
-        }
-
-    /// El compte no porta títol (els camps ja diuen què són), el permís el posa ell mateix i la
-    /// celebració no en té.
+    /// El compte porta títol només per al jove que es registra («Guarda el que has fet»): qui entra
+    /// o qui és pare o mare ja sap què fa. El permís el posa ell mateix i la benvinguda el porta a
+    /// dins, amb el logotip.
     @get:StringRes
     val title: Int? get() = titleFor(step)
 
     @StringRes
     fun titleFor(step: EntryStep): Int? = when (step) {
-        EntryStep.ACCOUNT, EntryStep.CONSENT, EntryStep.DONE, EntryStep.WELCOME -> null
+        EntryStep.ACCOUNT -> if (savesFirstAction) R.string.onboarding_account_title else null
+        EntryStep.CONSENT, EntryStep.WELCOME -> null
         EntryStep.FIRST_ACTION -> intent.actionTitle
         else -> step.title
     }
+
+    /// La línia de sota del títol. A «Fet», només quan la primera acció ha estat una tasca: diu on
+    /// és i què se'n fa.
+    @get:StringRes
+    val message: Int? get() = when (step) {
+        EntryStep.ACCOUNT -> if (savesFirstAction) R.string.account_landing_subtitle else null
+        EntryStep.DONE -> if (outcome is EntryFirstActionOutcome.Task) R.string.onboarding_done_task_message else null
+        else -> step.message
+    }
+
+    /// El jove que es registra: el compte es presenta com a guardar el que ha fet.
+    val savesFirstAction: Boolean get() = role == ViraAccountRole.TEEN && isSigningUp
 
     val showsProgress: Boolean
         get() = step !in setOf(EntryStep.WELCOME, EntryStep.DONE, EntryStep.PASSWORD_RESET, EntryStep.NEW_PASSWORD) &&
@@ -251,6 +257,7 @@ class EntryNavigator(
 
     fun completeFirstAction(result: EntryFirstActionOutcome) {
         outcome = result
+        prefs.firstAction.value = EntryFirstActionKind.of(result).raw
         advance()
     }
 
@@ -268,6 +275,7 @@ class EntryNavigator(
     /// "Ara no" a la primera acció: directe al compte, o al següent que apliqui.
     fun skipAction() {
         outcome = null
+        prefs.firstAction.value = ""
         val target = EntryStep.afterSkippedAction(steps, requiresAccount(), user(), pendingRole) ?: return finish()
         go(target)
     }
