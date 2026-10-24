@@ -97,7 +97,13 @@ object CapturePhrase {
         if (hour > 24) return null
         val minute = match.groupValues[2].takeIf { it.isNotEmpty() }?.toIntOrNull() ?: 0
         val marker = match.groupValues[3].lowercase(Locale.ROOT)
-        if (isAfternoon(marker) && hour < 12) hour += 12
+        // «De la nit» va de les 9 del vespre a les 4 de la matinada: «les 12 de la nit» és mitjanit i
+        // «la 1 de la nit», la 1:00, no les 13:00.
+        if (isNight(marker)) {
+            hour = when (hour) { 12 -> 0; in 1..4 -> hour; in 5..11 -> hour + 12; else -> hour }
+        } else if (isAfternoon(marker) && hour < 12) {
+            hour += 12
+        }
         if ((marker.startsWith("am") || marker.startsWith("a.m") || "mat" in marker) && hour == 12) hour = 0
         if (hour >= 24 || minute >= 60) return null
         return LocalTime.of(hour, minute) to match.range
@@ -105,7 +111,9 @@ object CapturePhrase {
 
     private fun isAfternoon(marker: String) =
         marker.startsWith("pm") || marker.startsWith("p.m") ||
-            listOf("tarda", "tarde", "afternoon", "nit", "noche", "evening").any { it in marker }
+            listOf("tarda", "tarde", "afternoon", "evening").any { it in marker }
+
+    private fun isNight(marker: String) = "nit" in marker || "noche" in marker
 
     // Títol
 

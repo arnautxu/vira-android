@@ -72,6 +72,13 @@ class AddStepsTest {
     }
 
     @Test
+    fun phraseReadsNightHours() {
+        assertEquals(LocalTime.of(21, 0), CapturePhrase.detect("Trucar a les 9 de la nit", monday).time)
+        assertEquals(LocalTime.of(0, 0), CapturePhrase.detect("Trucar demà a les 12 de la nit", monday).time)
+        assertEquals(LocalTime.of(1, 0), CapturePhrase.detect("Llamar a la 1 de la noche", monday).time)
+    }
+
+    @Test
     fun undoFromDoneKeepsTheSchedule() {
         val state = TaskAddState(today = monday)
         state.updateTitle("Dentista demà a les 17:30")
