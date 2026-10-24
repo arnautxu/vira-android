@@ -17,4 +17,9 @@ data class PlanHost(
     /// Un hàbit, una pauta o una presa ha canviat: cal refer la finestra d'avisos
     /// (`ViraNotifications.reschedule`).
     val onScheduleChanged: suspend () -> Unit = {},
+    /// Una tasca o un hàbit acaba de quedar marcat (i ja compta): la nota de l'escala del dia
+    /// (`ViraDaySound.playDone`). `closingDayOf` només per a una tasca, que pot tancar el dia.
+    val onDone: suspend (closingDayOf: cat.vira.android.core.data.model.PlanItem?) -> Unit = {},
+    /// Desmarcar sona com «Desfer» (`ViraSound.play(.undo)`).
+    val onUndone: () -> Unit = {},
 )

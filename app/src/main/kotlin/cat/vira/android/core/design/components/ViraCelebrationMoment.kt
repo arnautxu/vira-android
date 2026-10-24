@@ -1,5 +1,7 @@
 package cat.vira.android.core.design.components
 
+import cat.vira.android.core.sound.ViraHaptics
+import cat.vira.android.core.sound.ViraSound
 import android.view.accessibility.AccessibilityManager
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.background
@@ -61,6 +63,8 @@ fun ViraCelebrationMoment(
     modifier: Modifier = Modifier,
     area: ViraArea = ViraArea.Rewards,
     onShown: () -> Unit = {},
+    /// Repte, premi i carta comparteixen el «ta-da»; el nivell porta l'arpegi.
+    sound: ViraSound.Cue = ViraSound.Cue.CHALLENGE,
     scene: @Composable () -> Unit,
     summary: @Composable () -> Unit,
 ) {
@@ -74,6 +78,9 @@ fun ViraCelebrationMoment(
 
     LaunchedEffect(Unit) {
         onShown()
+        ViraHaptics.celebrate(context)
+        // Amb la remuntada tàctil, que arrenca als 420 ms.
+        ViraSound.play(context, sound, delayMs = 420)
         if (reduceMotion) return@LaunchedEffect
         launch { appear.animateTo(1f, ViraMotion.entrance()) }
         launch { delay(150); bubble.animateTo(1f, ViraMotion.entrance()) }

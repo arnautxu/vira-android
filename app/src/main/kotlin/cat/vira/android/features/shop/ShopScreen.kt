@@ -19,8 +19,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.window.Dialog
@@ -36,6 +35,8 @@ import cat.vira.android.core.design.tokens.ViraArea
 import cat.vira.android.core.design.tokens.ViraColor
 import cat.vira.android.core.design.tokens.ViraFont
 import cat.vira.android.core.design.tokens.ViraSpacing
+import cat.vira.android.core.sound.ViraHaptics
+import cat.vira.android.core.sound.ViraSound
 import kotlinx.coroutines.launch
 import java.time.Instant
 
@@ -54,7 +55,6 @@ import java.time.Instant
 fun ShopScreen(onBack: (() -> Unit)? = null) {
     val data = rememberShopData()
     val scope = rememberCoroutineScope()
-    val haptics = LocalHapticFeedback.current
     val celebrationsOn = rememberCelebrationsEnabled()
 
     val counter by data.counter.collectAsStateWithLifecycle(null)
@@ -67,6 +67,7 @@ fun ShopScreen(onBack: (() -> Unit)? = null) {
     var revealing by remember { mutableStateOf<SkinItem?>(null) }
     var justBought by remember { mutableStateOf<SkinItem?>(null) }
     var saveFailed by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
     val balance = counter?.coinBalance ?: 0
     val ownedKeys = skins.map { it.key }.toSet()
@@ -77,7 +78,8 @@ fun ShopScreen(onBack: (() -> Unit)? = null) {
     fun setWish(key: String) = data.preferences.edit { putString(ShopPreferences.WISH, key) }
 
     fun wear(key: String?) {
-        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+        ViraHaptics.play(context, ViraHaptics.Feedback.Done)
+        ViraSound.play(context, ViraSound.Cue.EQUIP)
         scope.launch { data.skinsLogic.equip(key) }
     }
 
@@ -89,7 +91,10 @@ fun ShopScreen(onBack: (() -> Unit)? = null) {
             saveFailed = result.isFailure
             if (!result.getOrDefault(false)) return@launch
             if (wishKey == item.key) setWish("")
-            // Amb les celebracions apagades no hi ha vestidor: la skin ja és posada i prou.
+            ViraHaptics.play(context, ViraHaptics.Feedback.Reward)
+            // Amb les celebracions apagades no hi ha vestidor: la skin ja és posada i prou. Amb
+            // revelació, el so el porta ella, sincronitzat amb el que es veu.
+            if (!celebrationsOn) ViraSound.play(context, ViraSound.Cue.EQUIP)
             if (celebrationsOn) revealing = item else showNextGoals(item, catalog, ownedKeys + item.key) { justBought = it }
         }
     }

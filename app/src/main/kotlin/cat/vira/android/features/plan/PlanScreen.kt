@@ -1,5 +1,7 @@
 package cat.vira.android.features.plan
 
+import cat.vira.android.core.sound.ViraDaySound
+import cat.vira.android.core.sound.ViraSound
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -140,6 +142,8 @@ fun rememberPlanActions(onCapture: (java.time.LocalDate, DayPeriod?) -> Unit = {
                 undo = undo,
                 onCapture = onCapture,
                 onScheduleChanged = { ViraNotifications.reschedule(context.applicationContext) },
+                onDone = { item -> ViraDaySound.playDone(context, backend.db, closingDayOf = item) },
+                onUndone = { ViraSound.play(context, ViraSound.Cue.UNDO) },
             ),
             firstDay = firstDay,
             generation = { backend.session.dataGeneration },
