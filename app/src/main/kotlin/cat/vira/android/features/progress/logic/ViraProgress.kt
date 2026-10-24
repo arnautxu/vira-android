@@ -63,6 +63,27 @@ class ViraProgress(
         return coins
     }
 
+    /// `record`, però un sol cop per cosa (`ViraRewardOnce`): el camí de marcar un hàbit o una
+    /// tasca. Si ja s'havia premiat, compta per al dia i prou, i torna `null`. Els reptes es compten
+    /// sobre les monedes concedides (`ViraChallenges`), així que tampoc avancen dues vegades.
+    suspend fun recordOnce(reason: CoinReason, key: String, once: ViraRewardOnce, now: Instant = clock()): Int? {
+        if (!once.claim(key, now)) {
+            recordAgain(now)
+            return null
+        }
+        return record(reason, now)
+    }
+
+    /// El mateix que `record`, sense cap recompensa: per a una cosa que es torna a marcar quan ja
+    /// s'havia premiat. Compta per al dia igual —si és la que el tanca, la ratxa avança— i els
+    /// avisos es refan, però no hi ha monedes ni XP dues vegades.
+    suspend fun recordAgain(now: Instant = clock()) {
+        var milestone: Int? = null
+        db.withTransaction { milestone = registerActivity(now) }
+        milestone?.let { onMilestone(it) }
+        onActivity(now)
+    }
+
     /// Una sessió de concentració acabada (`FocusSessionController.finish`): monedes si toca
     /// (15 min, 4 al dia) i, si és completada, descongela Viri **sense** comptar el dia.
     suspend fun recordFocus(session: FocusSession, now: Instant = clock()): Int {

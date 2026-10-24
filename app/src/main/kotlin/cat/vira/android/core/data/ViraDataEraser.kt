@@ -101,7 +101,7 @@ object ViraDataEraser {
         "settings.viriTabTipSeen",
     )
 
-    val ownPrefixes = listOf("settings.", "cards.", "account.", "suggestions.", "sync.")
+    val ownPrefixes = listOf("settings.", "cards.", "account.", "suggestions.", "sync.", "rewards.")
 
     fun resetPreferences(preferences: SharedPreferences) {
         val doomed = preferences.all.keys.filter { key ->

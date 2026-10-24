@@ -22,6 +22,7 @@ import cat.vira.android.core.notifications.ViraNotificationWorker
 import cat.vira.android.core.notifications.ViraNotifications
 import cat.vira.android.features.emotions.ViraEmotionCheckIn
 import cat.vira.android.features.plan.PlanNotificationEffects
+import cat.vira.android.features.progress.logic.ViraRewardOnce
 import cat.vira.android.features.settings.ViraSimpleSettings
 import cat.vira.android.features.shop.ViraCardCelebrations
 import kotlinx.coroutines.Dispatchers
@@ -57,10 +58,12 @@ class ViraApp : Application(), ViraNotificationHost {
         // El mateix registre que el check-in d'Emocions, sense intensitat ni nota.
         logEmotion = { ViraEmotionCheckIn.record(ViraStore(backend.db), it) },
         // Pla: el mateix camí que la pantalla, sense «Desfer». La medicació no dona res.
-        completeHabit = { id, day -> PlanNotificationEffects(ViraStore(backend.db)).completeHabit(id, day) },
-        completePlanItem = { PlanNotificationEffects(ViraStore(backend.db)).completePlanItem(it) },
-        recordIntake = { id, at, status -> PlanNotificationEffects(ViraStore(backend.db)).recordIntake(id, at, status) },
+        completeHabit = { id, day -> planEffects().completeHabit(id, day) },
+        completePlanItem = { planEffects().completePlanItem(it) },
+        recordIntake = { id, at, status -> planEffects().recordIntake(id, at, status) },
     )
+
+    private fun planEffects() = PlanNotificationEffects(ViraStore(backend.db), ViraRewardOnce(ViraPreferences.open(this)))
 
     /// La finestra de «Desfer» i la recompensa que ve després (`ViraCompletionQueue`). És del
     /// procés perquè un gir de pantalla no se l'endugui a mitges.
