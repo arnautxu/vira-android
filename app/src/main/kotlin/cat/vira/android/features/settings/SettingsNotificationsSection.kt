@@ -11,9 +11,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.stringResource
 import androidx.core.app.NotificationManagerCompat
@@ -22,6 +20,8 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import cat.vira.android.R
 import cat.vira.android.core.data.ViraPreferences
 import cat.vira.android.core.notifications.ViraNotifications
+import cat.vira.android.core.sound.ViraHaptics
+import cat.vira.android.core.sound.ViraSound
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -121,7 +121,7 @@ fun SettingsNotificationsSection() {
 fun SettingsSoundsSection() {
     val preferences = LocalSettingsPreferences.current
     var soundMode by rememberStringPreference(SettingsKeys.SOUND_MODE, ViraSoundMode.ALL.raw)
-    val haptics = LocalHapticFeedback.current
+    val context = LocalContext.current
     SettingsGroup(header = stringResource(R.string.settings_sounds)) {
         row {
             SettingsToggleRow(
@@ -129,7 +129,10 @@ fun SettingsSoundsSection() {
                     ViraSimpleSettings.setSounds(preferences, isOn)
                     soundMode = (if (isOn) ViraSoundMode.ALL else ViraSoundMode.OFF).raw
                     // Un interruptor de so que no es nota en tocar-lo no es pot comprovar.
-                    if (isOn) haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                    if (isOn) {
+                        ViraSound.play(context, ViraSound.Cue.CHALLENGE)
+                        ViraHaptics.play(context, ViraHaptics.Feedback.Done)
+                    }
                 },
                 hint = stringResource(R.string.settings_sounds_hint),
             )
