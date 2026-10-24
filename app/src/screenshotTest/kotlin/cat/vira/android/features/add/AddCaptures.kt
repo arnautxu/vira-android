@@ -62,6 +62,12 @@ fun AddTaskWhenClock() = Sheet {
     )
 }
 
+/// «La partim?»: la tasca sembla gran i Viri proposa partir-la abans de Fet.
+@PreviewTest @AddCaptures @Composable
+fun AddTaskSplit() = Sheet {
+    TaskAddFlow(actions, {}, none, {}, zone = zone, now = now, initialStep = TaskAddStep.Split, initialTitle = "Treball de socials")
+}
+
 @PreviewTest @AddCaptures @Composable
 fun AddTaskDone() = Sheet {
     TaskAddFlow(

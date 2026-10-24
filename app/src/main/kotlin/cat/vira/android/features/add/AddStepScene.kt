@@ -38,6 +38,7 @@ import kotlin.math.roundToInt
 /// (`ViraSceneFraming`): la finestra del bàner baixa o puja fins a ell perquè surti sencer.
 enum class AddScene(@DrawableRes val image: Int, val viriTop: Float, val viriBottom: Float) {
     Capture(R.drawable.viri_suggest_capture_1, 0.30f, 0.84f),
+    Breakdown(R.drawable.viri_suggest_breakdown_1, 0.08f, 0.72f),
     Habit(R.drawable.viri_suggest_habit_2, 0.30f, 0.72f),
     Board(R.drawable.viri_suggest_habit_3, 0.28f, 0.80f),
     HabitDone(R.drawable.viri_suggest_habit_1, 0.39f, 0.89f),

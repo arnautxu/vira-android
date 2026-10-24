@@ -4,18 +4,13 @@ import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
@@ -26,11 +21,8 @@ import cat.vira.android.R
 import cat.vira.android.core.sound.ViraSound
 import cat.vira.android.core.sound.ViraHaptics
 import cat.vira.android.core.data.model.CoinReason
-import cat.vira.android.core.design.LocalViraEnvironment
-import cat.vira.android.core.design.components.ViraActionButton
-import cat.vira.android.core.design.components.ViraActionHierarchy
-import cat.vira.android.core.design.tokens.ViraArea
-import cat.vira.android.core.design.tokens.ViraSpacing
+import cat.vira.android.features.assist.ViriAssistConsentSheet
+import cat.vira.android.features.assist.ViriAssistStepsSheet
 import cat.vira.android.features.plan.DayPeriod
 import cat.vira.android.features.plan.PlanDay
 import java.time.Instant
@@ -77,6 +69,8 @@ fun TaskAddFlow(
             if (inPreview && initialStep == TaskAddStep.When) it.loadWhen(initialDayCounts, emptyList(), now.atZone(zone).toLocalDateTime())
         }
     }
+    val scope = rememberCoroutineScope()
+    val split = remember { TaskSplitOffer(actions, scope) }
     val focusManager = LocalFocusManager.current
     val context = LocalContext.current
     val titleFocus = remember { FocusRequester() }
@@ -131,7 +125,17 @@ fun TaskAddFlow(
     fun finish() {
         if (state.save(actions.createTask, zone)) {
             ViraSound.saved(context)
+            split.rememberIfSmall(state)
             go(TaskAddStep.Done)
+        }
+    }
+
+    /// «La partim?»: les dues respostes desen la tasca i passen a Fet.
+    fun answerSplit(wantsSteps: Boolean) {
+        if (state.save(actions.createTask, zone)) {
+            ViraSound.saved(context)
+            go(TaskAddStep.Done)
+            split.answer(state, wantsSteps)
         }
     }
 
@@ -140,11 +144,19 @@ fun TaskAddFlow(
         ViraSound.play(context, ViraSound.Cue.UNDO)
     }
 
-    /// «Següent», el retorn del teclat, un dia triat i «Desar». Quan no queda res per preguntar, desa.
-    fun advance() {
-        if (!state.canSave) return
-        val next = state.nextStep()
+    fun advanceNow() {
+        val next = state.nextStep(offersSplit = split.offers(state))
         if (next == TaskAddStep.Done) finish() else go(next)
+    }
+
+    /// «Següent», el retorn del teclat, un dia triat i «Desar». Quan no queda res per preguntar, desa
+    /// (o passa a «La partim?»). Si encara cal saber què diu Jev, l'espera un moment.
+    fun advance() {
+        if (!state.canSave || split.waitsForJev) return
+        if (state.step == TaskAddStep.What && split.ask(state) && state.nextStep() == TaskAddStep.Done) {
+            return split.waitThenAdvance { if (state.step == TaskAddStep.What) advanceNow() }
+        }
+        advanceNow()
     }
 
     val callbacks = TaskStepCallbacks(
@@ -189,6 +201,7 @@ fun TaskAddFlow(
                 },
                 onAnother = state::another,
                 onFinish = onDismiss,
+                onSplit = ::answerSplit,
             )
         },
     ) { step ->
@@ -199,7 +212,7 @@ fun TaskAddFlow(
                 state.pick(moment)
                 advance()
             }
-            TaskAddStep.Split -> Unit
+            TaskAddStep.Split -> TaskSplitStep(state.titleToSave)
             TaskAddStep.Done -> {
                 val last = state.justAdded.lastOrNull()
                 val coins by produceState<Int?>(null, last) {
@@ -209,6 +222,8 @@ fun TaskAddFlow(
             }
         }
     }
+    split.consentFor?.let { ViriAssistConsentSheet(onAccept = split::accept, onDismiss = split::dismissConsent) }
+    split.splitting?.let { item -> ViriAssistStepsSheet(item) { split.splitting = null } }
 }
 
 /// Els tocs de les pantalles de la cara Tasca, que viuen a `TaskAddSteps.kt`.
@@ -218,50 +233,3 @@ class TaskStepCallbacks(
     val onUndoLast: () -> Unit,
     val onUndoFromDone: () -> Unit,
 )
-
-/// Els botons de baix de cada pas.
-@Composable
-private fun TaskActions(
-    state: TaskAddState,
-    onAdvance: () -> Unit,
-    onSaveForToday: () -> Unit,
-    onAnother: () -> Unit,
-    onFinish: () -> Unit,
-) {
-    val area = ViraArea.Plan
-    when (state.step) {
-        TaskAddStep.What -> AddStepActions(area) {
-            // «Per avui» (2026-10-22): escriure i un toc. No surt si el full s'ha obert des d'un altre dia.
-            val forToday = @Composable { modifier: Modifier ->
-                ViraActionButton(
-                    stringResource(R.string.add_task_for_today), onClick = onSaveForToday, modifier = modifier,
-                    hierarchy = ViraActionHierarchy.Secondary, area = area, enabled = state.canSave,
-                )
-            }
-            val next = @Composable { modifier: Modifier ->
-                ViraActionButton(stringResource(R.string.add_next), onClick = onAdvance, modifier = modifier, enabled = state.canSave)
-            }
-            if (LocalViraEnvironment.current.isAccessibilitySize) {
-                if (state.offersForToday) forToday(Modifier.fillMaxWidth())
-                next(Modifier.fillMaxWidth())
-            } else {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(ViraSpacing.xs)) {
-                    if (state.offersForToday) forToday(Modifier.weight(1f))
-                    next(Modifier.weight(1f))
-                }
-            }
-        }
-        // Sense res triat, desa avui i sense hora: l'hora no és obligatòria.
-        TaskAddStep.When -> AddStepActions(area) {
-            ViraActionButton(stringResource(R.string.add_save), onClick = onAdvance, modifier = Modifier.fillMaxWidth())
-        }
-        TaskAddStep.Split -> Unit
-        TaskAddStep.Done -> AddStepActions(area) {
-            ViraActionButton("+ " + stringResource(R.string.add_task_another), onClick = onAnother, modifier = Modifier.fillMaxWidth())
-            ViraActionButton(
-                stringResource(R.string.add_task_finish), onClick = onFinish, modifier = Modifier.fillMaxWidth(),
-                hierarchy = ViraActionHierarchy.Textual, area = area,
-            )
-        }
-    }
-}
