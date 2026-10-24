@@ -65,6 +65,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import cat.vira.android.core.design.viraLocale
 import cat.vira.android.R
+import cat.vira.android.features.add.ViraAddKind
+import cat.vira.android.features.add.ViraAddSheet
 import cat.vira.android.core.data.model.Habit
 import cat.vira.android.core.design.LocalViraEnvironment
 import cat.vira.android.core.design.components.LocalActiveCompletion
@@ -131,7 +133,7 @@ fun HabitsSection(snapshot: PlanSnapshot, actions: PlanActions, chrome: PlanChro
         HabitsList(habits, progress, actions, today, onOpen = { detailId = it.id.toString() }, onEdit = { editing = it }, onCreate = { creating = true })
     }
 
-    if (creating) HabitEditor(null, actions, onDismiss = { creating = false })
+    if (creating) ViraAddSheet(onDismiss = { creating = false }, kind = ViraAddKind.Habit)
     editing?.let { habit -> HabitEditor(habit, actions, onDismiss = { editing = null }) }
 }
 
