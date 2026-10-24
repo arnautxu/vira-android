@@ -38,6 +38,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import cat.vira.android.R
+import cat.vira.android.core.sound.ViraHaptics
 import cat.vira.android.core.data.model.Medication
 import cat.vira.android.core.data.model.MedicationForm
 import cat.vira.android.core.design.LocalViraEnvironment
@@ -132,6 +133,8 @@ fun MedicationAddFlow(
                 hasReminder = state.hasReminder,
             ),
         )
+        // Sense so: la medicació no en té. Només la vibració de desar.
+        ViraHaptics.play(context, ViraHaptics.Feedback.Saved)
         // Amb els avisos de medicació apagats a Ajustos, l'avís no sortiria igualment: no es pregunta.
         val asks = state.hasReminder && actions.medicationRemindersOn && !inPreview && !ViraNotifications.canPost(context)
         if (asks && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && permission != null) {

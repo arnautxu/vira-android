@@ -1,5 +1,8 @@
 package cat.vira.android.features.emotions
 
+import cat.vira.android.core.design.components.ViraSceneBanner
+import cat.vira.android.core.sound.ViraHaptics
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -23,10 +26,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -56,7 +57,7 @@ internal fun MindfulnessCategoryContent(
     onExercise: (MindfulnessExercise) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val haptics = LocalHapticFeedback.current
+    val context = LocalContext.current
     Column(
         modifier
             .fillMaxSize()
@@ -77,7 +78,7 @@ internal fun MindfulnessCategoryContent(
             )
             category.exercises.forEachIndexed { index, exercise ->
                 ExerciseRow(index + 1, exercise) {
-                    haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                    ViraHaptics.play(context, ViraHaptics.Feedback.Selection)
                     onExercise(exercise)
                 }
             }
@@ -130,14 +131,9 @@ internal fun MindfulnessPill(text: String, fill: Color = ViraColor.surface(ViraA
 @Composable
 private fun CategoryHero(category: MindfulnessCategory) {
     val shape = RoundedCornerShape(ViraRadius.l)
-    val artHeight = (170.dp * LocalDensity.current.fontScale).coerceAtMost(220.dp)
     Column(Modifier.fillMaxWidth().clip(shape).background(ViraGradient.card(ViraArea.Emotions), shape)) {
-        Image(
-            painterResource(category.scene),
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxWidth().height(artHeight),
-        )
+        // Mateixa alçada a les tres categories; la finestra va a buscar Viri a cadascuna.
+        ViraSceneBanner(category.scene, heightRatio = 0.65f, hiddenBottom = ViraSpacing.xxl)
         MindfulnessBubble(
             stringResource(R.string.mindfulness_category_bubble),
             Modifier.padding(start = ViraSpacing.m, end = ViraSpacing.m, bottom = ViraSpacing.m),

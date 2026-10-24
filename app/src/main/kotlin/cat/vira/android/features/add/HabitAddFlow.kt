@@ -19,6 +19,8 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.stringResource
 import cat.vira.android.R
+import cat.vira.android.core.sound.ViraSound
+import cat.vira.android.core.sound.ViraHaptics
 import cat.vira.android.core.data.model.CoinReason
 import cat.vira.android.core.data.model.Habit
 import cat.vira.android.core.design.components.ViraActionButton
@@ -98,6 +100,7 @@ fun HabitAddFlow(
             reminderTime = state.reminderMinutes?.let { PlanDay.at(today, it / 60, it % 60, zone) },
         )
         actions.saveHabit(habit)
+        ViraSound.saved(context)
         state.created = habit
         go(HabitAddStep.Done)
     }
@@ -139,6 +142,8 @@ fun HabitAddFlow(
         onUndo = {
             // «Desfer» a Fet: l'arxiva, i torna al camp amb el nom per si només calia arreglar-lo.
             state.created?.let(actions.archiveHabit)
+            ViraHaptics.play(context, ViraHaptics.Feedback.Selection)
+            ViraSound.play(context, ViraSound.Cue.UNDO)
             state.created = null
             go(HabitAddStep.What)
         },

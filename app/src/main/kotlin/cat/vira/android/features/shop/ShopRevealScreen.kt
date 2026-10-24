@@ -1,5 +1,6 @@
 package cat.vira.android.features.shop
 
+import cat.vira.android.core.sound.ViraSound
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -43,8 +44,18 @@ fun ShopRevealScreen(item: SkinItem, onContinue: () -> Unit, celebrationsEnabled
         eyebrow = stringResource(item.tier.nameRes),
         message = stringResource(R.string.shop_reveal_message, stringResource(item.nameRes)),
         celebrationsEnabled = celebrationsEnabled,
+        sound = item.tier.revealSound,
     ) { RevealHero(item) }
 }
+
+/// Cada raresa té el seu so, de més curt i senzill a més ple. Mai sona a màquina escurabutxaques.
+private val SkinTier.revealSound: ViraSound.Cue
+    get() = when (this) {
+        SkinTier.Common -> ViraSound.Cue.SHOP_COMMON
+        SkinTier.Special -> ViraSound.Cue.SHOP_SPECIAL
+        SkinTier.Epic -> ViraSound.Cue.SHOP_EPIC
+        SkinTier.Legendary -> ViraSound.Cue.SHOP_LEGENDARY
+    }
 
 @Composable
 private fun RevealHero(item: SkinItem) {

@@ -1,5 +1,6 @@
 package cat.vira.android.features.plan
 
+import cat.vira.android.core.design.components.ViraSceneTile
 import cat.vira.android.app.PlanSection
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateFloatAsState
@@ -227,7 +228,7 @@ fun HabitsTodayHero(habits: List<Habit>, progress: HabitProgress) {
             ) {
                 ProgressRing(done, due.size, stringResource(R.string.habits_hero_today))
                 Column(
-                    Modifier.weight(1f).padding(end = if (isLarge) 0.dp else 64.dp),
+                    Modifier.weight(1f).padding(end = if (isLarge) 0.dp else 76.dp + ViraSpacing.xs),
                     verticalArrangement = Arrangement.spacedBy(ViraSpacing.textRelated),
                 ) {
                     Text(title, style = ViraFont.title, color = ink, modifier = Modifier.semantics { heading() })
@@ -237,10 +238,11 @@ fun HabitsTodayHero(habits: List<Habit>, progress: HabitProgress) {
             WeekDots(habits, progress)
         }
         if (!isLarge) {
-            ViraPictogram(
-                if (allDone) R.drawable.viri_medal else R.drawable.viri_emotion_content,
-                Modifier.align(Alignment.TopEnd).padding(end = ViraSpacing.xxs).offset(y = -ViraSpacing.xs).clearAndSetSemantics { },
-                size = 76.dp,
+            // Viri sencer en miniatura: posant el sol a l'hàbit o, tot fet, al puf amb la llista.
+            ViraSceneTile(
+                if (allDone) R.drawable.viri_home_done else R.drawable.viri_suggest_habit_3,
+                side = 76.dp,
+                modifier = Modifier.align(Alignment.TopEnd).padding(ViraSpacing.s),
             )
         }
     }

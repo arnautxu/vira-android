@@ -1,5 +1,6 @@
 package cat.vira.android.features.progress
 
+import cat.vira.android.core.sound.ViraSound
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -94,6 +95,7 @@ fun StreakCelebration(
         message = message,
         celebrationsEnabled = celebrationsEnabled,
         onShown = onShown,
+        sound = ViraSound.Cue.STREAK_TODAY,
         // Cada dia de ratxa, una escena diferent; les fites, el seu clip. L'heroi d'aquí sota
         // només surt quan el vídeo no es reprodueix (Reduir moviment, captures).
         backdrop = StreakSceneVideo.celebrationBackdrop(streakDays, cardKey, soundEnabled)?.let {
@@ -174,6 +176,7 @@ fun LevelUpCelebration(level: Int, totalXP: Int, onContinue: () -> Unit, modifie
         onContinue = onContinue,
         modifier = modifier,
         area = ViraArea.Today,
+        sound = ViraSound.Cue.LEVEL_UP,
         scene = { SceneImage(R.drawable.viri_scene_launch) },
     ) {
         CelebrationSummaryCard(ViraArea.Today, pills = pills) {

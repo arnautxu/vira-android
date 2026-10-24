@@ -1,5 +1,10 @@
 package cat.vira.android.features.progress.ui
 
+import cat.vira.android.core.sound.ViraSound
+import cat.vira.android.core.sound.ViraHaptics
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -83,7 +88,17 @@ internal fun ProfileHeader(
             .background(ViraGradient.card(ViraArea.Rewards)),
     ) {
         // 4:3: el retall és de dalt i de baix, que és on les skins tenen decorat.
-        Box(Modifier.fillMaxWidth().aspectRatio(4f / 3f)) {
+        // Tocar Viri el fa dir alguna cosa: tres veuetes que roten. És un detall, no una acció: no
+        // porta cap informació, així que TalkBack no l'anuncia.
+        val context = LocalContext.current
+        Box(
+            Modifier.fillMaxWidth().aspectRatio(4f / 3f).pointerInput(Unit) {
+                detectTapGestures {
+                    ViraHaptics.play(context, ViraHaptics.Feedback.Tap)
+                    ViraSound.playViri(context)
+                }
+            },
+        ) {
             ProgressSlots.Portrait(Modifier.fillMaxSize())
         }
         Column(

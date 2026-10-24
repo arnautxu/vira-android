@@ -1,5 +1,7 @@
 package cat.vira.android.features.plan
 
+import androidx.compose.ui.platform.LocalContext
+import cat.vira.android.core.sound.ViraSound
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -24,11 +26,15 @@ import cat.vira.android.core.resources.ViraVideo
 /// a l'espai de l'heroi.
 @Composable
 fun HabitCelebrationScreen(title: String, coins: Int, xp: Int, onContinue: () -> Unit) {
+    // El clip porta el seu so, com a l'iPhone: sona amb Ajustos → Sons encès, i llavors la
+    // pantalla no en fa sonar cap altre.
+    val muted = ViraSound.mode(LocalContext.current) == ViraSound.Mode.OFF
     ViraCelebrationScreen(
         caption = stringResource(R.string.habit_done_title),
         message = title,
         onContinue = onContinue,
         area = ViraArea.Rewards,
+        sound = null,
         extra = {
             if (coins > 0 || xp > 0) {
                 ViraRewardTally(coins, xp, iconSize = 28.dp, style = ViraFont.title, color = ViraColor.onCard(ViraArea.Rewards))
@@ -38,6 +44,7 @@ fun HabitCelebrationScreen(title: String, coins: Int, xp: Int, onContinue: () ->
         ViraAlphaVideo(
             ViraVideo.HabitDone,
             Modifier.fillMaxWidth().heightIn(max = 280.dp).aspectRatio(720f / 1280f),
+            isMuted = muted,
         )
     }
 }

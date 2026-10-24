@@ -1,5 +1,6 @@
 package cat.vira.android.features.emotions
 
+import cat.vira.android.core.design.components.ViraSceneBanner
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -46,14 +47,8 @@ internal fun MindfulnessFinished(
     onFocus: () -> Unit,
 ) {
     val shape = RoundedCornerShape(ViraRadius.l)
-    val artHeight = (260.dp * LocalDensity.current.fontScale).coerceAtMost(300.dp)
     Column(Modifier.fillMaxWidth().clip(shape).background(ViraGradient.card(ViraArea.Emotions), shape)) {
-        Image(
-            painterResource(R.drawable.viri_suggest_wind_down_2),
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxWidth().height(artHeight),
-        )
+        ViraSceneBanner(R.drawable.viri_suggest_wind_down_2, heightRatio = 0.72f, hiddenBottom = 16.dp)
         Column(Modifier.padding(ViraSpacing.m), verticalArrangement = Arrangement.spacedBy(ViraSpacing.s)) {
             val bubble = stringResource(R.string.mindfulness_done_bubble)
             val a11y = stringResource(R.string.today_viri_a11y, bubble)

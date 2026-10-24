@@ -13,9 +13,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import cat.vira.android.R
+import cat.vira.android.core.sound.ViraSound
+import cat.vira.android.core.sound.ViraHaptics
 import cat.vira.android.core.data.model.CoinReason
 import cat.vira.android.core.design.LocalViraEnvironment
 import cat.vira.android.core.design.components.ViraActionButton
@@ -60,6 +63,7 @@ fun TaskAddFlow(
         ).also { it.justAdded += initialAdded }
     }
     val focusManager = LocalFocusManager.current
+    val context = LocalContext.current
     val titleFocus = remember { FocusRequester() }
     val scope = rememberCoroutineScope()
     var focusTitle by remember { mutableStateOf(false) }
@@ -78,7 +82,15 @@ fun TaskAddFlow(
     }
 
     fun finish() {
-        if (state.save(actions.createTask, zone)) go(TaskAddStep.Done)
+        if (state.save(actions.createTask, zone)) {
+            ViraSound.saved(context)
+            go(TaskAddStep.Done)
+        }
+    }
+
+    fun undone() {
+        ViraHaptics.play(context, ViraHaptics.Feedback.Selection)
+        ViraSound.play(context, ViraSound.Cue.UNDO)
     }
 
     /// «Següent», el retorn del teclat, un dia triat i «Desar». Quan no queda res per preguntar, desa.
@@ -103,8 +115,8 @@ fun TaskAddFlow(
             state.symbolName = entry.symbolName
             advance()
         },
-        onUndoLast = { state.undoLast(actions.deleteTasks) },
-        onUndoFromDone = { state.undoFromDone(actions.deleteTasks) },
+        onUndoLast = { state.undoLast(actions.deleteTasks); undone() },
+        onUndoFromDone = { state.undoFromDone(actions.deleteTasks); undone() },
     )
 
     AddStepScaffold(

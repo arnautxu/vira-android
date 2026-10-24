@@ -1,5 +1,6 @@
 package cat.vira.android.features.focus
 
+import cat.vira.android.core.sound.ViraSound
 import android.content.Context
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
@@ -60,7 +61,7 @@ internal fun saveProfile(
             isNew -> store.create(dao, profile)
             else -> store.save(dao, profile)
         }
-        FocusSound.play(context, FocusSound.Cue.SAVED)
+        ViraSound.play(context, ViraSound.Cue.SAVED)
         onSaved(saved)
     }
 }

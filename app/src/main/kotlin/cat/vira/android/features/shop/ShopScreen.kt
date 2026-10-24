@@ -1,5 +1,8 @@
 package cat.vira.android.features.shop
 
+import cat.vira.android.core.sound.ViraSound
+import cat.vira.android.core.sound.ViraHaptics
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -64,6 +67,7 @@ fun ShopScreen(onBack: (() -> Unit)? = null) {
     var revealing by remember { mutableStateOf<SkinItem?>(null) }
     var celebrating by remember { mutableStateOf(false) }
     var saveFailed by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
     val balance = counter?.coinBalance ?: 0
     val ownedSkins = skins.map { it.key }.toSet()
@@ -73,6 +77,12 @@ fun ShopScreen(onBack: (() -> Unit)? = null) {
 
     /// Desa tot o res. Un error de la base de dades es diu a la pantalla; quedar-se curt de
     /// monedes no és un error (el botó ja ho deia) i no canvia res.
+    fun wear(key: String?) {
+        ViraHaptics.play(context, ViraHaptics.Feedback.Done)
+        ViraSound.play(context, ViraSound.Cue.EQUIP)
+        scope.launch { data.skinsLogic.equip(key) }
+    }
+
     fun purchase(block: suspend () -> Boolean, onDone: () -> Unit) {
         scope.launch {
             val result = runCatching { block() }
@@ -93,10 +103,9 @@ fun ShopScreen(onBack: (() -> Unit)? = null) {
         section = section,
         onSection = { section = it },
         onBack = onBack,
-        onDefaultTap = { scope.launch { data.skinsLogic.equip(null) } },
-        onSkinTap = { item ->
-            if (item.key in ownedSkins) scope.launch { data.skinsLogic.equip(item.key) } else selection = item
-        },
+        onDefaultTap = { wear(null) },
+        // Una skin ja comprada es posa a l'instant: reversible, gratuïta i freqüent.
+        onSkinTap = { item -> if (item.key in ownedSkins) wear(item.key) else selection = item },
         onBadgeTap = { badgeSelection = it },
         celebrating = celebrationsOn && celebrating,
     )
@@ -107,8 +116,14 @@ fun ShopScreen(onBack: (() -> Unit)? = null) {
             isOwned = item.key in ownedSkins,
             isEquipped = item.key == equippedKey,
             balance = balance,
-            onBuy = { purchase({ data.skinsLogic.buy(item) }) { if (celebrationsOn) revealing = item } },
-            onWear = { scope.launch { data.skinsLogic.equip(item.key) } },
+            onBuy = {
+                purchase({ data.skinsLogic.buy(item) }) {
+                    ViraHaptics.play(context, ViraHaptics.Feedback.Reward)
+                    // Amb revelació, el so el porta ella, sincronitzat amb el que es veu.
+                    if (celebrationsOn) revealing = item else ViraSound.play(context, ViraSound.Cue.EQUIP)
+                }
+            },
+            onWear = { wear(item.key) },
             onDismiss = { selection = null },
         )
     }

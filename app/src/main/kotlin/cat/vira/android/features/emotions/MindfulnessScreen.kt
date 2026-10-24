@@ -1,5 +1,6 @@
 package cat.vira.android.features.emotions
 
+import cat.vira.android.core.design.components.ViraSceneBanner
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.foundation.Image
@@ -89,14 +90,8 @@ enum class MindfulnessCategory(@StringRes val title: Int, @StringRes val subtitl
 @Composable
 private fun MindfulnessHero(onBreathe: () -> Unit) {
     val shape = RoundedCornerShape(ViraRadius.l)
-    val artHeight = (200.dp * LocalDensity.current.fontScale).coerceAtMost(240.dp)
     Column(Modifier.fillMaxWidth().clip(shape).background(ViraGradient.card(ViraArea.Emotions), shape)) {
-        Image(
-            painterResource(R.drawable.viri_suggest_mindfulness_1),
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxWidth().height(artHeight).viraIdleBreath(),
-        )
+        ViraSceneBanner(R.drawable.viri_suggest_mindfulness_1, heightRatio = 0.66f, hiddenBottom = 16.dp)
         Column(Modifier.padding(ViraSpacing.m), verticalArrangement = Arrangement.spacedBy(ViraSpacing.s)) {
             MindfulnessBubble(stringResource(R.string.emotions_mindfulness_hero_bubble))
             Column(verticalArrangement = Arrangement.spacedBy(ViraSpacing.textRelated)) {

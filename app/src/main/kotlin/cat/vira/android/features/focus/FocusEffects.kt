@@ -1,5 +1,6 @@
 package cat.vira.android.features.focus
 
+import cat.vira.android.core.sound.ViraSound
 import android.content.Context
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.ProcessLifecycleOwner
@@ -37,19 +38,19 @@ class AndroidFocusEffects(context: Context, private val store: ViraStore) : Focu
 
     override fun started(controller: FocusSessionController) {
         FocusRuntime.attach(controller)
-        FocusSound.play(context, FocusSound.Cue.START)
+        ViraSound.play(context, ViraSound.Cue.FOCUS_START)
         FocusService.show(context)
         controller.state.endDate?.let { FocusAlarm.schedule(context, it) }
     }
 
     override fun paused(controller: FocusSessionController) {
-        FocusSound.play(context, FocusSound.Cue.PAUSE)
+        ViraSound.play(context, ViraSound.Cue.FOCUS_PAUSE)
         FocusAlarm.cancel(context)
         FocusService.refresh(context)
     }
 
     override fun resumed(controller: FocusSessionController) {
-        FocusSound.play(context, FocusSound.Cue.RESUME)
+        ViraSound.play(context, ViraSound.Cue.FOCUS_RESUME)
         // Amb l'hora de final nova: la pausa l'ha endarrerida.
         controller.state.endDate?.let { FocusAlarm.schedule(context, it) }
         FocusService.refresh(context)
@@ -65,7 +66,7 @@ class AndroidFocusEffects(context: Context, private val store: ViraStore) : Focu
         val visible = ProcessLifecycleOwner.get().lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)
         when {
             !visible -> FocusNotifications.postEnded(context)
-            endsNow -> FocusSound.play(context, if (kind == FocusKind.FOCUS) FocusSound.Cue.END else FocusSound.Cue.BREAK_END)
+            endsNow -> ViraSound.play(context, if (kind == FocusKind.FOCUS) ViraSound.Cue.FOCUS_END else ViraSound.Cue.BREAK_END)
         }
     }
 
