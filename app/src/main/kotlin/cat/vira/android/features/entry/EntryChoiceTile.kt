@@ -23,6 +23,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.selected
@@ -38,6 +39,7 @@ import cat.vira.android.core.design.tokens.ViraFont
 import cat.vira.android.core.design.tokens.ViraRadius
 import cat.vira.android.core.design.tokens.ViraSpacing
 import cat.vira.android.core.design.tokens.ViraTouch
+import cat.vira.android.core.sound.ViraSound
 
 /// Fila de tria de la fulla, amb pictograma opcional ("Per on comencem?", edat) (`EntryChoiceTile.swift`).
 ///
@@ -57,6 +59,7 @@ fun EntryChoiceTile(
 ) {
     val environment = LocalViraEnvironment.current
     val haptics = LocalHapticFeedback.current
+    val context = LocalContext.current
     val shape = RoundedCornerShape(ViraRadius.m)
     val pictogramSide = 40.dp * LocalDensity.current.fontScale.coerceAtMost(2f)
 
@@ -74,6 +77,7 @@ fun EntryChoiceTile(
         )
         .viraPressable {
             haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+            ViraSound.play(context, ViraSound.Cue.ENTRY_CHOICE)
             onClick()
         }
         .semantics(mergeDescendants = true) { selected = isSelected }
