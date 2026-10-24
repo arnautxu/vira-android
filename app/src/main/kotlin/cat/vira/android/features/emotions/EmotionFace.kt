@@ -56,8 +56,9 @@ fun EmotionFaceAnimated(emotion: Emotion, modifier: Modifier = Modifier, size: D
     val reduceMotion = LocalViraEnvironment.current.reduceMotion
     FaceCircle(size, modifier, ViraGradient.card(ViraArea.Emotions)) {
         Box(Modifier.fillMaxSize().viraIdleBreath()) { FaceArt(emotion, size) }
-        if (!reduceMotion) {
-            ViraAlphaVideo(emotion.video, Modifier.fillMaxSize(), loopStart = 0.0, fill = true)
+        val video = emotion.video
+        if (!reduceMotion && video != null) {
+            ViraAlphaVideo(video, Modifier.fillMaxSize(), loopStart = 0.0, fill = true)
         }
     }
 }

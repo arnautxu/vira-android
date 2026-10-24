@@ -14,19 +14,32 @@ import cat.vira.android.core.resources.ViraVideo
 /// L'enum en cru viu a `core/data` perquè la fila que es sincronitza sigui la mateixa; el que
 /// cal per pintar-la, aquí.
 
-/// Les cares principals per defecte, en l'ordre de la graella de l'iPhone.
+/// Les sis de sortida: tres agradables i tres desagradables (Arnau, 2026-10-23). Qui ja ha
+/// personalitzat la graella conserva la seva (`EmotionPreferences`).
 val Emotion.Companion.primary: List<Emotion>
-    get() = listOf(Emotion.CONTENT, Emotion.ANGRY, Emotion.ANXIOUS, Emotion.SAD, Emotion.SCARED, Emotion.CONFUSED)
+    get() = listOf(Emotion.CONTENT, Emotion.CALM, Emotion.PROUD, Emotion.SAD, Emotion.ANXIOUS, Emotion.ANGRY)
 
 /// Les emocions desagradables poden oferir una sortida d'ajuda si la intensitat és alta.
 /// No serveix per jutjar-les ni per ordenar-les: no hi ha emocions millors ni pitjors.
 val Emotion.isUnpleasant: Boolean
-    get() = this != Emotion.CONTENT && this != Emotion.EUPHORIC
+    get() = when (this) {
+        Emotion.CONTENT, Emotion.CALM, Emotion.PROUD, Emotion.EUPHORIC, Emotion.MOTIVATED,
+        Emotion.GRATEFUL, Emotion.EXCITED, Emotion.RELIEVED -> false
+        Emotion.ANGRY, Emotion.ANXIOUS, Emotion.CONFUSED, Emotion.LONELY, Emotion.SCARED,
+        Emotion.ASHAMED, Emotion.SAD, Emotion.TIRED, Emotion.LOW_ENERGY, Emotion.UNMOTIVATED,
+        Emotion.BLOCKED -> true
+    }
 
 @get:StringRes
 val Emotion.label: Int
     get() = when (this) {
         Emotion.CONTENT -> R.string.emotion_content
+        Emotion.CALM -> R.string.emotion_calm
+        Emotion.PROUD -> R.string.emotion_proud
+        Emotion.MOTIVATED -> R.string.emotion_motivated
+        Emotion.GRATEFUL -> R.string.emotion_grateful
+        Emotion.EXCITED -> R.string.emotion_excited
+        Emotion.RELIEVED -> R.string.emotion_relieved
         Emotion.ANGRY -> R.string.emotion_angry
         Emotion.ANXIOUS -> R.string.emotion_anxious
         Emotion.SAD -> R.string.emotion_sad
@@ -42,7 +55,8 @@ val Emotion.label: Int
     }
 
 /// El primer fotograma del vídeo de l'emoció (`stillAssetName`): una escena sencera que omple el
-/// cercle. Quatre emocions encara no en tenen i cauen al retall (`cutout`).
+/// cercle. Les quatre d'energia i les sis agradables noves encara no en tenen i cauen al retall
+/// (`cutout`).
 @get:DrawableRes
 val Emotion.still: Int?
     get() = when (this) {
@@ -55,7 +69,8 @@ val Emotion.still: Int?
         Emotion.SCARED -> R.drawable.viri_emotion_scared_still
         Emotion.ASHAMED -> R.drawable.viri_emotion_ashamed_still
         Emotion.CONFUSED -> R.drawable.viri_emotion_confused_still
-        Emotion.TIRED, Emotion.LOW_ENERGY, Emotion.UNMOTIVATED, Emotion.BLOCKED -> null
+        Emotion.TIRED, Emotion.LOW_ENERGY, Emotion.UNMOTIVATED, Emotion.BLOCKED,
+        Emotion.CALM, Emotion.PROUD, Emotion.MOTIVATED, Emotion.GRATEFUL, Emotion.EXCITED, Emotion.RELIEVED -> null
     }
 
 /// El retall de Viri sense fons (`assetName`).
@@ -63,6 +78,12 @@ val Emotion.still: Int?
 val Emotion.cutout: Int
     get() = when (this) {
         Emotion.CONTENT -> R.drawable.viri_emotion_content
+        Emotion.CALM -> R.drawable.viri_emotion_calm
+        Emotion.PROUD -> R.drawable.viri_emotion_proud
+        Emotion.MOTIVATED -> R.drawable.viri_emotion_motivated
+        Emotion.GRATEFUL -> R.drawable.viri_emotion_grateful
+        Emotion.EXCITED -> R.drawable.viri_emotion_excited
+        Emotion.RELIEVED -> R.drawable.viri_emotion_relieved
         Emotion.ANGRY -> R.drawable.viri_emotion_angry
         Emotion.ANXIOUS -> R.drawable.viri_emotion_anxious
         Emotion.SAD -> R.drawable.viri_emotion_sad
@@ -77,9 +98,11 @@ val Emotion.cutout: Int
         Emotion.BLOCKED -> R.drawable.viri_emotion_blocked
     }
 
-/// Viri fent l'emoció, en moviment (`ViraAlphaVideo.Name.emotion`). Ara n'hi ha per a totes.
-val Emotion.video: ViraVideo
+/// Viri fent l'emoció, en moviment (`ViraAlphaVideo.Name.emotion`). Les sis agradables noves encara
+/// no en tenen: com a l'iPhone (`ViraAlphaVideo.exists`), queda la cara quieta.
+val Emotion.video: ViraVideo?
     get() = when (this) {
+        Emotion.CALM, Emotion.PROUD, Emotion.MOTIVATED, Emotion.GRATEFUL, Emotion.EXCITED, Emotion.RELIEVED -> null
         Emotion.CONTENT -> ViraVideo.ViriEmotionContent
         Emotion.ANGRY -> ViraVideo.ViriEmotionAngry
         Emotion.ANXIOUS -> ViraVideo.ViriEmotionAnxious
