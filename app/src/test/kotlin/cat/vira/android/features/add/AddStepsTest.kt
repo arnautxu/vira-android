@@ -17,13 +17,29 @@ class AddStepsTest {
     @Test
     fun taskSkipsWhatIsAlreadyKnown() {
         assertEquals(TaskAddStep.When, TaskAddStep.What.next(dayIsGiven = false, timeIsGiven = false))
-        assertEquals(TaskAddStep.Time, TaskAddStep.What.next(dayIsGiven = true, timeIsGiven = false))
+        assertEquals(TaskAddStep.Done, TaskAddStep.When.next(dayIsGiven = false, timeIsGiven = false))
+        // «demà» a la frase encara pregunta «Quan», per l'hora; una hora sola, pel dia.
+        assertEquals(TaskAddStep.When, TaskAddStep.What.next(dayIsGiven = true, timeIsGiven = false))
+        assertEquals(TaskAddStep.When, TaskAddStep.What.next(dayIsGiven = false, timeIsGiven = true))
         assertEquals(TaskAddStep.Done, TaskAddStep.What.next(dayIsGiven = true, timeIsGiven = true))
-        assertEquals(TaskAddStep.Done, TaskAddStep.When.next(dayIsGiven = true, timeIsGiven = true))
-        assertEquals(TaskAddStep.What, TaskAddStep.Time.previous(dayIsGiven = true))
-        assertEquals(TaskAddStep.When, TaskAddStep.Time.previous(dayIsGiven = false))
+        assertEquals(TaskAddStep.What, TaskAddStep.When.previous(dayIsGiven = true))
+        assertNull(TaskAddStep.What.previous(dayIsGiven = false))
         assertNull(TaskAddStep.Done.previous(dayIsGiven = false))
+        assertEquals(2, TaskAddStep.QUESTION_COUNT)
+        assertEquals(1, TaskAddStep.What.number)
+        assertEquals(2, TaskAddStep.When.number)
         assertNull(TaskAddStep.Done.number)
+    }
+
+    @Test
+    fun aBigTaskPassesThroughSplitBeforeDone() {
+        assertEquals(TaskAddStep.Split, TaskAddStep.When.next(dayIsGiven = false, timeIsGiven = false, offersSplit = true))
+        assertEquals(TaskAddStep.Split, TaskAddStep.What.next(dayIsGiven = true, timeIsGiven = true, offersSplit = true))
+        assertEquals(TaskAddStep.Done, TaskAddStep.Split.next(dayIsGiven = false, timeIsGiven = false, offersSplit = true))
+        assertEquals(TaskAddStep.When, TaskAddStep.What.next(dayIsGiven = false, timeIsGiven = false, offersSplit = true))
+        assertEquals(TaskAddStep.When, TaskAddStep.Split.previous(dayIsGiven = true, timeIsGiven = false))
+        assertEquals(TaskAddStep.What, TaskAddStep.Split.previous(dayIsGiven = true, timeIsGiven = true))
+        assertEquals(TaskAddStep.QUESTION_COUNT, TaskAddStep.Split.number)
     }
 
     @Test

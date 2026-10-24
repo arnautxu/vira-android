@@ -3,32 +3,45 @@ package cat.vira.android.features.add
 import java.util.Locale
 
 /// Els passos de la cara Tasca (`QuickCaptureStep`, Arnau, 2026-10-19: «una pregunta cada
-/// vegada»): **què** → **quan** → **hora** (opcional) → **fet**. El que ja se sap no es pregunta:
-/// si la frase diu «demà a les 5», o s'ha obert des d'un dia i una franja del calendari,
-/// «Següent» salta fins on falti alguna cosa.
+/// vegada»). **2026-10-24 (Arnau: «el dia i l'hora han d'anar en una sola pantalla», opció A + C)**:
+/// **què** → **quan**, amb el dia i l'hora junts i tres moments d'un toc a dalt → **fet**. El que ja
+/// se sap no es pregunta: si la frase diu «demà a les 5», o s'ha obert des d'un dia i una franja del
+/// calendari, «Següent» desa directament.
 ///
-/// «La partim?» de l'iPhone no hi és: és de les ajudes de Viri amb Claude, que Android encara no té.
+/// **La partim?**: si la tasca sembla gran, abans de Fet Viri proposa partir-la en passos. No és
+/// una pregunta més del recompte: surt amb el número de l'última i només quan el telèfon la veu gran.
 enum class TaskAddStep {
-    What, When, Time, Done;
+    What, When, Split, Done;
 
-    /// «1 de 3» a la capçalera. Fet no en porta: ja no és una pregunta.
-    val number: Int? get() = if (this == Done) null else ordinal + 1
-
-    fun next(dayIsGiven: Boolean, timeIsGiven: Boolean): TaskAddStep = when (this) {
-        What -> if (!dayIsGiven) When else if (timeIsGiven) Done else Time
-        When -> if (timeIsGiven) Done else Time
-        Time, Done -> Done
+    /// «1 de 2» a la capçalera. Fet no en porta: ja no és una pregunta. «La partim?» porta el de
+    /// l'última, perquè no sumi una pregunta que la majoria de tasques no veuran.
+    val number: Int? get() = when (this) {
+        Done -> null
+        Split -> QUESTION_COUNT
+        else -> ordinal + 1
     }
 
-    /// On porta «Enrere». Des de Fet no se'n torna: la tasca ja és desada i té «Desfer».
-    fun previous(dayIsGiven: Boolean): TaskAddStep? = when (this) {
+    /// Només se salta «Quan» si se saben el dia i l'hora: amb el dia sol, «Quan» surt amb el dia ja
+    /// marcat. `offersSplit`, que la tasca sembla gran i Viri pot proposar partir-la.
+    fun next(dayIsGiven: Boolean, timeIsGiven: Boolean, offersSplit: Boolean = false): TaskAddStep {
+        val end = if (offersSplit) Split else Done
+        return when (this) {
+            What -> if (dayIsGiven && timeIsGiven) end else When
+            When -> end
+            Split, Done -> Done
+        }
+    }
+
+    /// On porta «Enrere». Des de Fet no se'n torna: la tasca ja és desada i té «Desfer». Des de
+    /// «La partim?», a l'última pregunta que s'ha fet.
+    fun previous(dayIsGiven: Boolean, timeIsGiven: Boolean = false): TaskAddStep? = when (this) {
         What, Done -> null
         When -> What
-        Time -> if (dayIsGiven) What else When
+        Split -> if (dayIsGiven && timeIsGiven) What else When
     }
 
     companion object {
-        const val QUESTION_COUNT = 3
+        const val QUESTION_COUNT = 2
     }
 }
 

@@ -1,20 +1,26 @@
 package cat.vira.android.features.add
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.core.content.ContextCompat
 import androidx.compose.ui.res.stringResource
 import cat.vira.android.R
 import cat.vira.android.core.sound.ViraSound
@@ -26,17 +32,18 @@ import cat.vira.android.core.design.components.ViraActionHierarchy
 import cat.vira.android.core.design.tokens.ViraArea
 import cat.vira.android.core.design.tokens.ViraSpacing
 import cat.vira.android.features.plan.DayPeriod
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import cat.vira.android.features.plan.PlanDay
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 
-/// La cara **Tasca** del full «Afegir» (`QuickCaptureForm`): **què** → **quan** (un toc i passa) →
-/// **hora**, opcional, amb «Es repeteix» → **fet**, una petita celebració amb «+ Una altra».
+/// La cara **Tasca** del full «Afegir» (`QuickCaptureForm`): **què** → **quan**, el dia i l'hora en
+/// una sola pantalla amb tres moments d'un toc a dalt (Arnau, 2026-10-24, opció «A + C») → **fet**,
+/// una petita celebració amb «+ Una altra».
 ///
 /// Si capturar una tasca costa més que recordar-la, l'eina no s'utilitza: el títol és l'únic que
-/// cal. «Per avui» desa d'un toc des del primer pas.
+/// cal. «Per avui» desa d'un toc des del primer pas. Al camp hi ha el micròfon, i el teclat no
+/// s'obre sol enlloc, tampoc a «+ Una altra».
 @Composable
 fun TaskAddFlow(
     actions: AddSheetActions,
@@ -51,7 +58,10 @@ fun TaskAddFlow(
     initialTitle: String = "",
     /// Les captures de Fet hi posen una tasca ja desada.
     initialAdded: List<AddedTask> = emptyList(),
+    /// Les captures de «Quan» hi posen els punts del calendari.
+    initialDayCounts: Map<LocalDate, Int> = emptyMap(),
 ) {
+    val inPreview = LocalInspectionMode.current
     val state = remember {
         TaskAddState(
             today = now.atZone(zone).toLocalDate(),
@@ -60,17 +70,39 @@ fun TaskAddFlow(
             now = now.atZone(zone).toLocalTime(),
             initialStep = initialStep,
             initialTitle = initialTitle,
-        ).also { it.justAdded += initialAdded }
+            clock = if (inPreview) ({ now.atZone(zone).toLocalTime() }) else ({ java.time.LocalTime.now(zone) }),
+        ).also {
+            it.justAdded += initialAdded
+            // Les captures no esperen la base de dades: «Quan» ja surt amb els moments i els punts.
+            if (inPreview && initialStep == TaskAddStep.When) it.loadWhen(initialDayCounts, emptyList(), now.atZone(zone).toLocalDateTime())
+        }
     }
     val focusManager = LocalFocusManager.current
     val context = LocalContext.current
     val titleFocus = remember { FocusRequester() }
-    val scope = rememberCoroutineScope()
-    var focusTitle by remember { mutableStateOf(false) }
-    LaunchedEffect(state.step) { onFirstStep(state.step == TaskAddStep.What) }
-    LaunchedEffect(focusTitle) {
-        if (focusTitle) runCatching { titleFocus.requestFocus() }
-        focusTitle = false
+    // El micròfon: res a les captures, que no tenen reconeixedor.
+    val dictation = remember { if (inPreview) null else TaskDictation(context) }
+    LaunchedEffect(dictation) { dictation?.checkAvailability() }
+    DisposableEffect(dictation) { onDispose { dictation?.stop() } }
+    val micPermission = if (inPreview) null else rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) dictation?.start() else dictation?.denied()
+    }
+    LaunchedEffect(state.step) {
+        onFirstStep(state.step == TaskAddStep.What)
+        dictation?.stop()
+        if (state.step == TaskAddStep.When && !inPreview) {
+            val history = actions.recentTasks().take(200).mapNotNull {
+                CaptureMoment.of(
+                    day = PlanDay.date(it.day, zone),
+                    time = it.time?.atZone(zone)?.toLocalDateTime(),
+                    createdOn = PlanDay.date(it.createdAt, zone),
+                )
+            }
+            // Els punts del calendari: el que queda d'aquest mes i els dos següents.
+            val counts = actions.dayCounts(state.today, state.today.plusMonths(3))
+            val current = if (inPreview) now.atZone(zone).toLocalDateTime() else java.time.LocalDateTime.now(zone)
+            state.loadWhen(counts, history, current)
+        }
     }
     val usual by produceState<List<CaptureUsual.Entry>?>(null) {
         value = CaptureUsual.pick(actions.recentTasks().map { CaptureUsual.Entry(it.title, it.symbolName) })
@@ -79,6 +111,21 @@ fun TaskAddFlow(
     fun go(next: TaskAddStep) {
         focusManager.clearFocus()
         state.step = next
+    }
+
+    fun toggleMic() {
+        val mic = dictation ?: return
+        ViraHaptics.play(context, ViraHaptics.Feedback.Selection)
+        if (mic.state == TaskDictation.State.Listening) return mic.stop()
+        focusManager.clearFocus()
+        // Si ja hi havia text, el que es diu s'hi afegeix al darrere.
+        val typed = state.title.trim()
+        mic.onText = { heard -> state.updateTitle(if (typed.isEmpty()) heard else "$typed $heard") }
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+            mic.start()
+        } else {
+            micPermission?.launch(Manifest.permission.RECORD_AUDIO)
+        }
     }
 
     fun finish() {
@@ -102,14 +149,6 @@ fun TaskAddFlow(
 
     val callbacks = TaskStepCallbacks(
         onAdvance = ::advance,
-        onPickDay = { day ->
-            // Un dia és una resposta sencera: es veu el check un moment i passa.
-            state.choose(day)
-            scope.launch {
-                delay(220)
-                if (state.step == TaskAddStep.When) advance()
-            }
-        },
         onPickUsual = { entry ->
             state.updateTitle(entry.title)
             state.symbolName = entry.symbolName
@@ -130,7 +169,7 @@ fun TaskAddFlow(
             AddTopBar(
                 number = state.step.number,
                 total = TaskAddStep.QUESTION_COUNT,
-                canGoBack = state.step.previous(state.dayIsGiven) != null,
+                canGoBack = state.step.previous(state.dayIsGiven, state.timeIsGiven) != null,
                 closeTitle = closeTitle,
                 onBack = { focusManager.clearFocus(); state.goBack() },
                 onClose = onDismiss,
@@ -148,22 +187,19 @@ fun TaskAddFlow(
                         finish()
                     }
                 },
-                onSaveWithoutTime = {
-                    state.choose(AddTime.None)
-                    finish()
-                },
-                onAnother = {
-                    state.another()
-                    focusTitle = true
-                },
+                onAnother = state::another,
                 onFinish = onDismiss,
             )
         },
     ) { step ->
         when (step) {
-            TaskAddStep.What -> TaskWhatStep(state, usual, titleFocus, callbacks)
-            TaskAddStep.When -> TaskWhenStep(state, callbacks, zone)
-            TaskAddStep.Time -> TaskTimeStep(state)
+            TaskAddStep.What -> TaskWhatStep(state, usual, titleFocus, callbacks, dictation, ::toggleMic)
+            TaskAddStep.When -> TaskWhenStep(state) { moment ->
+                // Un moment és la resposta sencera: dia i franja, i desa.
+                state.pick(moment)
+                advance()
+            }
+            TaskAddStep.Split -> Unit
             TaskAddStep.Done -> {
                 val last = state.justAdded.lastOrNull()
                 val coins by produceState<Int?>(null, last) {
@@ -178,19 +214,17 @@ fun TaskAddFlow(
 /// Els tocs de les pantalles de la cara Tasca, que viuen a `TaskAddSteps.kt`.
 class TaskStepCallbacks(
     val onAdvance: () -> Unit,
-    val onPickDay: (LocalDate) -> Unit,
     val onPickUsual: (CaptureUsual.Entry) -> Unit,
     val onUndoLast: () -> Unit,
     val onUndoFromDone: () -> Unit,
 )
 
-/// Els botons de baix de cada pas. A Quan no n'hi ha: un dia és la resposta.
+/// Els botons de baix de cada pas.
 @Composable
 private fun TaskActions(
     state: TaskAddState,
     onAdvance: () -> Unit,
     onSaveForToday: () -> Unit,
-    onSaveWithoutTime: () -> Unit,
     onAnother: () -> Unit,
     onFinish: () -> Unit,
 ) {
@@ -217,14 +251,11 @@ private fun TaskActions(
                 }
             }
         }
-        TaskAddStep.When -> Unit
-        TaskAddStep.Time -> AddStepActions(area) {
-            ViraActionButton(stringResource(R.string.add_save), onClick = onAdvance, modifier = Modifier.fillMaxWidth(), enabled = state.hasTime)
-            ViraActionButton(
-                stringResource(R.string.capture_time_none), onClick = onSaveWithoutTime, modifier = Modifier.fillMaxWidth(),
-                hierarchy = ViraActionHierarchy.Textual, area = area,
-            )
+        // Sense res triat, desa avui i sense hora: l'hora no és obligatòria.
+        TaskAddStep.When -> AddStepActions(area) {
+            ViraActionButton(stringResource(R.string.add_save), onClick = onAdvance, modifier = Modifier.fillMaxWidth())
         }
+        TaskAddStep.Split -> Unit
         TaskAddStep.Done -> AddStepActions(area) {
             ViraActionButton("+ " + stringResource(R.string.add_task_another), onClick = onAnother, modifier = Modifier.fillMaxWidth())
             ViraActionButton(

@@ -33,6 +33,8 @@ class AddSheetActions(
     val coins: suspend (CoinReason, LocalDate) -> Int? = { reason, _ -> ViraRewards.rule(reason)?.coins },
     /// Les últimes tasques, de la més nova a la més vella, per a «Les de sempre».
     val recentTasks: suspend () -> List<PlanItem> = { emptyList() },
+    /// Quantes coses hi ha cada dia d'avui fins a `until` (exclòs): els punts del calendari de «Quan».
+    val dayCounts: suspend (LocalDate, LocalDate) -> Map<LocalDate, Int> = { _, _ -> emptyMap() },
     /// «Avisos» i els de tasques encesos a Ajustos: si no, la targeta del permís no surt.
     val planRemindersOn: Boolean = true,
     /// Els avisos de medicació encesos a Ajustos: si no, desar una pauta no demana el permís.
@@ -64,6 +66,13 @@ fun rememberAddSheetActions(): AddSheetActions {
                 }
             },
             recentTasks = { backend.db.planItems().all().sortedByDescending { it.createdAt }.take(300) },
+            dayCounts = { from, until ->
+                val zone = java.time.ZoneId.systemDefault()
+                backend.db.planItems().all()
+                    .map { PlanDay.date(it.day, zone) }
+                    .filter { !it.isBefore(from) && it.isBefore(until) }
+                    .groupingBy { it }.eachCount()
+            },
             planRemindersOn = backend.preferences.getBoolean(ViraNotificationPreferences.REMINDERS_ENABLED, true) &&
                 backend.preferences.getBoolean(ViraNotificationPreferences.REMINDERS_PLAN_ENABLED, true),
             medicationRemindersOn = backend.preferences.getBoolean(ViraNotificationPreferences.REMINDERS_MEDICATION_ENABLED, true),
