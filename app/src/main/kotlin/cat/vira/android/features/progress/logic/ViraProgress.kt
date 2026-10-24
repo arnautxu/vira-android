@@ -1,6 +1,7 @@
 package cat.vira.android.features.progress.logic
 
 import androidx.room.withTransaction
+import cat.vira.android.core.data.ViraCardTallies
 import cat.vira.android.core.data.ViraRewards
 import cat.vira.android.core.data.ViraStore
 import cat.vira.android.core.data.ViraTime
@@ -145,6 +146,7 @@ class ViraProgress(
         )
         store.create(db.coinTransactions(), CoinTransaction(amount = item.reward, reasonRaw = CoinReason.CHALLENGE.raw, createdAt = now))
         store.create(db.challengeClaims(), ChallengeClaim(key = item.key, cycleStart = ViraChallenges.cycleStart(item.period, now, days), claimedAt = now))
+        if (ViraCardTallies.countsChallenge(item.key)) ViraCardTallies.shared?.add(1, ViraCardTallies.Kind.CHALLENGES_DONE)
         true
     }
 
@@ -167,6 +169,7 @@ class ViraProgress(
         )
         store.create(db.coinTransactions(), CoinTransaction(amount = reward, reasonRaw = CoinReason.CHALLENGE.raw, createdAt = now))
         store.create(db.challengeClaims(), ChallengeClaim(key = ViraWelcomeChallenge.KEY, cycleStart = ViraWelcomeChallenge.CYCLE_START, claimedAt = now))
+        ViraCardTallies.shared?.add(1, ViraCardTallies.Kind.CHALLENGES_DONE)
         true
     }
 

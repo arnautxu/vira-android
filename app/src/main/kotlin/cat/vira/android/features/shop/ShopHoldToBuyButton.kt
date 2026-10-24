@@ -97,9 +97,11 @@ fun ShopHoldToBuyButton(price: Int, onBuy: () -> Unit, modifier: Modifier = Modi
                             haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                         }
                     }
-                    val released = withTimeoutOrNull(HOLD_MILLIS.toLong()) { waitForUpOrCancellation() }
+                    // `null` vol dir que ha passat el temps; un gest cancel·lat (scroll, dit fora) torna un
+                    // `Unit` com deixar-lo anar, i no compra.
+                    val ended = withTimeoutOrNull(HOLD_MILLIS.toLong()) { waitForUpOrCancellation(); Unit }
                     ticks.cancel()
-                    if (released == null) {
+                    if (ended == null) {
                         // Ha aguantat fins al final: es compra, i el que quedi del gest no fa res més.
                         haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                         onBuy()

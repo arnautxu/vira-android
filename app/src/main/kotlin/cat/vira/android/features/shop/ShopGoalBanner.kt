@@ -84,7 +84,6 @@ fun ShopGoalBanner(celebrating: Boolean, onOpen: () -> Unit) {
     val skins by data.skins.collectAsStateWithLifecycle(emptyList())
     val wishKey by rememberPreference(data.preferences, ShopPreferences.WISH, "")
     val announced by rememberPreference(data.preferences, ShopPreferences.GOAL_ANNOUNCED, "")
-    var previous by remember { mutableStateOf<Int?>(null) }
     var pending by remember { mutableStateOf<SkinItem?>(null) }
     /// L'última que ha sortit, que es queda mentre la targeta s'en va.
     var shown by remember { mutableStateOf<SkinItem?>(null) }
@@ -97,8 +96,8 @@ fun ShopGoalBanner(celebrating: Boolean, onOpen: () -> Unit) {
     val balance = counter?.coinBalance
     LaunchedEffect(balance) {
         val new = balance ?: return@LaunchedEffect
-        val old = previous
-        previous = new
+        val old = LastSeenBalance.value
+        LastSeenBalance.value = new
         // La primera lectura no és un canvi: si ja hi arribaves en obrir l'app, no cal dir-t'ho.
         if (old == null) return@LaunchedEffect
         val item = ShopCollection.goalReached(wishKey, old, new, skins.map { it.key }.toSet(), announced) ?: return@LaunchedEffect
@@ -196,6 +195,13 @@ fun ShopGoalBannerCard(item: SkinItem, onOpen: () -> Unit, onClose: () -> Unit, 
             buttons()
         }
     }
+}
+
+/// L'últim saldo que ha vist l'avís, fora de la composició: les pestanyes i Concentra't són
+/// destinacions diferents, i les monedes d'una sessió arriben quan l'avís no hi és. En tornar, el
+/// creuament es veu igual; només la primera lectura de l'app no compta com a canvi.
+private object LastSeenBalance {
+    @Volatile var value: Int? = null
 }
 
 /// Quant es queda a la pantalla si ningú no la toca.

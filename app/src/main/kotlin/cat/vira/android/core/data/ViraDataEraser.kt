@@ -45,6 +45,8 @@ object ViraDataEraser {
             db.tombstones().deleteAll()
         }
         alsoErase()
+        // Els recomptes de les cartes també són seus (`ViraCardTallies`).
+        ViraCardTallies(preferences).clear()
 
         preferences.edit().apply {
             listOf(
