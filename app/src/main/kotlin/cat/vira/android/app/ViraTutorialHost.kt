@@ -151,12 +151,13 @@ fun rememberViraTutorial(navigator: ViraNavigator): ViraTutorialState {
         ViraTutorialState(navigator, backend.preferences, saved, EntryPreferences.shared(backend.preferences))
     }
     val completed by rememberPreference(backend.preferences, ViraPreferences.TUTORIAL_COMPLETED, false)
-    // La primera lectura decideix si és el tomb curt; un canvi a `false` després (Ajustos, que tapa
-    // les pestanyes un moment), el sencer. Per això sobreviu mentre Ajustos és a sobre.
-    val firstLook = rememberSaveable { mutableStateOf(true) }
+    // El sencer només quan la clau passa de `true` a `false` («Torna a veure el tomb» d'Ajustos, que
+    // tapa les pestanyes un moment). Per això sobreviu mentre Ajustos és a sobre i a un gir de
+    // pantalla: tornar a llançar l'efecte no és demanar el tomb.
+    val wasCompleted = rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(completed) {
-        val isFirst = firstLook.value
-        firstLook.value = false
+        val replay = wasCompleted.value && !completed
+        wasCompleted.value = completed
         if (completed || state.step != null) {
             // Un tomb restaurat després que Android recreï l'activitat: el registre és nou i cal
             // tornar a seguir les peces, o la cortina quedaria sense forats ni «Prova-ho».
@@ -164,7 +165,7 @@ fun rememberViraTutorial(navigator: ViraNavigator): ViraTutorialState {
             state.checking = false
             return@LaunchedEffect
         }
-        if (!isFirst) state.start(ViraTutorialRoute.REPLAY)
+        if (replay) state.start(ViraTutorialRoute.REPLAY)
         else if (hasUsedApp(backend.db)) state.start(ViraTutorialRoute.FIRST)
         state.checking = false
     }
