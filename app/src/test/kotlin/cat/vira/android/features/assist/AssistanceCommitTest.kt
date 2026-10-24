@@ -33,7 +33,7 @@ class AssistanceCommitTest {
 
     @Test
     fun elsMarcatsPassenAlPlaPenjatsDeLaTascaIDesferElsTreu() = runBlocking {
-        val parent = store.create(db.planItems(), PlanItem(title = "Treball de socials"))
+        val parent = store.create(db.planItems(), PlanItem(title = "Treball de socials")).let { db.planItems().byId(it.id)!! }
         val commit = AssistanceCommit(store)
         commit.add(steps, parent.id, parent.title, parent.updatedAt)
         // Un segon toc és la mateixa operació.
@@ -53,7 +53,7 @@ class AssistanceCommitTest {
 
     @Test
     fun siLaTascaHaCanviatNoEsDesaRes() = runBlocking {
-        val parent = store.create(db.planItems(), PlanItem(title = "Treball de socials"))
+        val parent = store.create(db.planItems(), PlanItem(title = "Treball de socials")).let { db.planItems().byId(it.id)!! }
         try {
             AssistanceCommit(store).add(steps, parent.id, "Un altre títol", parent.updatedAt)
             fail("Havia de dir que ha canviat")
@@ -65,7 +65,7 @@ class AssistanceCommitTest {
 
     @Test
     fun unPasEditatAturaElDesferSencer() = runBlocking {
-        val parent = store.create(db.planItems(), PlanItem(title = "Treball de socials"))
+        val parent = store.create(db.planItems(), PlanItem(title = "Treball de socials")).let { db.planItems().byId(it.id)!! }
         val commit = AssistanceCommit(store)
         commit.add(steps, parent.id, parent.title, parent.updatedAt)
         val child = db.planItems().all().first { it.id != parent.id }

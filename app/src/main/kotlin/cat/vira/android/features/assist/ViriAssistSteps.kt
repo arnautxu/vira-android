@@ -103,7 +103,9 @@ class AssistanceCommit(private val store: ViraStore, private val clock: () -> In
                 )
                 child to detail
             }
-        }
+            // Tal com han quedat desades (la base de dades arrodoneix les hores): és el que
+            // compararà Desfer.
+        }.map { (child, detail) -> db.planItems().byId(child.id)!! to db.assistanceDetails().byId(detail.id)!! }
     }
 
     /// Tot o res. Un pas editat, fet o sincronitzat d'un altre telèfon atura el lot sencer.
