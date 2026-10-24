@@ -415,6 +415,29 @@
           }
         }
       }
+    },
+    "notification.permission.ask.general.support": {
+      "comment": "Android: l'iPhone diu «L'iPhone».",
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El telèfon necessita el teu permís."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El teléfono necesita tu permiso."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your phone needs your OK."
+          }
+        }
+      }
     }
   }
 }

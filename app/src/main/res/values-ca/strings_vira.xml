@@ -1524,7 +1524,7 @@
     <string name="notification_permission_allow">Avisa\'m</string>
     <string name="notification_permission_ask">T\'aviso a les %1$s?</string>
     <string name="notification_permission_ask_general">Encara no et puc avisar</string>
-    <string name="notification_permission_ask_general_support">L\'iPhone necessita el teu permís.</string>
+    <string name="notification_permission_ask_general_support">El telèfon necessita el teu permís.</string>
     <string name="notification_permission_ask_support">Un avís quan toqui, i prou.</string>
     <string name="notification_permission_denied">Els avisos estan apagats. Es tornen a encendre als ajustos del telèfon.</string>
     <string name="notification_permission_settings">Ajustos</string>

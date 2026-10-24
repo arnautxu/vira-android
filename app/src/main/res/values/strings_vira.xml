@@ -1524,7 +1524,7 @@
     <string name="notification_permission_allow">Remind me</string>
     <string name="notification_permission_ask">Remind you at %1$s?</string>
     <string name="notification_permission_ask_general">I can\'t remind you yet</string>
-    <string name="notification_permission_ask_general_support">Your iPhone needs your OK.</string>
+    <string name="notification_permission_ask_general_support">Your phone needs your OK.</string>
     <string name="notification_permission_ask_support">One reminder when it\'s time, that\'s all.</string>
     <string name="notification_permission_denied">Notifications are off. You can turn them back on in your phone\'s settings.</string>
     <string name="notification_permission_settings">Settings</string>
