@@ -31,6 +31,11 @@ import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import cat.vira.android.R
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.ProcessLifecycleOwner
+import android.content.Context
 import cat.vira.android.core.design.LocalViraEnvironment
 import cat.vira.android.core.design.components.viraPressable
 import cat.vira.android.core.design.tokens.ViraArea
@@ -49,6 +54,14 @@ import java.time.LocalTime
 /// Sense permís, la pregunta i «Avisa'm», que obre el diàleg del sistema. Si el diàleg ja no surt
 /// (Android no torna a preguntar), o en un Android sense diàleg, on es torna a encendre. Amb el
 /// permís, o amb els avisos apagats a Ajustos, res.
+/// El diàleg del permís no treu l'app de primer pla, i la passada del desar ja s'ha fet sense
+/// permís: sense una de nova, l'avís de la tasca que s'acaba de crear no sortiria. Va per
+/// l'abast del procés perquè el full es pot tancar just després.
+fun rescheduleAfterGrant(context: Context) {
+    val app = context.applicationContext
+    ProcessLifecycleOwner.get().lifecycleScope.launch(Dispatchers.Default) { ViraNotifications.reschedule(app) }
+}
+
 @Composable
 fun AddNotificationPermissionCard(time: LocalTime, remindersOn: Boolean) {
     val context = LocalContext.current
@@ -59,6 +72,7 @@ fun AddNotificationPermissionCard(time: LocalTime, remindersOn: Boolean) {
     val permission = if (inPreview) null else rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         canPost = granted && ViraNotifications.canPost(context)
         isDenied = !canPost
+        if (canPost) rescheduleAfterGrant(context)
     }
     if (!remindersOn || canPost) return
 

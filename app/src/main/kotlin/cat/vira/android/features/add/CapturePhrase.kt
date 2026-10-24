@@ -84,7 +84,7 @@ object CapturePhrase {
     /// «a les 8», «a les 8:30», «a las 20h», «at 5 pm», «a les 9 del matí». La franja del dia mana per
     /// damunt del número; sense franja, **l'hora es pren literal**: «a les 8» són les 8:00.
     private val hourPattern = Regex(
-        """(?:\b(?:a\s+l(?:es|as|a)|at)\s+)(\d{1,2})(?:\s*[:.h]\s*(\d{2}))?\s*""" +
+        """(?:\b(?:a\s+l(?:es|as|a)|at)\s+)(\d{1,2})(?:\s*[:.h]\s*(\d{2}))?(?![\d:])\s*""" +
             """(h\b|am\b|pm\b|a\.m\.|p\.m\.|del\s+matí|de\s+la\s+tarda|de\s+la\s+nit|""" +
             """de\s+la\s+mañana|de\s+la\s+tarde|de\s+la\s+noche|in\s+the\s+morning|""" +
             """in\s+the\s+afternoon|in\s+the\s+evening)?""",

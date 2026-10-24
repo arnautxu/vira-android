@@ -217,6 +217,10 @@ class TaskAddState(
     fun undoFromDone(delete: (List<PlanItem>) -> Unit) {
         val last = undoLast(delete) ?: return
         updateTitle(last.title)
+        // El títol desat ja no diu el dia ni l'hora de la frase: es tornen a posar a mà, perquè
+        // arreglar el nom no se n'emporti el que ja s'havia triat.
+        choose(last.day)
+        last.time?.let { exactTime = it; choose(AddTime.Exact) }
         step = TaskAddStep.What
     }
 }

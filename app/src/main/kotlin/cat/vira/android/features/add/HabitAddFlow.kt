@@ -83,6 +83,7 @@ fun HabitAddFlow(
     val inPreview = LocalInspectionMode.current
     val permission = if (inPreview) null else rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         state.isRemindersDenied = !granted
+        if (granted) rescheduleAfterGrant(context)
     }
     LaunchedEffect(state.step) { onFirstStep(state.step == HabitAddStep.What) }
 

@@ -64,6 +64,25 @@ class AddStepsTest {
     }
 
     @Test
+    fun phraseIgnoresIncompleteHours() {
+        // Un tros d'hora no és una hora: millor preguntar-la que desar-ne una d'equivocada.
+        assertNull(CapturePhrase.detect("Dentista demà a les 17:5", monday).time)
+        assertNull(CapturePhrase.detect("Call tomorrow at 1230", monday).time)
+        assertEquals(LocalTime.of(20, 0), CapturePhrase.detect("Sopar a las 20h", monday).time)
+    }
+
+    @Test
+    fun undoFromDoneKeepsTheSchedule() {
+        val state = TaskAddState(today = monday)
+        state.updateTitle("Dentista demà a les 17:30")
+        state.save({ item, _ -> listOf(item) }, java.time.ZoneId.of("Europe/Madrid"))
+        state.undoFromDone {}
+        assertEquals("Dentista", state.title)
+        assertEquals(monday.plusDays(1), state.day)
+        assertEquals(LocalTime.of(17, 30), state.time)
+    }
+
+    @Test
     fun phraseWithoutDateKeepsTheTitle() {
         val plain = CapturePhrase.detect("Comprar pa", monday)
         assertEquals("Comprar pa", plain.title)

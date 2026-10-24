@@ -118,7 +118,10 @@ fun MedicationAddFlow(
     val focusManager = LocalFocusManager.current
     val inPreview = LocalInspectionMode.current
     // El permís es demana en desar, com si l'haguessis encès tu, i no a la primera presa que no sonarà.
-    val permission = if (inPreview) null else rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { onDismiss() }
+    val permission = if (inPreview) null else rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) rescheduleAfterGrant(context)
+        onDismiss()
+    }
     LaunchedEffect(state.step) { onFirstStep(state.step == MedicationAddStep.What) }
 
     fun save() {
