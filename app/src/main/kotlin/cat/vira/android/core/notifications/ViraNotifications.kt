@@ -131,9 +131,16 @@ object ViraNotifications {
 
     /// Si Viri pot parlar al vespre: el recordatori emocional li cedeix el lloc
     /// (`ViraStreakNotifications.speaks`). Sense saber res de la ratxa, calla i l'emocional segueix.
+    /// Amb el canal de Viri apagat als Ajustos del sistema, Viri no parla: l'emocional segueix.
     private fun viriSpeaks(context: Context, state: ViraStreakState?): Boolean =
-        canPost(context) && ViraNotificationPreferences.viriMessagesEnabled(ViraPreferences.open(context)) &&
+        canPost(context) && channelIsOn(context, ViraNotificationChannel.VIRI) &&
+            ViraNotificationPreferences.viriMessagesEnabled(ViraPreferences.open(context)) &&
             state?.isVisible == true
+
+    /// Un canal apagat als Ajustos del sistema no ensenya res.
+    fun channelIsOn(context: Context, channel: ViraNotificationChannel): Boolean =
+        NotificationManagerCompat.from(context).getNotificationChannelCompat(channel.id)?.importance !=
+            NotificationManagerCompat.IMPORTANCE_NONE
 
     suspend fun rescheduleReminders(
         context: Context,
@@ -287,6 +294,10 @@ object ViraNotifications {
         val inputs = snapshot(host.notificationDatabase)
         // Una concentració que silencia Vira, començada després de l'última passada: tampoc.
         if (ViraNotificationPlanner.muteWindow(inputs.focusSessions, now)?.contains(now) == true) return false
+        // Descans de 12–15: el que no s'ha demanat i arriba tard (Doze) no surt passades les 21:30.
+        val unsolicited = notification.id.startsWith(ViraStreakNotifications.PREFIX) ||
+            notification.id.startsWith(ViraNotificationPlanner.EMOTION_PREFIX)
+        if (unsolicited && !ViraRestHours.allows(now, ViraRestHours.isYoung(ViraPreferences.open(context)), zone)) return false
         if (notification.id.startsWith(ViraStreakNotifications.PREFIX)) {
             // Amagar la ratxa se n'emporta els avisos; un recordatori d'un dia que ja compta, fora.
             val state = host.notificationEffects.streakState(now)
