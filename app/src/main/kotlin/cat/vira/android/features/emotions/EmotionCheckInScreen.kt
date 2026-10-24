@@ -1,5 +1,8 @@
 package cat.vira.android.features.emotions
 
+import cat.vira.android.core.sound.ViraHaptics
+import cat.vira.android.core.sound.ViraSound
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.activity.compose.BackHandler
@@ -29,9 +32,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
@@ -67,7 +68,7 @@ fun EmotionCheckInScreen(
     val preferences = LocalViraBackend.current.preferences
     val store = rememberEmotionStore()
     val scope = rememberCoroutineScope()
-    val haptics = LocalHapticFeedback.current
+    val context = LocalContext.current
 
     var primary by remember { mutableStateOf(EmotionPreferences.primary(preferences)) }
     var draft by remember { mutableStateOf<EmotionCheckInDraft?>(null) }
@@ -78,7 +79,7 @@ fun EmotionCheckInScreen(
     fun open(emotion: Emotion) {
         if (draft != null) return
         hasSaveError = false
-        haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
+        ViraHaptics.play(context, ViraHaptics.Feedback.Selection)
         draft = EmotionCheckInDraft(emotion)
     }
 
@@ -102,7 +103,9 @@ fun EmotionCheckInScreen(
                     }.isSuccess
                     hasSaveError = !saved
                     if (saved) {
-                        haptics.performHapticFeedback(HapticFeedbackType.Confirm)
+                        ViraHaptics.play(context, ViraHaptics.Feedback.Done)
+                        // El mateix so per a totes: cap emoció sona millor que una altra.
+                        ViraSound.play(context, ViraSound.Cue.EMOTION_SAVED)
                         draft = null
                         onRecorded?.invoke()
                     }

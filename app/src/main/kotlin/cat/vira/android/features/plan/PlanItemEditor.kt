@@ -1,5 +1,7 @@
 package cat.vira.android.features.plan
 
+import cat.vira.android.core.sound.ViraSound
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -39,6 +41,7 @@ fun PlanItemEditor(
     var time by remember(item.id) { mutableStateOf(item.time?.atZone(zone)?.toLocalTime()) }
     var recurrence by remember(item.id) { mutableStateOf(item.recurrence) }
     val canSave = title.isNotBlank()
+    val context = LocalContext.current
 
     fun save() {
         if (!canSave) return
@@ -50,6 +53,7 @@ fun PlanItemEditor(
             time = time?.let { PlanDay.at(day, it.hour, it.minute, zone) },
         )
         if (isNew) actions.create(edited, recurrence) else actions.save(item, edited, recurrence)
+        ViraSound.saved(context)
         onDismiss()
     }
 

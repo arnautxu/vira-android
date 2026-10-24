@@ -1,5 +1,7 @@
 package cat.vira.android.features.today
 
+import cat.vira.android.core.sound.ViraSound
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -134,6 +136,7 @@ fun QuickCaptureScreen(
     ) {
         // La mateixa escriptura que el Pla: les repeticions, la transacció i els avisos.
         val actions = rememberPlanActions()
+        val context = LocalContext.current
         QuickCaptureContent(
             initialDay = initialDay,
             initialPeriod = initialPeriod,
@@ -142,6 +145,7 @@ fun QuickCaptureScreen(
                 val trimmed = title.trim()
                 if (trimmed.isNotEmpty()) {
                     actions.create(PlanItem(title = trimmed, day = day, time = time, symbolName = symbol), recurrence)
+                    ViraSound.saved(context)
                     onDismiss()
                 }
             },

@@ -1,5 +1,6 @@
 package cat.vira.android.features.plan
 
+import cat.vira.android.core.design.components.ViraSceneBanner
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -161,12 +162,8 @@ private fun Hero(habit: Habit, progress: HabitProgress, onToggle: () -> Unit) {
     }
     val spoken = stringResource(R.string.today_viri_a11y, line)
     Column(Modifier.fillMaxWidth().clip(shape).background(ViraGradient.card(area, ViraGradient.Axis.Vertical))) {
-        Image(
-            painterResource(R.drawable.viri_suggest_habit_1),
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxWidth().height(if (isLarge) 140.dp else 190.dp).viraIdleBreath().clearAndSetSemantics { },
-        )
+        // La bombolla en tapa 20 dp: els 32 que puja menys els 12 de marge.
+        ViraSceneBanner(R.drawable.viri_suggest_habit_1, heightRatio = 0.62f, hiddenBottom = 20.dp)
         Column(Modifier.padding(ViraSpacing.s), verticalArrangement = Arrangement.spacedBy(ViraSpacing.s)) {
             Text(
                 line,

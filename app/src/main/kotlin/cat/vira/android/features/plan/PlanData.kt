@@ -106,6 +106,7 @@ class PlanActions(
                 val current = db.planItems().byId(item.id) ?: return@write
                 save(db.planItems(), current.copy(statusRaw = PlanItemStatus.PENDING.raw, completedAt = null))
             }
+            host.onUndone()
             host.undo(id)
         } else {
             // La propera repetició es fa ara (com a l'iPhone) i el "Desfer" se l'emporta: si no,
@@ -116,6 +117,7 @@ class PlanActions(
                 val current = db.planItems().byId(item.id) ?: return@writeThen null
                 if (current.status == PlanItemStatus.DONE) return@writeThen null
                 save(db.planItems(), current.copy(statusRaw = PlanItemStatus.DONE.raw, completedAt = ViraTime.now()))
+                host.onDone(current)
                 val nextId = createNextOccurrence(current, zone)
                 PendingCompletion(
                     id = id,
@@ -185,6 +187,7 @@ class PlanActions(
             write {
                 logs(habit, day).forEach { delete(it) }
             }
+            host.onUndone()
             host.undo(id)
         } else {
             writeThen {
@@ -193,6 +196,7 @@ class PlanActions(
                 val current = db.habits().byId(habit.id) ?: return@writeThen null
                 if (current.isArchived || logs(habit, day).isNotEmpty()) return@writeThen null
                 create(db.habitLogs(), HabitLog(day = PlanDay.start(day, zone), habitId = habit.id))
+                host.onDone(null)
                 PendingCompletion(
                     id = id,
                     reason = CoinReason.HABIT,

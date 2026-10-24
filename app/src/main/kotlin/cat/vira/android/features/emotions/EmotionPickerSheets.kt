@@ -1,5 +1,7 @@
 package cat.vira.android.features.emotions
 
+import cat.vira.android.core.sound.ViraHaptics
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -23,9 +25,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
@@ -82,7 +82,7 @@ internal fun ColumnScope.EmotionPrimaryPickerContent(
     onCancel: () -> Unit,
     onDone: () -> Unit,
 ) {
-    val haptics = LocalHapticFeedback.current
+    val context = LocalContext.current
     EmotionSheetBar(
         stringResource(R.string.emotions_customize_title),
         leading = stringResource(R.string.action_cancel) to onCancel,
@@ -108,7 +108,7 @@ internal fun ColumnScope.EmotionPrimaryPickerContent(
                     row.forEach { emotion ->
                         Box(Modifier.weight(1f)) {
                             PrimaryOption(emotion, selection) { toggled ->
-                                haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                                ViraHaptics.play(context, ViraHaptics.Feedback.Selection)
                                 onChange(toggled)
                             }
                         }

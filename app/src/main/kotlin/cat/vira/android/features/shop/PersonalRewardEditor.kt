@@ -1,5 +1,7 @@
 package cat.vira.android.features.shop
 
+import cat.vira.android.core.sound.ViraSound
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -83,7 +85,13 @@ fun PersonalRewardEditorContent(
     var cost by rememberSaveable { mutableIntStateOf(100) }
     val focus = remember { FocusRequester() }
     val canSave = title.isNotBlank()
-    val save = { if (canSave) onSave(title.trim(), cost) }
+    val context = LocalContext.current
+    val save = {
+        if (canSave) {
+            onSave(title.trim(), cost)
+            ViraSound.saved(context)
+        }
+    }
     if (focusesTitle) LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
 
     Column(
