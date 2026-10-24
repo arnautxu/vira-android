@@ -74,9 +74,12 @@ class MedicationAddState(initialStep: MedicationAddStep, initialName: String, in
     val canAdvance: Boolean get() = trimmedName.isNotEmpty() && times.isNotEmpty()
 
     /// La següent hora arrenca dues hores després de l'última, que és el que sol tocar en una pauta
-    /// de dues o tres preses.
+    /// de dues o tres preses. Si passa de mitjanit i aquella hora ja hi és, salta dues hores més:
+    /// una fila repetida es perdria en desar i la pauta no seria la que es veu.
     fun addTime() {
-        times = times + ((times.maxOrNull() ?: (9 * 60)) + 120) % ClockMinutes.DAY_LENGTH
+        var next = ((times.maxOrNull() ?: (9 * 60)) + 120) % ClockMinutes.DAY_LENGTH
+        repeat(ClockMinutes.DAY_LENGTH / 120) { if (next in times) next = (next + 120) % ClockMinutes.DAY_LENGTH }
+        times = times + next
     }
 
     fun move(index: Int, steps: Int) {

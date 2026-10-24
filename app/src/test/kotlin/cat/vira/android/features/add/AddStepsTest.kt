@@ -128,4 +128,10 @@ class AddStepsTest {
         state.name = "  "
         assertTrue(!state.canAdvance)
     }
+    @Test
+    fun medicationTimesPastMidnightNeverRepeat() {
+        val state = MedicationAddState(MedicationAddStep.Time, "La de la nit", listOf(21 * 60))
+        repeat(3) { state.addTime() }
+        assertEquals(listOf(21 * 60, 23 * 60, 1 * 60, 3 * 60), state.times)
+    }
 }
