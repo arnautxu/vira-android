@@ -30,6 +30,7 @@ import cat.vira.android.core.design.tokens.ViraColor
 import cat.vira.android.core.design.tokens.ViraFont
 import cat.vira.android.core.design.tokens.ViraSpacing
 import cat.vira.android.core.notifications.ViraNotifications
+import cat.vira.android.features.add.ClockMinutes
 import java.time.LocalTime
 
 /// Crear o editar una pauta (`MedicationEditor`): què (nom, dosi, forma), quins dies, a quines
@@ -126,7 +127,7 @@ fun MedicationEditor(medication: Medication?, actions: PlanActions, onDismiss: (
             FormDivider()
             FormActionRow(stringResource(R.string.medication_times_add), ViraColor.accent(ViraArea.Plan)) {
                 // La següent arrenca dues hores després de l'última, que és el que sol tocar.
-                times = times + ((times.maxOrNull() ?: (9 * 60)) + 120) % (24 * 60)
+                times = times + ClockMinutes.nextDose(times)
             }
         }
         FormSection(

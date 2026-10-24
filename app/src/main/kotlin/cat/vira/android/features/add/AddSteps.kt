@@ -71,6 +71,15 @@ object ClockMinutes {
         val wrapped = ((raw % DAY_LENGTH) + DAY_LENGTH) % DAY_LENGTH
         return (wrapped / STEP) * STEP
     }
+
+    /// L'hora de la presa nova: dues hores després de l'última. Si passa de mitjanit i aquella hora
+    /// ja hi és, salta dues hores més: una fila repetida es perdria en desar i la pauta no seria la
+    /// que es veu (`ViraClockMinutes.nextDose` de l'iPhone).
+    fun nextDose(after: List<Int>): Int {
+        var next = ((after.maxOrNull() ?: (9 * 60)) + 120) % DAY_LENGTH
+        repeat(DAY_LENGTH / 120) { if (next in after) next = (next + 120) % DAY_LENGTH }
+        return next
+    }
 }
 
 /// Els dies d'un hàbit (1 = diumenge, com l'iPhone) amb les tres dreceres del pas «Quins dies»
