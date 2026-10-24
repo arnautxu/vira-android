@@ -33,9 +33,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -45,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.edit
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cat.vira.android.R
+import cat.vira.android.core.sound.ViraHaptics
 import cat.vira.android.app.rememberPreference
 import cat.vira.android.core.design.LocalViraEnvironment
 import cat.vira.android.core.design.components.viraPressable
@@ -78,7 +77,6 @@ fun ShopGoalBanner(celebrating: Boolean, onOpen: () -> Unit) {
     val data = rememberShopData()
     val context = LocalContext.current
     val view = LocalView.current
-    val haptics = LocalHapticFeedback.current
     val reduceMotion = LocalViraEnvironment.current.reduceMotion
     val counter by data.counter.collectAsStateWithLifecycle(null)
     val skins by data.skins.collectAsStateWithLifecycle(emptyList())
@@ -108,7 +106,7 @@ fun ShopGoalBanner(celebrating: Boolean, onOpen: () -> Unit) {
         val item = pending ?: return@LaunchedEffect
         if (celebrating) return@LaunchedEffect
         pending = null
-        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+        ViraHaptics.play(context, ViraHaptics.Feedback.Done)
         shown = item
         visible = true
         if (talkBack) view.announceForAccessibility(readyText)

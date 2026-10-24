@@ -11,6 +11,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -27,6 +28,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.edit
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cat.vira.android.R
+import cat.vira.android.ViraApp
 import cat.vira.android.app.rememberPreference
 import cat.vira.android.core.design.LocalViraEnvironment
 import cat.vira.android.core.design.components.viraSectionBackground
@@ -67,7 +69,17 @@ fun ShopScreen(onBack: (() -> Unit)? = null) {
     var revealing by remember { mutableStateOf<SkinItem?>(null) }
     var justBought by remember { mutableStateOf<SkinItem?>(null) }
     var saveFailed by remember { mutableStateOf(false) }
+    var buying by remember { mutableStateOf(false) }
     val context = LocalContext.current
+
+    // Una compra pot guanyar una carta (la primera, la tercera, la desena skin). La seva celebració
+    // espera que es tanquin el vestidor i el següent objectiu: dues pantalles completes alhora no.
+    val celebrations = remember(context) { (context.applicationContext as? ViraApp)?.celebrations }
+    val holdCelebrations = buying || revealing != null || justBought != null
+    DisposableEffect(holdCelebrations) {
+        if (holdCelebrations) celebrations?.defer(true)
+        onDispose { if (holdCelebrations) celebrations?.defer(false) }
+    }
 
     val balance = counter?.coinBalance ?: 0
     val ownedKeys = skins.map { it.key }.toSet()
@@ -86,16 +98,21 @@ fun ShopScreen(onBack: (() -> Unit)? = null) {
     /// Desa tot o res. Un error de la base de dades es diu a la pantalla; quedar-se curt de
     /// monedes no és un error (el botó ja ho deia) i no canvia res.
     fun buy(item: SkinItem) {
+        buying = true
         scope.launch {
             val result = runCatching { data.skinsLogic.buy(item) }
             saveFailed = result.isFailure
-            if (!result.getOrDefault(false)) return@launch
+            if (!result.getOrDefault(false)) {
+                buying = false
+                return@launch
+            }
             if (wishKey == item.key) setWish("")
             ViraHaptics.play(context, ViraHaptics.Feedback.Reward)
             // Amb les celebracions apagades no hi ha vestidor: la skin ja és posada i prou. Amb
             // revelació, el so el porta ella, sincronitzat amb el que es veu.
             if (!celebrationsOn) ViraSound.play(context, ViraSound.Cue.EQUIP)
             if (celebrationsOn) revealing = item else showNextGoals(item, catalog, ownedKeys + item.key) { justBought = it }
+            buying = false
         }
     }
 

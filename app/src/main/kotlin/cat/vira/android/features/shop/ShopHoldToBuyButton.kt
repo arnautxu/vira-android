@@ -4,6 +4,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
@@ -25,9 +26,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -38,6 +43,7 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import cat.vira.android.R
+import cat.vira.android.core.sound.ViraHaptics
 import cat.vira.android.core.design.LocalViraEnvironment
 import cat.vira.android.core.design.components.ViraPictogram
 import cat.vira.android.core.design.tokens.ViraArea
@@ -62,7 +68,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun ShopHoldToBuyButton(price: Int, onBuy: () -> Unit, modifier: Modifier = Modifier) {
     val reduceMotion = LocalViraEnvironment.current.reduceMotion
-    val haptics = LocalHapticFeedback.current
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val progress = remember { Animatable(0f) }
     val shape = RoundedCornerShape(ViraRadius.s)
@@ -83,6 +89,13 @@ fun ShopHoldToBuyButton(price: Int, onBuy: () -> Unit, modifier: Modifier = Modi
                 role = Role.Button
                 onClick(label = label) { onBuy(); true }
             }
+            // Amb teclat o creueta, Intro compra a l'instant, com el toc de TalkBack.
+            .onKeyEvent { event ->
+                val activates = event.key == Key.Enter || event.key == Key.NumPadEnter || event.key == Key.DirectionCenter
+                if (activates && event.type == KeyEventType.KeyUp) onBuy()
+                activates
+            }
+            .focusable()
             .pointerInput(price) {
                 awaitEachGesture {
                     awaitFirstDown()
@@ -94,7 +107,7 @@ fun ShopHoldToBuyButton(price: Int, onBuy: () -> Unit, modifier: Modifier = Modi
                         val step = HOLD_MILLIS / COIN_TICKS
                         repeat(COIN_TICKS) { index ->
                             delay(if (index == 0) 50L else step.toLong())
-                            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            ViraHaptics.play(context, ViraHaptics.Feedback.Selection)
                         }
                     }
                     // `null` vol dir que ha passat el temps; un gest cancel·lat (scroll, dit fora) torna un
@@ -102,8 +115,8 @@ fun ShopHoldToBuyButton(price: Int, onBuy: () -> Unit, modifier: Modifier = Modi
                     val ended = withTimeoutOrNull(HOLD_MILLIS.toLong()) { waitForUpOrCancellation(); Unit }
                     ticks.cancel()
                     if (ended == null) {
-                        // Ha aguantat fins al final: es compra, i el que quedi del gest no fa res més.
-                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        // Ha aguantat fins al final: es compra (la vibració de premi la fa la Botiga), i
+                        // el que quedi del gest no fa res més.
                         onBuy()
                         waitForUpOrCancellation()
                     } else {

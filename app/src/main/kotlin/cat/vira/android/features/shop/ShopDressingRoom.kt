@@ -33,9 +33,8 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -45,6 +44,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import cat.vira.android.R
+import cat.vira.android.core.sound.ViraHaptics
 import cat.vira.android.core.design.LocalViraEnvironment
 import cat.vira.android.core.design.tokens.ViraColor
 import cat.vira.android.core.design.tokens.ViraFont
@@ -69,7 +69,7 @@ fun ShopDressingRoom(
     holdsClosed: Boolean = false,
 ) {
     val reduceMotion = LocalViraEnvironment.current.reduceMotion
-    val haptics = LocalHapticFeedback.current
+    val context = LocalContext.current
     val view = LocalView.current
     val title = stringResource(R.string.shop_dressing_title)
     var isOpen by rememberSaveable(item.key) { mutableStateOf(false) }
@@ -79,7 +79,7 @@ fun ShopDressingRoom(
         if (isOpen || holdsClosed) return@LaunchedEffect
         view.announceForAccessibility(title)
         repeat(item.tier.curtainShakes) {
-            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+            ViraHaptics.play(context, ViraHaptics.Feedback.Selection)
             if (!reduceMotion) {
                 angle.animateTo(0f, keyframes {
                     durationMillis = 440

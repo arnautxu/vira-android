@@ -28,8 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -42,6 +41,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import cat.vira.android.R
+import cat.vira.android.core.sound.ViraHaptics
 import cat.vira.android.core.design.LocalViraEnvironment
 import cat.vira.android.core.design.components.ViraActionButton
 import cat.vira.android.core.design.components.ViraActionHierarchy
@@ -91,7 +91,7 @@ fun ShopNextGoalContent(
     modifier: Modifier = Modifier,
     initialChoice: String? = null,
 ) {
-    val haptics = LocalHapticFeedback.current
+    val context = LocalContext.current
     var choice by rememberSaveable { mutableStateOf(initialChoice) }
     val options = ShopCollection.nextGoals(catalog, ownedKeys)
     val (owned, total) = ShopCollection.progress(catalog, ownedKeys)
@@ -137,14 +137,14 @@ fun ShopNextGoalContent(
             Column(verticalArrangement = Arrangement.spacedBy(ViraSpacing.xs)) {
                 options.forEach { item ->
                     GoalOption(item, balance, isChosen = choice == item.key) {
-                        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        ViraHaptics.play(context, ViraHaptics.Feedback.Selection)
                         choice = if (choice == item.key) null else item.key
                     }
                 }
             }
             ViraActionButton(
                 stringResource(R.string.action_done),
-                { choice?.let { haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove); onChoose(it) } ?: onLater() },
+                { choice?.let { ViraHaptics.play(context, ViraHaptics.Feedback.Selection); onChoose(it) } ?: onLater() },
                 Modifier.fillMaxWidth(), textStyle = ViraFont.headline,
             )
         }

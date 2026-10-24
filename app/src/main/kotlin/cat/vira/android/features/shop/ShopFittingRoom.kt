@@ -18,8 +18,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -32,6 +31,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import cat.vira.android.R
+import cat.vira.android.core.sound.ViraHaptics
 import cat.vira.android.core.design.LocalViraEnvironment
 import cat.vira.android.core.design.components.ViraActionButton
 import cat.vira.android.core.design.components.ViraActionHierarchy
@@ -191,7 +191,7 @@ private fun FittingAction(
 /// preferència de pantalla, no una dada de l'usuari que hagi de viatjar.
 @Composable
 private fun ShopWishButton(isWished: Boolean, onToggle: () -> Unit) {
-    val haptics = LocalHapticFeedback.current
+    val context = LocalContext.current
     val label = stringResource(if (isWished) R.string.shop_wish_on else R.string.shop_wish_add)
     val shape = RoundedCornerShape(ViraRadius.s)
     val (fill, ink) = if (isWished) {
@@ -200,7 +200,7 @@ private fun ShopWishButton(isWished: Boolean, onToggle: () -> Unit) {
         ViraColor.accent(ViraArea.Today) to ViraColor.onAccent
     }
     val toggle = {
-        haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+        ViraHaptics.play(context, ViraHaptics.Feedback.Selection)
         onToggle()
     }
     Box(
