@@ -129,6 +129,13 @@ class AddStepsTest {
     }
 
     @Test
+    fun nextDoseSkipsATimeAlreadyTaken() {
+        assertEquals(11 * 60, ClockMinutes.nextDose(emptyList()))
+        // 23:00 + 2 h = 1:00, que ja hi és: 3:00.
+        assertEquals(3 * 60, ClockMinutes.nextDose(listOf(60, 23 * 60)))
+    }
+
+    @Test
     fun weekdayPresets() {
         assertEquals(WeekdayPreset.Everyday, WeekdayPreset.matching((1..7).toSet()))
         assertEquals(WeekdayPreset.Weekend, WeekdayPreset.matching(setOf(1, 7)))
