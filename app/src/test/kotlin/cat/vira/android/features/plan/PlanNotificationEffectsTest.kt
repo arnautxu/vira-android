@@ -18,6 +18,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import cat.vira.android.features.progress.logic.ViraRewardOnce
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -34,7 +35,9 @@ class PlanNotificationEffectsTest {
     private val today = LocalDate.of(2026, 1, 15)
     private val db = ViraDatabase.inMemory(ApplicationProvider.getApplicationContext())
     private val store = ViraStore(db)
-    private val effects = PlanNotificationEffects(store, zone = { zone })
+    private val preferences = ApplicationProvider.getApplicationContext<Application>()
+        .getSharedPreferences("PlanNotificationEffectsTest", 0).also { it.edit().clear().commit() }
+    private val effects = PlanNotificationEffects(store, ViraRewardOnce(preferences), zone = { zone })
 
     @After fun close() = db.close()
 
@@ -57,6 +60,19 @@ class PlanNotificationEffectsTest {
         effects.completePlanItem(item.id)
         assertEquals(PlanItemStatus.DONE, db.planItems().byId(item.id)?.status)
         assertEquals(1, db.coinTransactions().all().size)
+    }
+
+    @Test
+    fun unHabitDesmarcatITornatAMarcarDesDeLAvisNoTornaAPagar() = runBlocking {
+        val habit = Habit(title = "Llegir")
+        store.create(db.habits(), habit)
+        val day = PlanDay.at(today, 9, 0, zone)
+        effects.completeHabit(habit.id, day)
+        db.habitLogs().all().forEach { store.delete(it) }
+        effects.completeHabit(habit.id, day)
+        assertEquals(1, db.habitLogs().all().size)
+        assertEquals(1, db.coinTransactions().all().size)
+        assertEquals(1, db.progressCounters().all().single().habitsCompletedCount)
     }
 
     @Test

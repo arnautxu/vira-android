@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Generat per scripts/export-strings.py des de Localizable.xcstrings, EmotionIntensity.xcstrings de l'iPhone (commit 6fd670c0) + android-strings.xcstrings. No es toca a mà. -->
+<!-- Generat per scripts/export-strings.py des de Localizable.xcstrings, EmotionIntensity.xcstrings de l'iPhone (commit 080cebdd) + android-strings.xcstrings. No es toca a mà. -->
 <resources>
     <string name="a11y_error">Error: %1$s</string>
     <plurals name="a11y_items_count">
@@ -172,6 +172,10 @@
     <string name="add_save">Save</string>
     <string name="add_step_count">%1$s of %2$s</string>
     <string name="add_task_another">Another one</string>
+    <string name="add_task_dictate">Say it</string>
+    <string name="add_task_dictate_denied">The mic is off in Settings. You can type it instead.</string>
+    <string name="add_task_dictate_listening">Listening…</string>
+    <string name="add_task_dictate_stop">Stop</string>
     <string name="add_task_done_new">New task</string>
     <string name="add_task_done_subtitle">A lighter head.</string>
     <string name="add_task_done_title">Noted!</string>
@@ -200,11 +204,23 @@
     <string name="add_task_time_title">What time?</string>
     <string name="add_task_usual">Your usual ones</string>
     <string name="add_task_what_subtitle">Write it the way you’d say it.</string>
+    <string name="add_task_what_subtitle_voice">Type it or say it.</string>
     <string name="add_task_what_title">What do you need to do?</string>
+    <string name="add_task_when_at_time">At a time</string>
     <string name="add_task_when_card">Pick a day</string>
+    <string name="add_task_when_day">Pick the day</string>
+    <string name="add_task_when_day_count">%1$s already planned</string>
+    <string name="add_task_when_dots">• what you already have</string>
+    <string name="add_task_when_hour">Hour</string>
+    <string name="add_task_when_minute">Minutes</string>
+    <string name="add_task_when_month_next">Next month</string>
+    <string name="add_task_when_month_previous">Previous month</string>
     <string name="add_task_when_more">more</string>
+    <string name="add_task_when_own">Or pick it yourself</string>
     <string name="add_task_when_pill">One tap</string>
-    <string name="add_task_when_title">When will you do it?</string>
+    <string name="add_task_when_quick">One tap and it’s in</string>
+    <string name="add_task_when_quick_hint">Saves the task for this time.</string>
+    <string name="add_task_when_title">When works for you?</string>
     <string name="add_title">Add</string>
     <string name="assistance_adjust">Adjust suggestion</string>
     <string name="assistance_answer_a_before_b">Suggestion: the first task before the second.</string>
@@ -881,15 +897,21 @@
     <string name="emotion_anxious">Anxious</string>
     <string name="emotion_ashamed">Ashamed</string>
     <string name="emotion_blocked">Blocked</string>
+    <string name="emotion_calm">Calm</string>
     <string name="emotion_confused">Confused</string>
     <string name="emotion_content">Happy</string>
     <string name="emotion_euphoric">Euphoric</string>
+    <string name="emotion_excited">Excited</string>
+    <string name="emotion_grateful">Grateful</string>
     <string name="emotion_intensity_clear">Clear selection</string>
     <string name="emotion_intensity_note_label">Optional note</string>
     <string name="emotion_intensity_optional">Optional intensity</string>
     <string name="emotion_intensity_selection_hint">Select this level. Tap again to clear it.</string>
     <string name="emotion_lonely">Lonely</string>
     <string name="emotion_low_energy">Low energy</string>
+    <string name="emotion_motivated">Motivated</string>
+    <string name="emotion_proud">Proud</string>
+    <string name="emotion_relieved">Relieved</string>
     <string name="emotion_sad">Sad</string>
     <string name="emotion_scared">Terrified</string>
     <string name="emotion_tired">Tired</string>
@@ -1501,6 +1523,8 @@
     <string name="notification_morning_title">Your day</string>
     <string name="notification_permission_allow">Remind me</string>
     <string name="notification_permission_ask">Remind you at %1$s?</string>
+    <string name="notification_permission_ask_general">I can\'t remind you yet</string>
+    <string name="notification_permission_ask_general_support">Your phone needs your OK.</string>
     <string name="notification_permission_ask_support">One reminder when it\'s time, that\'s all.</string>
     <string name="notification_permission_denied">Notifications are off. You can turn them back on in your phone\'s settings.</string>
     <string name="notification_permission_settings">Settings</string>

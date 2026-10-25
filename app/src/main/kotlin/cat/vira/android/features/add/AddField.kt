@@ -17,6 +17,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.layout.offset
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -63,6 +67,10 @@ fun AddTitleField(
     onNext: () -> Unit,
     area: ViraArea = ViraArea.Plan,
     focusRequester: FocusRequester? = null,
+    /// El mini llapis sobre la icona, perquè s'entengui que es pot canviar (Arnau, 2026-10-24).
+    showsPencil: Boolean = false,
+    /// El que va al final del camp: el micròfon de la cara Tasca.
+    trailing: (@Composable () -> Unit)? = null,
 ) {
     val shape = RoundedCornerShape(ViraRadius.l)
     val iconLabel = stringResource(R.string.add_task_icon_a11y)
@@ -82,11 +90,27 @@ fun AddTitleField(
                 .viraPressable(role = Role.Button, onClick = onToggleIcon)
                 .semantics { contentDescription = iconLabel; selected = isPickingIcon },
             contentAlignment = Alignment.Center,
-        ) { ViraPictogram(iconName, size = 34.dp) }
+        ) {
+            ViraPictogram(iconName, size = 34.dp)
+            if (showsPencil) {
+                Box(
+                    Modifier
+                        .align(Alignment.BottomEnd)
+                        .offset(5.dp, 5.dp)
+                        .size(20.dp)
+                        .background(ViraColor.accent(area), CircleShape)
+                        .border(2.dp, ViraColor.surfaceElevated, CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(Icons.Filled.Edit, contentDescription = null, tint = ViraColor.onAccent, modifier = Modifier.size(11.dp))
+                }
+            }
+        }
         AddTextField(
             value, onValueChange, placeholder, ViraFont.title, onNext,
             Modifier.weight(1f).then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier), area,
         )
+        trailing?.invoke()
     }
 }
 

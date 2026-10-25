@@ -15,6 +15,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import cat.vira.android.R
+import cat.vira.android.features.assist.ViriAssist
 
 /// Mòduls (`SettingsModulesSection`, D-37): els mateixos tres interruptors del flux d'entrada,
 /// perquè la promesa que hi fa («Ho pots canviar quan vulguis a Ajustos») sigui certa. Apagar-ne un
@@ -30,6 +31,8 @@ fun SettingsModulesSection() {
     var medication by rememberBooleanPreference(SettingsKeys.MODULE_MEDICATION, true)
     var mindfulness by rememberBooleanPreference(SettingsKeys.MODULE_MINDFULNESS, true)
     var calendar by rememberBooleanPreference(SettingsKeys.CALENDAR, false)
+    var viriAssist by rememberBooleanPreference(ViriAssist.ENABLED, true)
+    var viriAssistAccepted by rememberBooleanPreference(ViriAssist.ACCEPTED, false)
 
     val context = LocalContext.current
     val isPreview = LocalInspectionMode.current
@@ -54,6 +57,18 @@ fun SettingsModulesSection() {
         }
         if (isCalendarBlocked) {
             row { SettingsBlockedRow(stringResource(R.string.settings_calendar_denied)) { openAppSettings(context) } }
+        }
+        // Les ajudes de Viri amb Claude (`ViriAssist`). Apagar-les també oblida el «D'acord»: si es
+        // tornen a encendre, es torna a explicar què surt del telèfon.
+        row {
+            SettingsToggleRow(
+                stringResource(R.string.viri_assist_settings_title), viriAssist,
+                {
+                    viriAssist = it
+                    if (!it) viriAssistAccepted = false
+                },
+                hint = if (viriAssist) stringResource(R.string.viri_assist_settings_footer) else null,
+            )
         }
     }
 }

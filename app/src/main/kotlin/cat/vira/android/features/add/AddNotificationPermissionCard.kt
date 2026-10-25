@@ -30,6 +30,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import cat.vira.android.R
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
@@ -51,6 +53,9 @@ import java.time.LocalTime
 /// 2026-10-22, punts de fricció). El permís només es demanava a l'entrada, i qui hi deia «Ara no» no
 /// el tornava a veure mai: aquí es demana **en context**.
 ///
+/// I a Ajustos, sota «Avisos», sense hora (`time = null`, Arnau, 2026-10-24): «Avisos» neix encès, i
+/// qui s'havia saltat el permís tenia l'interruptor dient que sí i cap avís.
+///
 /// Sense permís, la pregunta i «Avisa'm», que obre el diàleg del sistema. Si el diàleg ja no surt
 /// (Android no torna a preguntar), o en un Android sense diàleg, on es torna a encendre. Amb el
 /// permís, o amb els avisos apagats a Ajustos, res.
@@ -63,7 +68,7 @@ fun rescheduleAfterGrant(context: Context) {
 }
 
 @Composable
-fun AddNotificationPermissionCard(time: LocalTime, remindersOn: Boolean) {
+fun AddNotificationPermissionCard(time: LocalTime?, remindersOn: Boolean) {
     val context = LocalContext.current
     val inPreview = LocalInspectionMode.current
     var canPost by remember { mutableStateOf(!inPreview && runCatching { ViraNotifications.canPost(context) }.getOrDefault(true)) }
@@ -74,6 +79,10 @@ fun AddNotificationPermissionCard(time: LocalTime, remindersOn: Boolean) {
         isDenied = !canPost
         if (canPost) rescheduleAfterGrant(context)
     }
+    // Qui torna dels ajustos del telèfon amb el permís ja donat no ha de seguir veient «Avisa'm».
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        if (!inPreview) canPost = runCatching { ViraNotifications.canPost(context) }.getOrDefault(true)
+    }
     if (!remindersOn || canPost) return
 
     val stacked = LocalViraEnvironment.current.isAccessibilitySize
@@ -82,8 +91,14 @@ fun AddNotificationPermissionCard(time: LocalTime, remindersOn: Boolean) {
             if (isDenied) {
                 Text(stringResource(R.string.notification_permission_denied), style = ViraFont.footnote, color = ViraColor.textPrimary)
             } else {
-                Text(stringResource(R.string.notification_permission_ask, clockText(time.hour * 60 + time.minute)), style = ViraFont.footnoteEmphasis, color = ViraColor.textPrimary)
-                Text(stringResource(R.string.notification_permission_ask_support), style = ViraFont.footnote, color = ViraColor.textSecondary)
+                val title = if (time != null) stringResource(R.string.notification_permission_ask, clockText(time.hour * 60 + time.minute))
+                else stringResource(R.string.notification_permission_ask_general)
+                Text(title, style = ViraFont.footnoteEmphasis, color = ViraColor.textPrimary)
+                Text(
+                    stringResource(if (time != null) R.string.notification_permission_ask_support else R.string.notification_permission_ask_general_support),
+                    style = ViraFont.footnote,
+                    color = ViraColor.textSecondary,
+                )
             }
         }
     }

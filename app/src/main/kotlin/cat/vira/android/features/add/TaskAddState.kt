@@ -11,7 +11,9 @@ import cat.vira.android.core.design.components.ViraPictogramName
 import cat.vira.android.features.plan.DayPeriod
 import cat.vira.android.features.plan.PlanDay
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.LocalTime
+import java.time.temporal.ChronoUnit
 import java.time.ZoneId
 import java.util.UUID
 
@@ -51,6 +53,8 @@ class TaskAddState(
     now: LocalTime = LocalTime.of(9, 0),
     initialStep: TaskAddStep = TaskAddStep.What,
     initialTitle: String = "",
+    /// L'hora d'ara, per a «A una hora» i els moments. Les captures i les proves la deixen fixa.
+    private val clock: () -> LocalTime = { now },
 ) {
     var step by mutableStateOf(initialStep)
     var title by mutableStateOf("")
@@ -59,7 +63,6 @@ class TaskAddState(
     var isPickingIcon by mutableStateOf(false)
     var selectedDay by mutableStateOf(initialDay ?: today)
         private set
-    var isPickingDay by mutableStateOf(false)
     var timeChoice by mutableStateOf<AddTime>(initialPeriod?.let { AddTime.Period(it) } ?: AddTime.None)
         private set
     var exactTime by mutableStateOf(now.withSecond(0).withNano(0))
@@ -72,13 +75,17 @@ class TaskAddState(
     private var ignoresDetectedDay by mutableStateOf(false)
     private var ignoresDetectedTime by mutableStateOf(false)
     val justAdded = mutableStateListOf<AddedTask>()
+    /// Els tres moments d'un toc i els punts del calendari del pas «Quan» (`loadWhen`).
+    var moments by mutableStateOf<List<CaptureMoment>>(emptyList())
+        private set
+    var dayCounts by mutableStateOf<Map<LocalDate, Int>>(emptyMap())
+        private set
 
     init {
         if (initialTitle.isNotEmpty()) updateTitle(initialTitle)
     }
 
     val tomorrow: LocalDate get() = today.plusDays(1)
-    val laterDays: List<LocalDate> get() = (2L..6L).map { today.plusDays(it) }
     val canSave: Boolean get() = title.isNotBlank()
 
     /// El dia que ha llegit la frase, si encara mana: tocar un dia a mà o la creu el treuen. La frase
@@ -114,8 +121,15 @@ class TaskAddState(
     val dayIsGiven: Boolean get() = initialDay != null || detectedDay != null
     val timeIsGiven: Boolean get() = initialPeriod != null || detectedTime != null
 
-    /// «Desar» del pas Hora necessita una fitxa triada; si no, és «Sense hora».
-    val hasTime: Boolean get() = detectedTime != null || timeChoice != AddTime.None
+    /// Si s'ha triat un dia aquí, l'ha llegit la frase o l'ha passat el calendari. Si no, el dia és
+    /// avui, ja marcat al calendari: «Desar» sempre desa.
+    val isDayChosen: Boolean get() = dayWasChosen || detectedDay != null
+
+    /// L'hora que es desarà, en minuts del dia, per a les rodes.
+    val timeMinutes: Int get() = (time ?: exactTime).let { it.hour * 60 + it.minute }
+
+    private val chosenPeriod: DayPeriod?
+        get() = if (detectedTime == null) (timeChoice as? AddTime.Period)?.period else null
 
     /// «Per avui» només té sentit si el full no s'ha obert des d'un altre dia del calendari.
     val offersForToday: Boolean get() = initialDay?.let { it == today } ?: true
@@ -136,7 +150,6 @@ class TaskAddState(
     fun choose(day: LocalDate) {
         selectedDay = day
         dayWasChosen = true
-        isPickingDay = false
     }
 
     fun choose(time: AddTime) {
@@ -150,22 +163,75 @@ class TaskAddState(
         choose(AddTime.Exact)
     }
 
+    // Pas «Quan» (`QuickCaptureForm+When.swift`)
+
+    /// Els punts del calendari (`counts`, dia → quantes coses hi ha) i els tres moments, en entrar a
+    /// «Quan». `history`, els moments de les tasques ja apuntades, de la més recent a la més antiga.
+    fun loadWhen(counts: Map<LocalDate, Int>, history: List<CaptureMoment>, now: LocalDateTime) {
+        dayCounts = counts
+        // L'hora ja dita no es torna a proposar: només falta el dia, i el calendari és a sota.
+        moments = if (timeIsGiven) emptyList() else CaptureMoment.suggestions(
+            now = now,
+            history = history,
+            fixedDayOffset = if (dayIsGiven) ChronoUnit.DAYS.between(today, day).toInt() else null,
+        )
+    }
+
+    /// Un moment és la resposta sencera: dia i franja. Qui crida desa.
+    fun pick(moment: CaptureMoment) {
+        val resolved = moment.resolved(today).toLocalDate()
+        // Si la frase ja deia aquest dia, es queda manant ella: així el títol es desa net.
+        if (detectedDay != resolved) choose(resolved)
+        choose(AddTime.Period(moment.period))
+    }
+
+    fun pickNoTime() {
+        if (!isDayChosen) choose(today)
+        choose(AddTime.None)
+    }
+
+    /// «A una hora» comença a la que ja hi havia: la de la frase o la de la franja (Nit → 21:00). Si
+    /// no n'hi havia cap, a la següent mitja hora rodona d'aquí a una estona (avui) o a les 17:00 (un
+    /// altre dia). Mai a una hora sense relació amb el que ja s'havia triat.
+    fun pickTime() {
+        if (time != null) return
+        if (!isDayChosen) choose(today)
+        if (detectedTime == null) exactTime = chosenPeriod?.let { LocalTime.of(it.defaultHour, 0) } ?: suggestedExactTime()
+        chooseExactTime()
+    }
+
+    /// Les rodes: moure-les vol dir que ara manen elles, no la frase.
+    fun setTime(minutes: Int) {
+        exactTime = LocalTime.of(minutes / 60, minutes % 60)
+        if (detectedTime != null) ignoresDetectedTime = true
+        choose(AddTime.Exact)
+    }
+
+    /// D'aquí a mitja hora, arrodonit a la mitja. Tard al vespre això ja és demà: el dia hi va
+    /// també, perquè no quedi una hora passada d'avui.
+    private fun suggestedExactTime(): LocalTime {
+        if (day != today) return LocalTime.of(17, 0)
+        val soon = today.atTime(clock()).plusMinutes(30).withSecond(0).withNano(0)
+        val rounded = soon.plusMinutes(((30 - soon.minute % 30) % 30).toLong())
+        if (rounded.toLocalDate() != today) choose(rounded.toLocalDate())
+        return rounded.toLocalTime()
+    }
+
     fun clearDetectedDay() { ignoresDetectedDay = true }
     fun clearDetectedTime() { ignoresDetectedTime = true }
 
     /// El pas que ve després d'aquest, saltant el que ja se sap.
-    fun nextStep(): TaskAddStep = step.next(dayIsGiven, timeIsGiven)
+    fun nextStep(offersSplit: Boolean = false): TaskAddStep = step.next(dayIsGiven, timeIsGiven, offersSplit)
 
     /// On porta «Enrere». De tornada al camp, la frase torna a manar: si ara diu «demà», que es llegeixi.
     fun goBack(): Boolean {
-        val previous = step.previous(dayIsGiven) ?: return false
+        val previous = step.previous(dayIsGiven, timeIsGiven) ?: return false
         if (previous == TaskAddStep.What) {
             if (initialDay == null) dayWasChosen = false
             if (initialPeriod == null) {
                 timeWasChosen = false
                 timeChoice = AddTime.None
             }
-            isPickingDay = false
         }
         step = previous
         return true
@@ -196,7 +262,6 @@ class TaskAddState(
         ignoresDetectedTime = false
         symbolName = ViraPictogramName.flag
         isPickingIcon = false
-        isPickingDay = false
         recurrence = PlanItemRecurrence.NONE
         selectedDay = initialDay ?: today
         dayWasChosen = initialDay != null

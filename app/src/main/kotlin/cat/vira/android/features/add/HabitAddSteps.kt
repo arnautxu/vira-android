@@ -70,7 +70,7 @@ fun HabitDaysStep(state: HabitAddState, callbacks: HabitStepCallbacks) {
         WeekdayPreset.entries.forEach { preset ->
             AddChoiceRow(
                 preset.pictogram, stringResource(preset.title), stringResource(preset.hint),
-                isSelected = !state.picksDays && state.weekdays == preset.days,
+                isSelected = state.hasPickedDays && !state.picksDays && state.weekdays == preset.days,
             ) { callbacks.onPickDays(preset.days) }
         }
         AddChoiceRow(

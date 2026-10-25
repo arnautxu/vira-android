@@ -20,6 +20,7 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import cat.vira.android.R
 import cat.vira.android.core.data.ViraPreferences
 import cat.vira.android.core.notifications.ViraNotifications
+import cat.vira.android.features.add.AddNotificationPermissionCard
 import cat.vira.android.core.sound.ViraHaptics
 import cat.vira.android.core.sound.ViraSound
 import kotlinx.coroutines.Dispatchers
@@ -107,7 +108,13 @@ fun SettingsNotificationsSection() {
         }
     }
 
-    if (isDenied) {
+    // Amb «Avisos» encès, la targeta diu si Android encara no té el permís o si l'ha denegat: un
+    // interruptor encès sense permís no avisa de res (Arnau, 2026-10-24).
+    if (notifications) {
+        AddNotificationPermissionCard(time = null, remindersOn = true)
+    } else if (isDenied) {
+        // Un cop denegat el permís, Android ja no torna a preguntar. Callar deixaria la medicació
+        // encesa sense fer mai res.
         SettingsGroup {
             row { SettingsBlockedRow(stringResource(R.string.habits_reminder_denied)) { openNotificationSettings(context) } }
         }

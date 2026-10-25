@@ -22,13 +22,19 @@ class CompletionQueueTest {
 
     private val deferrals = mutableListOf<Boolean>()
 
+    private val rewarded = mutableSetOf<String>()
+
     private fun TestScope.queue(
         firstHabit: Boolean = true,
         commitMillis: Long = 0,
         challenge: ChallengeMoment? = null,
     ) = CompletionQueue(
         scope = backgroundScope,
-        commit = { reason, _ -> delay(commitMillis); committed += reason; 3 to 3 },
+        commit = { reason, key, _ ->
+            delay(commitMillis)
+            committed += reason
+            if (rewarded.add(key)) 3 to 3 else null
+        },
         isFirstHabitOfDay = { firstHabit },
         undoWindowMillis = { 2_000 },
         challengeCompleted = { _, _ -> challenge },
@@ -143,5 +149,23 @@ class CompletionQueueTest {
         runCurrent()
         assertEquals(listOf(CoinReason.PLAN_ITEM, CoinReason.HABIT), committed)
         assertNull(queue.active)
+    }
+
+    @Test
+    fun `tornar a marcar una cosa ja premiada no revela res ni obre la celebració`() = runTest {
+        val queue = queue()
+        var commits = 0
+        fun habit() = PendingCompletion("habit-1-0", CoinReason.HABIT, onUndo = {}, onCommit = { commits++ }, title = "Llegir")
+        queue.present(habit())
+        advanceTimeBy(5_000)
+        runCurrent()
+        queue.habitCelebration = null
+        queue.present(habit())
+        advanceTimeBy(2_001)
+        runCurrent()
+        assertNull(queue.active)
+        assertNull(queue.habitCelebration)
+        assertEquals(1, commits)
+        assertEquals(deferrals.count { it }, deferrals.count { !it } + 1)
     }
 }

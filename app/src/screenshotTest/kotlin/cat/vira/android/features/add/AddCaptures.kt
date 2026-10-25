@@ -44,14 +44,28 @@ fun AddTaskWhat() = ViraCapture { ViraTheme(reduceMotion = true) {
     AddSheetContent(ViraAddKind.Task, actions, onDismiss = {}, zone = zone, now = now)
 } }
 
+/// El pas «Quan» amb els tres moments d'un toc, el calendari amb punts i «Sense hora».
 @PreviewTest @AddCaptures @Composable
 fun AddTaskWhen() = Sheet {
-    TaskAddFlow(actions, {}, none, {}, zone = zone, now = now, initialStep = TaskAddStep.When, initialTitle = "Treball de català")
+    TaskAddFlow(
+        actions, {}, none, {}, zone = zone, now = now, initialStep = TaskAddStep.When, initialTitle = "Treball de català",
+        initialDayCounts = mapOf(today to 1, today.plusDays(1) to 3, today.plusDays(4) to 2),
+    )
 }
 
+/// «Demà a les 17:30» a la frase: el dia marcat al calendari i el rellotge de roda obert.
 @PreviewTest @AddCaptures @Composable
-fun AddTaskTime() = Sheet {
-    TaskAddFlow(actions, {}, none, {}, zone = zone, now = now, initialStep = TaskAddStep.Time, initialTitle = "Treball de català")
+fun AddTaskWhenClock() = Sheet {
+    TaskAddFlow(
+        actions, {}, none, {}, zone = zone, now = now, initialStep = TaskAddStep.When, initialTitle = "Dentista demà a les 17:30",
+        initialDayCounts = mapOf(today.plusDays(1) to 1),
+    )
+}
+
+/// «La partim?»: la tasca sembla gran i Viri proposa partir-la abans de Fet.
+@PreviewTest @AddCaptures @Composable
+fun AddTaskSplit() = Sheet {
+    TaskAddFlow(actions, {}, none, {}, zone = zone, now = now, initialStep = TaskAddStep.Split, initialTitle = "Treball de socials")
 }
 
 @PreviewTest @AddCaptures @Composable

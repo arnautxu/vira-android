@@ -46,6 +46,9 @@ class HabitAddState(initialStep: HabitAddStep, initialTitle: String) {
     var isPickingIcon by mutableStateOf(false)
     /// Dies (1 = diumenge, com l'iPhone). Buit = cada dia.
     var weekdays by mutableStateOf(emptySet<Int>())
+    /// Si ja s'ha triat una drecera de dies. Buit vol dir «cada dia», i sense això «Cada dia» sortia
+    /// ja marcat en arribar al pas, abans de tocar res (Arnau, 2026-10-23).
+    var hasPickedDays by mutableStateOf(false)
     var picksDays by mutableStateOf(false)
     /// Minuts del dia de l'avís, o `null` si no n'hi ha.
     var reminderMinutes by mutableStateOf<Int?>(null)
@@ -133,6 +136,7 @@ fun HabitAddFlow(
         onPickDays = { days ->
             // Una drecera de dies passa sola: es veu el check un moment i avança.
             state.weekdays = days
+            state.hasPickedDays = true
             state.picksDays = false
             scope.launch {
                 delay(220)

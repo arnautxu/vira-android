@@ -24,10 +24,12 @@ data class EmotionEntry(
 
 val EmotionEntry.emotion: Emotion get() = Emotion.from(emotionRaw)
 
-/// Les tretze emocions de l'iPhone, amb el mateix valor en cru.
+/// Les dinou emocions de l'iPhone, amb el mateix valor en cru i el mateix ordre (el de la graella i
+/// el d'«Una altra», no cap escala). Les sis agradables noves són del 2026-10-23.
 enum class Emotion(val raw: String) {
-    CONTENT("content"), ANGRY("angry"), ANXIOUS("anxious"), SAD("sad"), EUPHORIC("euphoric"),
-    LONELY("lonely"), SCARED("scared"), ASHAMED("ashamed"), CONFUSED("confused"), TIRED("tired"),
+    CONTENT("content"), CALM("calm"), PROUD("proud"), ANGRY("angry"), ANXIOUS("anxious"), SAD("sad"),
+    EUPHORIC("euphoric"), MOTIVATED("motivated"), GRATEFUL("grateful"), EXCITED("excited"),
+    RELIEVED("relieved"), LONELY("lonely"), SCARED("scared"), ASHAMED("ashamed"), CONFUSED("confused"), TIRED("tired"),
     LOW_ENERGY("lowEnergy"), UNMOTIVATED("unmotivated"), BLOCKED("blocked");
 
     companion object {

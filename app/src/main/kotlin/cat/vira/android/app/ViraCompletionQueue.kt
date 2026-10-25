@@ -110,7 +110,7 @@ fun ViraCompletionQueue(content: @Composable () -> Unit) {
 /// La cua de tot el procés, amb les recompenses de `backend`. La crea `ViraApp`.
 internal fun processCompletionQueue(app: ViraApp, scope: CoroutineScope): CompletionQueue = CompletionQueue(
     scope = scope,
-    commit = { reason, at -> ViraFeatureSlots.commitReward(app.backend, reason, at) },
+    commit = { reason, key, at -> ViraFeatureSlots.commitReward(app.backend, reason, key, at) },
     isFirstHabitOfDay = {
         val today = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant()
         app.backend.db.habitLogs().all().count { it.day == today } <= 1
@@ -150,8 +150,10 @@ internal data class ChallengeMoment(val item: ChallengeItem, val progress: Int, 
 internal class CompletionQueue(
     private val scope: CoroutineScope,
     /// Concedeix la recompensa i retorna (monedes, XP). Rep l'instant de l'acció, no el de la
-    /// concessió: marcar una cosa a les 23:59:59 compta per al dia en què s'ha marcat.
-    private val commit: suspend (CoinReason, Instant) -> Pair<Int, Int>,
+    /// concessió: marcar una cosa a les 23:59:59 compta per al dia en què s'ha marcat. `null` si
+    /// la cosa (la clau és l'`id` de la fila) ja s'havia premiat (`ViraRewardOnce`): compta per al
+    /// dia i prou.
+    private val commit: suspend (CoinReason, String, Instant) -> Pair<Int, Int>?,
     private val isFirstHabitOfDay: suspend () -> Boolean,
     private val undoWindowMillis: () -> Long,
     /// El repte que l'acció acaba de completar, si n'hi ha cap per recollir.
@@ -227,7 +229,17 @@ internal class CompletionQueue(
         // penjada i apagar les celebracions fins que l'app torni a començar.
         var held = true
         try {
-            val (coins, xp) = withContext(NonCancellable) { commitCompletion(completion) }
+            // Tornar a marcar una cosa ja premiada: queda marcada i compta per al dia, però no hi
+            // ha xifra a revelar ni celebració que repetir. La fila es tanca aquí.
+            val result = withContext(NonCancellable) { commitCompletion(completion) }
+            if (result == null) {
+                if (revealing === completion) {
+                    revealing = null
+                    active = null
+                }
+                return
+            }
+            val (coins, xp) = result
             val moment = nextChallengeMoment(completion.reason)
             // **Només el primer hàbit del dia** obre la celebració (Arnau, 2026-08-10).
             val opensHabitCelebration = completion.reason == CoinReason.HABIT && celebrationsEnabled &&
@@ -260,8 +272,10 @@ internal class CompletionQueue(
         return moment
     }
 
-    private suspend fun commitCompletion(completion: PendingCompletion): Pair<Int, Int> {
-        val result = commit(completion.reason, actionAt.remove(completion) ?: clock())
+    /// Una cosa que ja s'havia premiat (marcar, desmarcar i tornar a marcar) només compta per al
+    /// dia: ni monedes, ni XP, ni l'efecte propi (`ViraRewardOnce`, Arnau, 2026-10-23).
+    private suspend fun commitCompletion(completion: PendingCompletion): Pair<Int, Int>? {
+        val result = commit(completion.reason, completion.id, actionAt.remove(completion) ?: clock()) ?: return null
         completion.onCommit?.invoke()
         return result
     }

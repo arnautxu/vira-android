@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Generat per scripts/export-strings.py des de Localizable.xcstrings, EmotionIntensity.xcstrings de l'iPhone (commit 6fd670c0) + android-strings.xcstrings. No es toca a mà. -->
+<!-- Generat per scripts/export-strings.py des de Localizable.xcstrings, EmotionIntensity.xcstrings de l'iPhone (commit 080cebdd) + android-strings.xcstrings. No es toca a mà. -->
 <resources>
     <string name="a11y_error">Error: %1$s</string>
     <plurals name="a11y_items_count">
@@ -172,6 +172,10 @@
     <string name="add_save">Desar</string>
     <string name="add_step_count">%1$s de %2$s</string>
     <string name="add_task_another">Una altra</string>
+    <string name="add_task_dictate">Dir-ho</string>
+    <string name="add_task_dictate_denied">El micròfon està apagat a Configuració. Pots escriure-ho.</string>
+    <string name="add_task_dictate_listening">T’escolto…</string>
+    <string name="add_task_dictate_stop">Atura</string>
     <string name="add_task_done_new">Tasca nova</string>
     <string name="add_task_done_subtitle">Un cap més lleuger.</string>
     <string name="add_task_done_title">Apuntada!</string>
@@ -200,11 +204,23 @@
     <string name="add_task_time_title">A quina hora?</string>
     <string name="add_task_usual">Les de sempre</string>
     <string name="add_task_what_subtitle">Escriu-ho com ho diries.</string>
+    <string name="add_task_what_subtitle_voice">Escriu-ho o digues-ho.</string>
     <string name="add_task_what_title">Què has de fer?</string>
+    <string name="add_task_when_at_time">A una hora</string>
     <string name="add_task_when_card">Tria un dia</string>
+    <string name="add_task_when_day">Tria el dia</string>
+    <string name="add_task_when_day_count">Ja hi tens %1$s</string>
+    <string name="add_task_when_dots">• el que ja tens</string>
+    <string name="add_task_when_hour">Hora</string>
+    <string name="add_task_when_minute">Minuts</string>
+    <string name="add_task_when_month_next">Mes següent</string>
+    <string name="add_task_when_month_previous">Mes anterior</string>
     <string name="add_task_when_more">més</string>
+    <string name="add_task_when_own">O tria tu</string>
     <string name="add_task_when_pill">Un toc</string>
-    <string name="add_task_when_title">Quan ho fas?</string>
+    <string name="add_task_when_quick">Un toc i apuntada</string>
+    <string name="add_task_when_quick_hint">Desa la tasca en aquest moment.</string>
+    <string name="add_task_when_title">Quan et va bé?</string>
     <string name="add_title">Afegir</string>
     <string name="assistance_adjust">Ajustar proposta</string>
     <string name="assistance_answer_a_before_b">Proposta: la primera tasca abans de la segona.</string>
@@ -881,15 +897,21 @@
     <string name="emotion_anxious">Ansiós</string>
     <string name="emotion_ashamed">Avergonyit</string>
     <string name="emotion_blocked">Bloquejat</string>
+    <string name="emotion_calm">Tranquil</string>
     <string name="emotion_confused">Confós</string>
     <string name="emotion_content">Content</string>
     <string name="emotion_euphoric">Eufòric</string>
+    <string name="emotion_excited">Il·lusionat</string>
+    <string name="emotion_grateful">Agraït</string>
     <string name="emotion_intensity_clear">Treu la selecció</string>
     <string name="emotion_intensity_note_label">Nota opcional</string>
     <string name="emotion_intensity_optional">Intensitat opcional</string>
     <string name="emotion_intensity_selection_hint">Tria aquest nivell. Torna’l a tocar per treure la selecció.</string>
     <string name="emotion_lonely">Sol</string>
     <string name="emotion_low_energy">Poca energia</string>
+    <string name="emotion_motivated">Motivat</string>
+    <string name="emotion_proud">Orgullós</string>
+    <string name="emotion_relieved">Alleujat</string>
     <string name="emotion_sad">Trist</string>
     <string name="emotion_scared">Aterrat</string>
     <string name="emotion_tired">Cansat</string>
@@ -1501,6 +1523,8 @@
     <string name="notification_morning_title">El teu dia</string>
     <string name="notification_permission_allow">Avisa\'m</string>
     <string name="notification_permission_ask">T\'aviso a les %1$s?</string>
+    <string name="notification_permission_ask_general">Encara no et puc avisar</string>
+    <string name="notification_permission_ask_general_support">El telèfon necessita el teu permís.</string>
     <string name="notification_permission_ask_support">Un avís quan toqui, i prou.</string>
     <string name="notification_permission_denied">Els avisos estan apagats. Es tornen a encendre als ajustos del telèfon.</string>
     <string name="notification_permission_settings">Ajustos</string>

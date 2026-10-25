@@ -8,6 +8,7 @@ import cat.vira.android.core.data.model.IntakeStatus
 import cat.vira.android.core.data.model.PlanItemStatus
 import cat.vira.android.core.data.model.status
 import cat.vira.android.features.progress.logic.ViraProgress
+import cat.vira.android.features.progress.logic.ViraRewardOnce
 import java.time.Instant
 import java.time.ZoneId
 import java.util.UUID
@@ -18,6 +19,8 @@ import java.util.UUID
 /// tocs a l'avís alhora no fan dues repeticions ni dues recompenses.
 class PlanNotificationEffects(
     private val store: ViraStore,
+    /// El que ja s'ha premiat: tornar a marcar des de l'avís no torna a pagar.
+    private val once: ViraRewardOnce,
     private val progress: ViraProgress = ViraProgress(store),
     private val zone: () -> ZoneId = { ZoneId.systemDefault() },
 ) {
@@ -31,7 +34,9 @@ class PlanNotificationEffects(
         if (habit.isArchived || !habit.isScheduled(date)) return@locked
         if (db.habitLogs().all().any { it.habitId == habit.id && PlanDay.date(it.day, zone()) == date }) return@locked
         store.create(db.habitLogs(), HabitLog(day = PlanDay.start(date, zone()), habitId = habit.id))
-        progress.record(CoinReason.HABIT)
+        // Sense finestra de «Desfer», la recompensa es concedeix de seguida i desmarcar des de l'app
+        // no en resta res. Per això mateix, un hàbit que ja s'havia premiat avui no torna a pagar.
+        progress.recordOnce(CoinReason.HABIT, ViraRewardOnce.habitKey(habit.id, date, zone()), once) ?: return@locked
         progress.countHabitCompleted()
     }
 
@@ -42,7 +47,7 @@ class PlanNotificationEffects(
         if (item.status != PlanItemStatus.PENDING) return@locked
         store.save(db.planItems(), item.copy(statusRaw = PlanItemStatus.DONE.raw, completedAt = ViraTime.now()))
         store.createNextOccurrence(item, zone())
-        progress.record(CoinReason.PLAN_ITEM)
+        progress.recordOnce(CoinReason.PLAN_ITEM, ViraRewardOnce.planItemKey(item.id), once)
     }
 
     /// «Presa» o «Salta-la». **Cap recompensa**: ni monedes, ni XP, ni ratxa.

@@ -35,6 +35,7 @@ import cat.vira.android.features.entry.EntryFirstActionHosts
 import cat.vira.android.core.data.ViraRewards
 import cat.vira.android.core.data.ViraStore
 import cat.vira.android.features.progress.logic.ViraProgress
+import cat.vira.android.features.progress.logic.ViraRewardOnce
 import java.time.Instant
 import cat.vira.android.features.entry.EntryRequest
 import cat.vira.android.features.entry.LocalEntryFirstActionHosts
@@ -127,10 +128,12 @@ internal object ViraFeatureSlots {
     fun Breathe(onClose: () -> Unit) = HelpBreatheScreen(onClose)
 
     /// Fil Viri i ratxa (`features/progress`): concedeix la recompensa d'una acció feta i en torna
-    /// (monedes, XP). Ha de passar per `ViraProgress.record`, que també compta el dia per a la ratxa;
-    /// l'XP és `ViraRewards.rule(reason)?.coins`. Mai des de medicació. `at` és quan s'ha tocat.
-    suspend fun commitReward(backend: ViraBackend, reason: CoinReason, at: Instant): Pair<Int, Int> {
-        val coins = ViraProgress(ViraStore(backend.db)).record(reason, now = at)
+    /// (monedes, XP). Ha de passar per `ViraProgress.recordOnce`, que també compta el dia per a la
+    /// ratxa i no paga dues vegades la mateixa `key` (`null`); l'XP és `ViraRewards.rule(reason)?.coins`.
+    /// Mai des de medicació. `at` és quan s'ha tocat.
+    suspend fun commitReward(backend: ViraBackend, reason: CoinReason, key: String, at: Instant): Pair<Int, Int>? {
+        val once = ViraRewardOnce(backend.preferences)
+        val coins = ViraProgress(ViraStore(backend.db)).recordOnce(reason, key, once, now = at) ?: return null
         return coins to (ViraRewards.rule(reason)?.coins ?: 0)
     }
 

@@ -31,7 +31,8 @@ interface ViraNotificationHost {
 ///   recompensa.
 /// - **`recordIntake`**: `ViraMedication.record`. **Cap recompensa**: ni monedes, ni XP, ni ratxa.
 /// - **`logEmotion`**: `ViraEmotionCheckIn.record`, sense intensitat ni nota.
-/// - **`capture`**: la frase llegida com la captura ràpida (dia i hora) i la recompensa.
+/// - **`capture`**: la frase llegida com la captura ràpida (dia i hora). **Cap recompensa**: apuntar
+///   una tasca no dona res, com a l'iPhone des del 2026-10-24; el premi és per fer-la.
 /// - **`streakState`**: `null` si encara no se sap; aleshores Viri no programa res.
 /// - **`afterChange`**: el que s'hagi de posar al dia després d'una acció (els widgets).
 ///
