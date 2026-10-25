@@ -10,6 +10,8 @@ import cat.vira.android.features.plan.PlanItemOrder
 import java.text.Normalizer
 import java.time.Instant
 import java.util.UUID
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /// Un pas proposat, editable (`AssistanceStep` de l'iPhone). Arriben desmarcats; el que s'escriu a
 /// mà neix marcat, perquè l'ha triat la persona. Els minuts només s'ensenyen: la tasca no en desa.
@@ -75,8 +77,13 @@ object AssistanceDraft {
 class AssistanceCommit(private val store: ViraStore, private val clock: () -> Instant = Instant::now) {
 
     private var receipt: List<Pair<PlanItem, PlanAssistanceDetail>>? = null
+    /// Un segon toc mentre el primer encara desa espera i troba el rebut: mai dos lots.
+    private val writing = Mutex()
 
-    suspend fun add(steps: List<AssistanceStep>, parentId: UUID, expectedTitle: String, expectedUpdatedAt: Instant) {
+    suspend fun add(steps: List<AssistanceStep>, parentId: UUID, expectedTitle: String, expectedUpdatedAt: Instant) =
+        writing.withLock { addOnce(steps, parentId, expectedTitle, expectedUpdatedAt) }
+
+    private suspend fun addOnce(steps: List<AssistanceStep>, parentId: UUID, expectedTitle: String, expectedUpdatedAt: Instant) {
         if (receipt != null) return // Un segon toc és la mateixa operació.
         val titles = AssistanceDraft.selectedTitles(steps)
         val db = store.db
@@ -109,14 +116,16 @@ class AssistanceCommit(private val store: ViraStore, private val clock: () -> In
     }
 
     /// Tot o res. Un pas editat, fet o sincronitzat d'un altre telèfon atura el lot sencer.
-    suspend fun undo() {
+    /// La comprovació i els esborrats van en una sola transacció: res pot canviar entremig, i si es
+    /// talla a mitges no queda cap pas esborrat.
+    suspend fun undo() = writing.withLock {
         val saved = receipt ?: throw AssistanceException(AssistanceProblem.STALE)
         val db = store.db
-        val current = db.withTransaction {
-            saved.map { (item, detail) -> db.planItems().byId(item.id) to db.assistanceDetails().byId(detail.id) }
+        db.withTransaction {
+            val current = saved.map { (item, detail) -> db.planItems().byId(item.id) to db.assistanceDetails().byId(detail.id) }
+            if (current != saved) throw AssistanceException(AssistanceProblem.CHANGED_SINCE_SAVE)
+            saved.forEach { (item, _) -> store.delete(item) }
         }
-        if (current != saved) throw AssistanceException(AssistanceProblem.CHANGED_SINCE_SAVE)
-        saved.forEach { (item, _) -> store.delete(item) }
         receipt = null
     }
 }

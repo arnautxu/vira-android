@@ -102,5 +102,6 @@ dependencies {
 
 // Les proves de captura (layoutlib) es queden sense memòria passades unes 70 captures amb el
 // valor per defecte (512 MB), i a 3 GB també passades unes 230: la memòria creix amb cada
-// captura. Els executors de GitHub tenen 16 GB; Gradle se'n queda 3.
-tasks.withType<Test>().configureEach { maxHeapSize = "6g" }
+// captura. Amb 6 GB, passades unes 414 les últimes ja no surten. Els executors de GitHub tenen
+// 16 GB; Gradle se'n queda 3.
+tasks.withType<Test>().configureEach { maxHeapSize = "10g" }

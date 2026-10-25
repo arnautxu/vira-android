@@ -207,10 +207,14 @@ class TaskAddState(
         choose(AddTime.Exact)
     }
 
+    /// D'aquí a mitja hora, arrodonit a la mitja. Tard al vespre això ja és demà: el dia hi va
+    /// també, perquè no quedi una hora passada d'avui.
     private fun suggestedExactTime(): LocalTime {
         if (day != today) return LocalTime.of(17, 0)
-        val soon = clock().plusMinutes(30).withSecond(0).withNano(0)
-        return soon.plusMinutes(((30 - soon.minute % 30) % 30).toLong())
+        val soon = today.atTime(clock()).plusMinutes(30).withSecond(0).withNano(0)
+        val rounded = soon.plusMinutes(((30 - soon.minute % 30) % 30).toLong())
+        if (rounded.toLocalDate() != today) choose(rounded.toLocalDate())
+        return rounded.toLocalTime()
     }
 
     fun clearDetectedDay() { ignoresDetectedDay = true }

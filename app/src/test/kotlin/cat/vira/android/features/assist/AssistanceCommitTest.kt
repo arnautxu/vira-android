@@ -5,6 +5,8 @@ import androidx.test.core.app.ApplicationProvider
 import cat.vira.android.core.data.ViraDatabase
 import cat.vira.android.core.data.ViraStore
 import cat.vira.android.core.data.model.PlanItem
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -49,6 +51,17 @@ class AssistanceCommitTest {
         commit.undo()
         assertEquals(listOf(parent.id), db.planItems().all().map { it.id })
         assertTrue(db.assistanceDetails().all().isEmpty())
+    }
+
+    @Test
+    fun dosTocsAlhoraDesenUnSolLot() = runBlocking {
+        val parent = store.create(db.planItems(), PlanItem(title = "Treball de socials")).let { db.planItems().byId(it.id)!! }
+        val commit = AssistanceCommit(store)
+        List(2) { async { commit.add(steps, parent.id, parent.title, parent.updatedAt) } }.awaitAll()
+        assertEquals(3, db.planItems().all().size)
+
+        commit.undo()
+        assertEquals(listOf(parent.id), db.planItems().all().map { it.id })
     }
 
     @Test

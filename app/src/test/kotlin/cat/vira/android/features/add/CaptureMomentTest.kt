@@ -125,6 +125,14 @@ class CaptureMomentTest {
     }
 
     @Test
+    fun tardAlVespreLaMitjaHoraSeguentJaEsDema() {
+        val late = TaskAddState(today = today, now = LocalTime.of(23, 40))
+        late.pickTime()
+        assertEquals(today.plusDays(1), late.day)
+        assertEquals(LocalTime.of(0, 30), late.time)
+    }
+
+    @Test
     fun lesRodesManenPerSobreDeLaFrase() {
         val state = TaskAddState(today = today)
         state.updateTitle("Dentista demà a les 17:30")
