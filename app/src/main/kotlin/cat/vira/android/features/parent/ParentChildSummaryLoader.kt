@@ -1,56 +1,37 @@
 package cat.vira.android.features.parent
 
+import cat.vira.android.core.backend.ViraJson
 import cat.vira.android.core.backend.ViraRestClient
-import cat.vira.android.core.backend.ViraRestClient.Param
-import cat.vira.android.core.data.ViraTime
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.intOrNull
-import java.time.Duration
-import java.time.Instant
 import java.util.UUID
 
-/// Carrega el resum (`ParentChildSummaryLoader` de l'iPhone). Cada consulta va per separat perquè
-/// el servidor pot dir que no a unes i que sí a altres: és exactament el que ha de passar quan un
-/// àmbit està tancat.
+/// Carrega el resum (`ParentChildSummaryLoader` de l'iPhone). **Només números**: el servidor compta
+/// (`parent_child_summary`, revisió del 2026-11-09) i les files del fill o filla (tasques amb títol i
+/// notes, hàbits, sessions) no baixen mai al telèfon del pare o la mare. Les emocions i la medicació
+/// van per les seves funcions, que a més miren el permís del tutor.
 class ParentChildSummaryLoader(
     private val rest: ViraRestClient = ViraRestClient(),
-    private val clock: () -> Instant = ViraTime::now,
 ) {
 
     suspend fun load(link: ParentLink, accessToken: String): ParentChildSummary {
         var summary = ParentChildSummary()
         val child = link.childUserId
-        val weekAgo = clock().minus(Duration.ofDays(7))
 
-        if (link.scopeUsage) {
-            val profiles = rows("profiles", child, accessToken, "display_name")
-            // Només l'XP, per una funció: la fila sencera de `progress_counters` porta també el
-            // recompte d'emocions, que és de l'àmbit d'emocions (`20261018122414`).
-            val xp = count("parent_child_total_xp", child, accessToken)
-            val streaks = rows("streaks", child, accessToken, "current_days")
-            val sessions = rows("focus_sessions", child, accessToken, "started_at,completed", Param("started_at", "gt.${ViraTime.format(weekAgo)}"))
+        // Una clau que no arriba és un àmbit tancat, i això ho decideix el servidor, no la còpia
+        // del vincle que hi hagi al telèfon.
+        if (link.scopeUsage || link.scopeHabits) {
+            val counts = rpcObject("parent_child_summary", child, accessToken)
             summary = summary.copy(
-                displayName = profiles.firstOrNull()?.string("display_name"),
-                totalXP = xp,
-                streakDays = streaks.firstOrNull()?.int("current_days") ?: 0,
-                focusSessionsLastWeek = sessions.count {
-                    (it.instant("started_at")?.isAfter(weekAgo) ?: false) && it.bool("completed") == true
-                },
-            )
-        }
-
-        if (link.scopeHabits) {
-            val logs = rows("habit_logs", child, accessToken, "day", Param("day", "gt.${ViraTime.format(weekAgo)}"))
-            val items = rows("plan_items", child, accessToken, "status", Param("status", "eq.pending"))
-            summary = summary.copy(
-                habitsDoneLastWeek = logs.count { it.instant("day")?.isAfter(weekAgo) ?: false },
-                tasksPending = items.count { it.string("status") == "pending" },
+                displayName = counts?.string("display_name"),
+                totalXP = counts?.int("total_xp"),
+                streakDays = counts?.int("streak_days"),
+                focusSessionsLastWeek = counts?.int("focus_last_week"),
+                habitsDoneLastWeek = counts?.int("habits_last_week"),
+                tasksPending = counts?.int("tasks_pending"),
             )
         }
 
@@ -75,16 +56,19 @@ class ParentChildSummaryLoader(
     }
 
     /// El pseudònim de cada fill o filla que hagi obert «Ús i ratxa», per a les targetes de
-    /// l'arrel. Sense aquest àmbit el perfil no es llegeix i la targeta diu «Fill o filla».
+    /// l'arrel (`parent_child_names`). Sense aquest àmbit la targeta diu «Fill o filla».
     /// Un error aquí no para el panell: un nom que no arriba no amaga cap dada.
-    suspend fun displayNames(links: List<ParentLink>, accessToken: String): Map<UUID, String> = coroutineScope {
-        links.filter { it.scopeUsage }.map { link ->
-            async {
-                val name = runCatching { rows("profiles", link.childUserId, accessToken, "display_name") }
-                    .getOrNull()?.firstOrNull()?.string("display_name")?.trim()
-                if (name.isNullOrEmpty()) null else link.childUserId to name
-            }
-        }.awaitAll().filterNotNull().toMap()
+    suspend fun displayNames(links: List<ParentLink>, accessToken: String): Map<UUID, String> {
+        val children = links.filter { it.scopeUsage }.map { it.childUserId }.toSet()
+        if (children.isEmpty()) return emptyMap()
+        val raw = runCatching { rest.rpc("parent_child_names", JsonObject(emptyMap()), accessToken) }.getOrNull()
+            ?: return emptyMap()
+        val rows = runCatching { ViraJson.json.parseToJsonElement(raw) as? JsonArray }.getOrNull() ?: return emptyMap()
+        return rows.mapNotNull { it as? JsonObject }.mapNotNull { row ->
+            val id = row.string("child_user_id")?.let { runCatching { UUID.fromString(it) }.getOrNull() }
+            val name = row.string("display_name")?.trim()
+            if (id == null || id !in children || name.isNullOrEmpty()) null else id to name
+        }.toMap()
     }
 
     /// `null` quan el servidor diu `null`: l'àmbit és obert però el permís del tutor no.
@@ -93,15 +77,12 @@ class ParentChildSummaryLoader(
         return ParentLinkClient.scalar(rest.rpc(function, body, token))?.toIntOrNull()
     }
 
-    /// Només les columnes que fan falta per comptar: el títol o les notes d'una tasca no han de
-    /// baixar mai al telèfon del pare o la mare, encara que la política del servidor les deixi.
-    /// El filtre de la setmana o de l'estat va al servidor: l'historial sencer no baixa mai.
-    private suspend fun rows(table: String, child: UUID, token: String, columns: String, vararg filters: Param): List<JsonObject> =
-        rest.select(table, listOf(Param("user_id", "eq.$child"), Param("select", columns)) + filters, token)
-            .mapNotNull { it as? JsonObject }
+    private suspend fun rpcObject(function: String, child: UUID, token: String): JsonObject? {
+        val body = JsonObject(mapOf("child" to JsonPrimitive(child.toString())))
+        val raw = rest.rpc(function, body, token)
+        return runCatching { ViraJson.json.parseToJsonElement(raw.ifBlank { "null" }) as? JsonObject }.getOrNull()
+    }
 
     private fun JsonObject.string(key: String) = (this[key] as? JsonPrimitive)?.contentOrNull
     private fun JsonObject.int(key: String) = (this[key] as? JsonPrimitive)?.intOrNull
-    private fun JsonObject.bool(key: String) = (this[key] as? JsonPrimitive)?.booleanOrNull
-    private fun JsonObject.instant(key: String) = string(key)?.let(ViraTime::parse)
 }

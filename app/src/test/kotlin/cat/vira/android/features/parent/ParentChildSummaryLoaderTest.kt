@@ -27,8 +27,6 @@ class ParentChildSummaryLoaderTest {
     private val child = UUID.randomUUID()
     private val server = MockWebServer()
     private val paths: MutableList<String> = Collections.synchronizedList(mutableListOf())
-    private val selects: MutableMap<String, String?> = Collections.synchronizedMap(mutableMapOf())
-    private val urls: MutableMap<String, okhttp3.HttpUrl> = Collections.synchronizedMap(mutableMapOf())
     /// Què torna cada camí. El que no hi és torna `[]`.
     private val responses = mutableMapOf<String, String>()
     private lateinit var loader: ParentChildSummaryLoader
@@ -39,14 +37,12 @@ class ParentChildSummaryLoaderTest {
             override fun dispatch(request: RecordedRequest): MockResponse {
                 val path = request.requestUrl!!.encodedPath
                 paths += path
-                selects[path] = request.requestUrl!!.queryParameter("select")
-                urls[path] = request.requestUrl!!
                 return MockResponse().setBody(responses[path] ?: "[]")
             }
         }
         server.start()
         val config = ViraBackendConfig.Values(server.url("/").toString().trimEnd('/'), "anon")
-        loader = ParentChildSummaryLoader(ViraRestClient(config, OkHttpClient()), clock = { now })
+        loader = ParentChildSummaryLoader(ViraRestClient(config, OkHttpClient()))
     }
 
     @After
@@ -55,22 +51,14 @@ class ParentChildSummaryLoaderTest {
     private fun link(usage: Boolean = false, habits: Boolean = false, emotions: Boolean = false, medication: Boolean = false) =
         ParentLink(UUID.randomUUID(), child, UUID.randomUUID(), usage, habits, emotions, medication, now)
 
-    /// Comptar tasques no vol dir baixar-ne el títol ni les notes.
+    /// Comptar tasques no vol dir baixar-ne el títol ni les notes: el pare o la mare només rep
+    /// números del servidor, mai files de cap taula del fill o filla.
     @Test
-    fun nomesBaixaLesColumnesQueCompta() = runBlocking {
-        loader.load(link(usage = true, habits = true), "token")
-        assertEquals("status", selects["/rest/v1/plan_items"])
-        assertEquals("day", selects["/rest/v1/habit_logs"])
-        assertFalse(selects.filterKeys { !it.contains("/rpc/") }.values.any { it == null || it == "*" })
-    }
-
-    /// La setmana i l'estat es filtren al servidor: l'historial sencer no baixa mai.
-    @Test
-    fun elsFiltresVanAlServidor() = runBlocking {
-        loader.load(link(usage = true, habits = true), "token")
-        assertEquals("eq.pending", urls["/rest/v1/plan_items"]!!.queryParameter("status"))
-        assertTrue(urls["/rest/v1/habit_logs"]!!.queryParameter("day")!!.startsWith("gt.2026-10-11"))
-        assertTrue(urls["/rest/v1/focus_sessions"]!!.queryParameter("started_at")!!.startsWith("gt.2026-10-11"))
+    fun nomesNumerosMaiFiles() = runBlocking {
+        loader.load(link(usage = true, habits = true, emotions = true, medication = true), "token")
+        loader.displayNames(listOf(link(usage = true)), "token")
+        assertTrue(paths.isNotEmpty())
+        assertTrue(paths.all { it.startsWith("/rest/v1/rpc/") })
     }
 
     @Test
@@ -105,15 +93,8 @@ class ParentChildSummaryLoaderTest {
 
     @Test
     fun lUsIElsHabitsCompten() = runBlocking {
-        responses["/rest/v1/profiles"] = """[{"display_name":"Marc"}]"""
-        responses["/rest/v1/rpc/parent_child_total_xp"] = "1240"
-        responses["/rest/v1/streaks"] = """[{"current_days":12}]"""
-        responses["/rest/v1/focus_sessions"] = """[
-            {"started_at":"2026-10-17T10:00:00Z","completed":true},
-            {"started_at":"2026-10-16T10:00:00Z","completed":false},
-            {"started_at":"2026-10-01T10:00:00Z","completed":true}]"""
-        responses["/rest/v1/habit_logs"] = """[{"day":"2026-10-15T00:00:00Z"},{"day":"2026-09-30T00:00:00Z"}]"""
-        responses["/rest/v1/plan_items"] = """[{"status":"pending"},{"status":"done"},{"status":"pending"}]"""
+        responses["/rest/v1/rpc/parent_child_summary"] = """{"display_name":"Marc","total_xp":1240,"streak_days":12,
+            "focus_last_week":1,"habits_last_week":1,"tasks_pending":2}"""
 
         val summary = loader.load(link(usage = true, habits = true), "token")
         assertEquals("Marc", summary.displayName)
@@ -125,11 +106,32 @@ class ParentChildSummaryLoaderTest {
         assertNull(summary.emotionCheckinsLastWeek)
     }
 
+    /// Un àmbit que el servidor no dona (tancat des del telèfon del fill) surt tancat, encara que
+    /// la còpia del vincle d'aquest telèfon digui que és obert.
+    @Test
+    fun manaElServidorNoLaCopiaDelVincle() = runBlocking {
+        responses["/rest/v1/rpc/parent_child_summary"] = """{"habits_last_week":3,"tasks_pending":0}"""
+        val summary = loader.load(link(usage = true, habits = true), "token")
+        assertNull(summary.streakDays)
+        assertNull(summary.totalXP)
+        assertEquals(3, summary.habitsDoneLastWeek)
+        assertEquals(0, summary.tasksPending)
+    }
+
     @Test
     fun elNomNomesEsLlegeixAmbLUsObert() = runBlocking {
-        responses["/rest/v1/profiles"] = """[{"display_name":"  Jana "}]"""
+        val other = UUID.randomUUID()
+        responses["/rest/v1/rpc/parent_child_names"] =
+            """[{"child_user_id":"$child","display_name":"  Jana "},{"child_user_id":"$other","display_name":"Pau"}]"""
         val names = loader.displayNames(listOf(link(usage = true), link(usage = false)), "token")
         assertEquals(mapOf(child to "Jana"), names)
-        assertEquals(1, paths.count { it == "/rest/v1/profiles" })
+        assertEquals(1, paths.count { it == "/rest/v1/rpc/parent_child_names" })
+    }
+
+    @Test
+    fun senseUsObertNoEsDemanaCapNom() = runBlocking {
+        val names = loader.displayNames(listOf(link(usage = false)), "token")
+        assertTrue(names.isEmpty())
+        assertTrue(paths.isEmpty())
     }
 }
