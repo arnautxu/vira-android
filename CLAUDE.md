@@ -19,8 +19,7 @@ Cal `ANDROID_HOME` (o `local.properties` amb `sdk.dir=`) amb la plataforma 35 i 
 - Mateix aspecte i mateixes mecàniques: cap pantalla nova, cap color nou, cap regla nova. El que
   no és a l'iPhone ni a `docs/context/` no es fa; si falta una decisió, es pregunta a l'Arnau.
 - Les mateixes normes dures que a l'iPhone, sense excepció: `PRIVACY_AND_SAFETY.md` (emocions i
-  medicació no surten del telèfon sense el permís del tutor; cap analítica de tercers, per tant
-  **res de Firebase**), `ACCESSIBILITY_REQUIREMENTS.md` (TalkBack a tot, lletra al 200 %,
+  medicació no surten del telèfon sense el permís del tutor), `ACCESSIBILITY_REQUIREMENTS.md` (TalkBack a tot, lletra al 200 %,
   contrast 4,5:1, tàctils ≥ 48 dp, mai informació només per color), `VIRI_AND_GAMIFICATION.md`,
   `CONTENT_STRATEGY.md` i `DESIGN_RULES.md`.
 - Els textos **no s'escriuen a mà**: surten de `Localizable.xcstrings` de l'iPhone amb
@@ -72,7 +71,7 @@ i només hi escriu allà**; un canvi al que és comú es demana al fil amo, mai 
   publica a `captures/<branca>`, el fil les revisa i, aprovades, les copia a
   `app/src/screenshotTestDebug/reference`; des d'aleshores la CI falla si una captura canvia.
   La galeria del sistema de disseny és a `app/src/screenshotTest/…/core/design/`.
-- Privacitat: testimonis al Keystore, `allowBackup=false`, cap analítica, medicació i emocions
+- Privacitat: testimonis al Keystore, `allowBackup=false`, medicació i emocions
   mai als widgets ni a cap superfície fora de l'app.
 - Widgets amb Glance; botons del panell ràpid (Concentra't, Respira); accessos de la icona.
 - **No es fa**: bloqueig d'apps (cap API sense servei d'accessibilitat), Siri, Spotlight,
