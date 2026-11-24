@@ -100,7 +100,7 @@ fun SettingsDataSection(onErased: () -> Unit) {
     val today = LocalDate.now()
     val errorText = error?.let { backendErrorMessage(it) }
 
-    SettingsGroup(header = stringResource(R.string.settings_data_section)) {
+    SettingsGroup(header = stringResource(R.string.settings_your_data_section)) {
         row { SettingsNoteRow(stringResource(R.string.settings_data_stored_message)) }
         row { SettingsActionRow(stringResource(R.string.settings_data_export), { saveJson("vira-$today.json") }, glyph = SettingsGlyphKind.Share) }
         row { SettingsActionRow(stringResource(R.string.settings_data_export_pdf), { savePdf("vira-$today.pdf") }, glyph = SettingsGlyphKind.Document) }
