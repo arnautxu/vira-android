@@ -173,7 +173,6 @@ private fun MainTabs(navigator: ViraNavigator) {
                     profile = profile,
                     onTabTap = navigator::open,
                     onFocus = { navigator.startFocus() },
-                    onProfile = { navigator.navigate(ViraDestination.Profile) },
                     onSettings = navigator::openSettings,
                     onHelp = navigator::openHelp,
                     onTabBounds = { key, bounds ->
@@ -224,7 +223,6 @@ fun ViraRootLayout(
     profile: ViraProfileSummary,
     onTabTap: (ViraTab) -> Unit,
     onFocus: () -> Unit,
-    onProfile: () -> Unit,
     onSettings: () -> Unit,
     onHelp: () -> Unit,
     onTabBounds: (key: String, bounds: Rect) -> Unit = { _, _ -> },
@@ -240,7 +238,6 @@ fun ViraRootLayout(
         ViraTopBar(
             area = selectedTab.area,
             profile = profile,
-            onProfile = onProfile,
             onSettings = onSettings,
             onHelp = onHelp,
             helpModifier = Modifier.viraTutorialTarget(ViraTutorialTarget.HelpNow),

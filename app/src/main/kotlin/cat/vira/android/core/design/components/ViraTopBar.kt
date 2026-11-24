@@ -22,8 +22,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
@@ -95,7 +93,6 @@ data class ViraProfileSummary(
 fun ViraTopBar(
     area: ViraArea,
     profile: ViraProfileSummary,
-    onProfile: () -> Unit,
     onSettings: () -> Unit,
     onHelp: () -> Unit,
     modifier: Modifier = Modifier,
@@ -119,7 +116,7 @@ fun ViraTopBar(
             if (environment.isAccessibilitySize) {
                 Column(verticalArrangement = Arrangement.spacedBy(ViraSpacing.xs)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        ViraProfileButton(profile.name, onProfile, onSettings, avatar)
+                        ViraProfileButton(profile.name, onSettings, avatar)
                         Spacer(Modifier.weight(1f))
                         ViraHelpButton(onHelp, helpModifier)
                     }
@@ -130,7 +127,7 @@ fun ViraTopBar(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(ViraSpacing.xxs),
                 ) {
-                    ViraProfileButton(profile.name, onProfile, onSettings, avatar, Modifier.padding(end = ViraSpacing.xxs))
+                    ViraProfileButton(profile.name, onSettings, avatar, Modifier.padding(end = ViraSpacing.xxs))
                     if (profile.coins != null) counters()
                     Spacer(Modifier.weight(1f))
                     ViraHelpButton(onHelp, helpModifier)
@@ -159,57 +156,39 @@ fun ViraHelpButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
     )
 }
 
-/// L'avatar de la skin posada. Obre el menú Perfil / Ajustos. 40 dp de dibuix, 48 de toc.
+/// L'avatar de la skin posada. Obre Ajustos d'un toc, sense menú (Arnau, 2026-11-24: «la gent no
+/// sap que es pot clicar»): el perfil ja és la pestanya Viri. 40 dp de dibuix, 48 de toc.
 @Composable
 fun ViraProfileButton(
     name: String,
-    onProfile: () -> Unit,
     onSettings: () -> Unit,
     avatar: @Composable () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    var menuOpen by remember { mutableStateOf(false) }
     val side = 40.dp * LocalDensity.current.fontScale.coerceAtMost(1.6f)
     val ring = if (LocalViraEnvironment.current.increasedContrast) ViraColor.textPrimary else ViraColor.brand
-    val hint = stringResource(R.string.profile_pill_hint)
+    val hint = stringResource(R.string.profile_pill_settings_hint)
 
-    Box(modifier) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = modifier
+            .defaultMinSize(ViraTouch.minimum, ViraTouch.minimum)
+            .clip(CircleShape)
+            .viraPressable(onClickLabel = hint, onClick = onSettings)
+            .clearAndSetSemantics {
+                contentDescription = name
+                role = Role.Button
+                onClick(hint) { onSettings(); true }
+            },
+    ) {
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier
-                .defaultMinSize(ViraTouch.minimum, ViraTouch.minimum)
+                .size(side)
                 .clip(CircleShape)
-                .viraPressable(onClickLabel = hint) { menuOpen = true }
-                .clearAndSetSemantics {
-                    contentDescription = name
-                    role = Role.Button
-                    onClick(hint) { menuOpen = true; true }
-                },
-        ) {
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier
-                    .size(side)
-                    .clip(CircleShape)
-                    .background(ViraColor.brandSurface)
-                    .border(2.dp, ring, CircleShape),
-            ) { avatar() }
-        }
-
-        DropdownMenu(
-            expanded = menuOpen,
-            onDismissRequest = { menuOpen = false },
-            containerColor = ViraColor.surfaceElevated,
-        ) {
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.tab_profile), style = ViraFont.body, color = ViraColor.textPrimary) },
-                onClick = { menuOpen = false; onProfile() },
-            )
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.action_settings), style = ViraFont.body, color = ViraColor.textPrimary) },
-                onClick = { menuOpen = false; onSettings() },
-            )
-        }
+                .background(ViraColor.brandSurface)
+                .border(2.dp, ring, CircleShape),
+        ) { avatar() }
     }
 }
 

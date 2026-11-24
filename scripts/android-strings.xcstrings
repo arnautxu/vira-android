@@ -438,6 +438,121 @@
           }
         }
       }
+    },
+    "settings.connect.title": {
+      "comment": "Android: l'iPhone diu «el teu iPhone».",
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connecta Vira amb el teu mòbil"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conecta Vira con tu móvil"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connect Vira to your phone"
+          }
+        }
+      }
+    },
+    "settings.connect.subtitle": {
+      "comment": "Android: només hi ha Calendari, no es tria res més.",
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Així no has d'apuntar res dues vegades. Ho pots apagar quan vulguis."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Así no apuntas nada dos veces. Lo puedes quitar cuando quieras."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "So you never write anything down twice. You can turn it off anytime."
+          }
+        }
+      }
+    },
+    "settings.connect.blocked": {
+      "comment": "Android: l'iPhone diu «a l'iPhone».",
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El permís està bloquejat al mòbil."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El permiso está bloqueado en el móvil."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Permission is blocked on your phone."
+          }
+        }
+      }
+    },
+    "onboarding.connections.title": {
+      "comment": "Android: l'iPhone diu «el teu iPhone».",
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connecta Vira amb el teu mòbil"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conecta Vira con tu móvil"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connect Vira to your phone"
+          }
+        }
+      }
+    },
+    "onboarding.connections.message": {
+      "comment": "Android: l'iPhone diu «l'iPhone».",
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Així no has d'apuntar res dues vegades. Toca «Connecta» i el mòbil et demanarà permís."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Así no apuntas nada dos veces. Toca «Conectar» y el móvil te pedirá permiso."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "So you never write anything down twice. Tap “Connect” and your phone will ask for permission."
+          }
+        }
+      }
     }
   }
 }

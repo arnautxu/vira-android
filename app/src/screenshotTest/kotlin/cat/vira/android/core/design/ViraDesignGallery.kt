@@ -109,12 +109,12 @@ fun Colors() = Gallery {
 fun TopBar() = Gallery {
     Column(verticalArrangement = Arrangement.spacedBy(ViraSpacing.s)) {
         ViraTopBar(
-            ViraArea.Today, ViraProfileSummary("Arnau", coins = 620, streakDays = 12, streakCountsToday = true), {}, {}, {},
+            ViraArea.Today, ViraProfileSummary("Arnau", coins = 620, streakDays = 12, streakCountsToday = true), {}, {},
             avatar = { ViraPictogram(R.drawable.viri_phone, size = 40.dp) },
         )
-        ViraTopBar(ViraArea.Plan, ViraProfileSummary("Arnau", coins = 12_480, streakDays = 3), {}, {}, {})
-        ViraTopBar(ViraArea.Plan, ViraProfileSummary("Arnau", coins = 0), {}, {}, {})
-        ViraTopBar(ViraArea.Emotions, ViraProfileSummary("Arnau"), {}, {}, {})
+        ViraTopBar(ViraArea.Plan, ViraProfileSummary("Arnau", coins = 12_480, streakDays = 3), {}, {})
+        ViraTopBar(ViraArea.Plan, ViraProfileSummary("Arnau", coins = 0), {}, {})
+        ViraTopBar(ViraArea.Emotions, ViraProfileSummary("Arnau"), {}, {})
     }
 }
 

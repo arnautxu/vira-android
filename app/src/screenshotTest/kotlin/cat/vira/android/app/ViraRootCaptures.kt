@@ -20,7 +20,7 @@ private fun Root(tab: ViraTab) {
         ViraRootLayout(
             selectedTab = tab,
             profile = ViraProfileSummary(name = "Nil", coins = 120, streakDays = 4),
-            onTabTap = {}, onFocus = {}, onProfile = {}, onSettings = {}, onHelp = {},
+            onTabTap = {}, onFocus = {}, onSettings = {}, onHelp = {},
         ) { PendingScreen() }
     }
 }

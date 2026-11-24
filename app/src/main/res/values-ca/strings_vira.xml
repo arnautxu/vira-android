@@ -1625,8 +1625,8 @@
     <string name="onboarding_beta_message">En aquesta última pàgina et recordem com funciona el feedback i què s\'envia.</string>
     <string name="onboarding_beta_screenshot">Quan obris el formulari, podràs triar si vols adjuntar una captura.</string>
     <string name="onboarding_beta_title">Beta de Vira</string>
-    <string name="onboarding_connections_message">Vira pot fer servir el que ja tens al telèfon. Tries tu.</string>
-    <string name="onboarding_connections_title">Què deixes entrar</string>
+    <string name="onboarding_connections_message">Així no has d\'apuntar res dues vegades. Toca «Connecta» i el mòbil et demanarà permís.</string>
+    <string name="onboarding_connections_title">Connecta Vira amb el teu mòbil</string>
     <string name="onboarding_done_siri">Ho pots demanar a Siri.</string>
     <string name="onboarding_done_task">A Avui</string>
     <string name="onboarding_done_task_message">Ho tens a Avui. Quan ho acabis, toca el cercle.</string>
@@ -2659,4 +2659,19 @@
     <string name="widget_plan_done">Marca-ho com a fet</string>
     <string name="widget_plan_done_description">Marca una tasca des del widget.</string>
     <string name="widget_plan_parameter">Tasca</string>
+    <string name="settings_connect_title">Connecta Vira amb el teu mòbil</string>
+    <string name="settings_connect_subtitle">Així no has d\'apuntar res dues vegades. Ho pots apagar quan vulguis.</string>
+    <string name="settings_connect_action">Connecta</string>
+    <string name="settings_connect_done">Connectat</string>
+    <string name="settings_connect_disconnect">Desconnecta</string>
+    <string name="settings_connect_blocked">El permís està bloquejat al mòbil.</string>
+    <string name="settings_connect_calendar_detail">Veus els teus plans a Inici.</string>
+    <string name="settings_look_section">Com es veu i com sona</string>
+    <string name="settings_what_shows_section">Què surt a Vira</string>
+    <string name="settings_privacy_family_section">Privacitat i família</string>
+    <string name="settings_your_data_section">Les teves dades</string>
+    <string name="settings_vira_section">Vira</string>
+    <string name="settings_focus_modes_hint">Per a Concentra\'t</string>
+    <string name="profile_pill_settings_hint">Obre Ajustos</string>
+    <string name="parent_inbox_menu">De la teva família (%1$d)</string>
 </resources>

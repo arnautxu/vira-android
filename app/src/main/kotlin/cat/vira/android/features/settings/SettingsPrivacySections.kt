@@ -34,7 +34,7 @@ import java.time.LocalDate
 /// tancaria l'app per a qui no té cap manera de tornar-hi a entrar. Qui el fa complir en obrir l'app
 /// és l'arrencada (`app/`); aquí només es desa.
 @Composable
-fun SettingsPrivacySection() {
+fun SettingsPrivacySection(onOpenParentPanel: (() -> Unit)? = null) {
     var lock by rememberBooleanPreference(ViraPreferences.BIOMETRIC_LOCK_ENABLED, false)
     val context = LocalContext.current
     val isPreview = LocalInspectionMode.current
@@ -42,13 +42,21 @@ fun SettingsPrivacySection() {
     LaunchedEffect(isAvailable) { if (!isAvailable && lock) lock = false }
 
     val title = stringResource(R.string.settings_privacy_lock)
-    SettingsGroup(header = stringResource(R.string.settings_privacy_section)) {
+    // A la portada hi entra també el panell de pares (Arnau, 2026-11-24): només amb sessió, perquè
+    // la vinculació viu al servidor i sense compte no hi ha res a vincular.
+    val showsFamily = onOpenParentPanel != null && rememberSettingsUser() != null
+    val parentPanel = stringResource(R.string.settings_parent_panel_title)
+    val header = if (onOpenParentPanel != null) R.string.settings_privacy_family_section else R.string.settings_privacy_section
+    SettingsGroup(header = stringResource(header)) {
         row {
             SettingsToggleRow(lock, { lock = it }, enabled = isAvailable) {
                 SettingsLabel(title, pictogram = R.drawable.picto_key)
             }
         }
         if (!isAvailable) row { SettingsNoteRow(stringResource(R.string.settings_privacy_lock_unavailable)) }
+        if (showsFamily && onOpenParentPanel != null) {
+            row { SettingsNavigationRow(onOpenParentPanel) { SettingsLabel(parentPanel, pictogram = R.drawable.picto_habit_friends) } }
+        }
     }
 }
 

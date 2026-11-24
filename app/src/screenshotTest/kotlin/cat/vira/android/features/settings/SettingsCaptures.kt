@@ -1,7 +1,14 @@
 package cat.vira.android.features.settings
 
 import android.content.res.Configuration
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
 import cat.vira.android.core.backend.ViraConsentStatus
 import cat.vira.android.core.backend.ViraGuardianRequest
@@ -11,6 +18,7 @@ import cat.vira.android.core.backend.sync.ViraSyncEngine
 import cat.vira.android.core.data.model.FocusProfile
 import cat.vira.android.core.design.ViraCapture
 import cat.vira.android.core.design.ViraTheme
+import cat.vira.android.core.design.tokens.ViraColor
 import com.android.tools.screenshot.PreviewTest
 import java.time.Instant
 import java.util.UUID
@@ -20,6 +28,12 @@ import java.util.UUID
 @Preview(name = "fosc", widthDp = 393, heightDp = 1500, locale = "ca", uiMode = Configuration.UI_MODE_NIGHT_YES or Configuration.UI_MODE_TYPE_NORMAL)
 @Preview(name = "lletra-gran", widthDp = 393, heightDp = 3200, locale = "es", fontScale = 2f)
 annotation class SettingsPageCaptures
+
+/// La portada és una sola llista llarga (Arnau, 2026-11-24): més alta perquè es vegi sencera.
+@Preview(name = "clar", widthDp = 393, heightDp = 3400, locale = "ca")
+@Preview(name = "fosc", widthDp = 393, heightDp = 3400, locale = "ca", uiMode = Configuration.UI_MODE_NIGHT_YES or Configuration.UI_MODE_TYPE_NORMAL)
+@Preview(name = "lletra-gran", widthDp = 393, heightDp = 7600, locale = "es", fontScale = 2f)
+annotation class SettingsHomeCaptures
 
 private val signedIn = ViraSession.State.SignedIn(
     ViraUser(UUID(0, 1), "nora@example.com", consent = ViraConsentStatus.PENDING),
@@ -51,8 +65,19 @@ private fun Capture(stack: List<SettingsPage> = emptyList(), session: ViraSessio
 
 private fun category(category: SettingsCategory) = listOf(SettingsPage.Category(category))
 
-@PreviewTest @SettingsPageCaptures @Composable
+@PreviewTest @SettingsHomeCaptures @Composable
 fun SettingsHome() = Capture()
+
+/// «Connecta Vira amb el teu mòbil» en els tres estats: per connectar, connectat i amb el permís
+/// denegat.
+@PreviewTest @SettingsPageCaptures @Composable
+fun SettingsConnectStates() = ViraCapture {
+    ViraTheme(reduceMotion = true) {
+        Column(Modifier.fillMaxSize().background(ViraColor.backgroundGrouped).padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            ViraConnectionState.entries.forEach { SettingsConnectCard(calendar = it, onConnect = {}, onDisconnect = {}) }
+        }
+    }
+}
 
 @PreviewTest @SettingsPageCaptures @Composable
 fun SettingsAccount() = Capture(category(SettingsCategory.ACCOUNT))

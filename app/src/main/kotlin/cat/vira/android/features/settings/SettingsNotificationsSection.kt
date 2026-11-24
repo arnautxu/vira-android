@@ -126,25 +126,28 @@ fun SettingsNotificationsSection() {
 /// i va junt amb la vibració, perquè qui vol el telèfon callat també el vol quiet.
 @Composable
 fun SettingsSoundsSection() {
+    SettingsGroup(header = stringResource(R.string.settings_sounds)) { row { SettingsSoundsToggle() } }
+}
+
+/// L'interruptor sol, perquè «Com es veu i com sona» el posi sota l'aparença (Arnau, 2026-11-24).
+@Composable
+fun SettingsSoundsToggle() {
     val preferences = LocalSettingsPreferences.current
     var soundMode by rememberStringPreference(SettingsKeys.SOUND_MODE, ViraSoundMode.ALL.raw)
     val context = LocalContext.current
-    SettingsGroup(header = stringResource(R.string.settings_sounds)) {
-        row {
-            SettingsToggleRow(
-                stringResource(R.string.settings_sounds_haptics), ViraSoundMode.from(soundMode) != ViraSoundMode.OFF, { isOn ->
-                    ViraSimpleSettings.setSounds(preferences, isOn)
-                    soundMode = (if (isOn) ViraSoundMode.ALL else ViraSoundMode.OFF).raw
-                    // Un interruptor de so que no es nota en tocar-lo no es pot comprovar.
-                    if (isOn) {
-                        ViraSound.play(context, ViraSound.Cue.CHALLENGE)
-                        ViraHaptics.play(context, ViraHaptics.Feedback.Done)
-                    }
-                },
-                hint = stringResource(R.string.settings_sounds_hint),
-            )
-        }
-    }
+    SettingsToggleRow(
+        stringResource(R.string.settings_sounds_haptics), ViraSoundMode.from(soundMode) != ViraSoundMode.OFF, { isOn ->
+            ViraSimpleSettings.setSounds(preferences, isOn)
+            soundMode = (if (isOn) ViraSoundMode.ALL else ViraSoundMode.OFF).raw
+            // Un interruptor de so que no es nota en tocar-lo no es pot comprovar.
+            if (isOn) {
+                ViraSound.play(context, ViraSound.Cue.CHALLENGE)
+                ViraHaptics.play(context, ViraHaptics.Feedback.Done)
+            }
+        },
+        hint = stringResource(R.string.settings_sounds_hint),
+        pictogram = R.drawable.picto_set_sound,
+    )
 }
 
 private fun notificationsAllowed(context: Context): Boolean =

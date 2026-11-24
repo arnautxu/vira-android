@@ -50,12 +50,11 @@ import cat.vira.android.core.design.tokens.ViraSpacing
 private val cardShape = RoundedCornerShape(ViraRadius.l)
 
 /// Mòdul protagonista de la portada d'Ajustos (`SettingsAccountCard`, `DESIGN_RULES.md` §3): qui
-/// ets, com va la sincronització i l'aparença, en una targeta lila. L'aparença és aquí, a un toc:
-/// és l'ajust que més es toca. Tocar la part de dalt obre el compte sencer.
+/// ets i com va la sincronització, en una targeta lila. Tocar-la obre el compte sencer. L'aparença
+/// ha baixat a «Com es veu i com sona» (`SettingsLookSection`, Arnau, 2026-11-24).
 @Composable
 fun SettingsAccountCard(onOpenAccount: () -> Unit, modifier: Modifier = Modifier) {
     val ink = ViraColor.onCard(ViraArea.Today)
-    var appearance by rememberStringPreference(ViraPreferences.APPEARANCE, ViraAppearance.AUTO.raw)
     val hint = stringResource(R.string.settings_account_card_hint)
     Column(
         modifier.fillMaxWidth().background(ViraGradient.card(ViraArea.Today), cardShape).padding(ViraSpacing.m),
@@ -72,20 +71,6 @@ fun SettingsAccountCard(onOpenAccount: () -> Unit, modifier: Modifier = Modifier
                 SettingsGlyph(SettingsGlyphKind.Chevron, ink)
             }
             SettingsSyncTag()
-        }
-        Column(verticalArrangement = Arrangement.spacedBy(ViraSpacing.xs)) {
-            Text(stringResource(R.string.settings_appearance_section), style = ViraFont.footnoteEmphasis, color = ink)
-            ViraSectionSwitcher(
-                area = ViraArea.Today,
-                items = listOf(
-                    ViraSectionItem(ViraAppearance.AUTO.raw, stringResource(R.string.settings_appearance_auto), R.drawable.picto_set_appearance),
-                    ViraSectionItem(ViraAppearance.LIGHT.raw, stringResource(R.string.settings_appearance_light), R.drawable.picto_sun),
-                    ViraSectionItem(ViraAppearance.DARK.raw, stringResource(R.string.settings_appearance_dark), R.drawable.picto_moon),
-                ),
-                selectedKey = ViraAppearance.from(appearance).raw,
-                onSelect = { appearance = it },
-                showsAllLabels = true,
-            )
         }
     }
 }
@@ -207,4 +192,22 @@ private fun Modifier.pullUp(distance: Dp): Modifier = layout { measurable, const
     val placeable = measurable.measure(constraints)
     val shift = distance.roundToPx()
     layout(placeable.width, (placeable.height - shift).coerceAtLeast(0)) { placeable.place(0, -shift) }
+}
+
+/// Automàtic, clar o fosc (`SettingsAppearanceSection`): els tres a la vista, amb el nom de cadascun.
+@Composable
+fun SettingsAppearanceSwitcher(modifier: Modifier = Modifier) {
+    var appearance by rememberStringPreference(ViraPreferences.APPEARANCE, ViraAppearance.AUTO.raw)
+    ViraSectionSwitcher(
+        area = ViraArea.Today,
+        items = listOf(
+            ViraSectionItem(ViraAppearance.AUTO.raw, stringResource(R.string.settings_appearance_auto), R.drawable.picto_set_appearance),
+            ViraSectionItem(ViraAppearance.LIGHT.raw, stringResource(R.string.settings_appearance_light), R.drawable.picto_sun),
+            ViraSectionItem(ViraAppearance.DARK.raw, stringResource(R.string.settings_appearance_dark), R.drawable.picto_moon),
+        ),
+        selectedKey = ViraAppearance.from(appearance).raw,
+        onSelect = { appearance = it },
+        modifier = modifier,
+        showsAllLabels = true,
+    )
 }
